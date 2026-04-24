@@ -1,0 +1,55 @@
+{
+  "_comment": "复制本文件到 ~/.gitee-cli/settings.json 并填写真实值。文件权限需设置为 0600。",
+
+  "git": {
+    "_comment": "与 git config --global 保持同步，用于 commit 署名",
+    "user": {
+      "name": "your-name",
+      "email": "your-email@example.com"
+    }
+  },
+
+  "hosts": {
+    "_comment": "支持多个 host，用于同时管理 gitee.com 与企业私有部署实例",
+    "gitee.com": {
+      "token": "<your-access-token>",
+      "username": "<your-gitee-username>",
+      "protocol": "https",
+      "scopes": [
+        "user_info",
+        "projects",
+        "pull_requests",
+        "issues",
+        "gists"
+      ],
+      "expires_at": ""
+    },
+    "your-company.gitee.com": {
+      "_comment": "企业私有部署示例，删除本块如无需多 host",
+      "token": "<enterprise-access-token>",
+      "username": "<enterprise-username>",
+      "protocol": "https",
+      "scopes": [
+        "user_info",
+        "projects",
+        "pull_requests",
+        "issues"
+      ],
+      "expires_at": ""
+    }
+  },
+
+  "preferences": {
+    "_comment": "全局偏好设置，可通过 gitee config set <key> <value> 修改",
+    "output": "table",
+    "_output_options": ["table", "json", "csv"],
+    "editor": "",
+    "_editor_comment": "留空则使用 $EDITOR 环境变量或系统默认值（vim/nano/notepad）",
+    "browser": "",
+    "_browser_comment": "留空则使用系统默认浏览器",
+    "prompt": "enabled",
+    "_prompt_options": ["enabled", "disabled"],
+    "pager": "",
+    "_pager_comment": "留空则使用 $PAGER 或 less；设为 cat 可禁用分页"
+  }
+}
