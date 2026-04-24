@@ -25,7 +25,7 @@ var (
 var rootCmd = &cobra.Command{
 	Use:   "gitee",
 	Short: "Gitee CLI — manage Gitee from your terminal",
-	Long: `gitee-cli is the official command-line tool for Gitee.
+	Long: `gitee-cli is a OpenSource command-line tool for Gitee, Author: AndersHsueh
 Work with repositories, issues, pull requests, gists and more.`,
 	SilenceUsage:  true,
 	SilenceErrors: true,
