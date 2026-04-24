@@ -61,23 +61,22 @@ func runRaw(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	var result json.RawMessage
-	var errResp error
 
 	switch method {
 	case "GET":
-		errResp = client.Get(ctx, path, &result)
+		err = client.Get(ctx, path, &result)
 	case "POST":
-		errResp = client.Post(ctx, path, body, &result)
+		err = client.Post(ctx, path, body, &result)
 	case "PATCH":
-		errResp = client.Patch(ctx, path, body, &result)
+		err = client.Patch(ctx, path, body, &result)
 	case "DELETE":
-		errResp = client.Delete(ctx, path)
+		err = client.Delete(ctx, path)
 	case "PUT":
-		errResp = client.Put(ctx, path, body, &result)
+		err = client.Put(ctx, path, body, &result)
 	}
 
-	if errResp != nil {
-		return errResp
+	if err != nil {
+		return err
 	}
 
 	if rawFlags.raw {

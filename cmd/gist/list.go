@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
+	"gitee-cli/internal/utils"
 	"gitee-cli/pkg/types"
 )
 
@@ -64,19 +65,12 @@ func runList(cobraCmd *cobra.Command, args []string) error {
 		if !g.Public {
 			vis = "private"
 		}
-		desc := g.Description
+		desc := utils.Truncate(g.Description, 50)
 		if desc == "" {
 			desc = "-"
 		}
-		if len(desc) > 50 {
-			desc = desc[:47] + "..."
-		}
-		updated := g.UpdatedAt
-		if len(updated) > 10 {
-			updated = updated[:10]
-		}
 		fmt.Fprintf(w, "%s\t%s\t%s\t%d\t%s\n",
-			g.ID, desc, vis, len(g.Files), updated)
+			g.ID, desc, vis, len(g.Files), utils.TruncateDate(g.UpdatedAt))
 	}
 	return w.Flush()
 }

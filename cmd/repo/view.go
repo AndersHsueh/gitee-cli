@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
+	"gitee-cli/internal/utils"
 	"gitee-cli/pkg/types"
 )
 
@@ -75,10 +76,10 @@ func runView(cobraCmd *cobra.Command, args []string) error {
 	fmt.Fprintf(w, "Open Issues:\t%d\n", repo.OpenIssuesCount)
 	fmt.Fprintf(w, "URL:\t%s\n", repo.HTMLURL)
 	if repo.PushedAt != "" {
-		fmt.Fprintf(w, "Pushed At:\t%s\n", repo.PushedAt[:10])
+		fmt.Fprintf(w, "Pushed At:\t%s\n", utils.TruncateDate(repo.PushedAt))
 	}
 	if repo.CreatedAt != "" {
-		fmt.Fprintf(w, "Created At:\t%s\n", repo.CreatedAt[:10])
+		fmt.Fprintf(w, "Created At:\t%s\n", utils.TruncateDate(repo.CreatedAt))
 	}
 	return w.Flush()
 }
@@ -86,7 +87,7 @@ func runView(cobraCmd *cobra.Command, args []string) error {
 // resolveRepo returns owner and repoName from flags or args.
 func resolveRepo(owner, repo string, args []string) (string, string, error) {
 	if len(args) > 0 {
-		o, r := splitOwnerRepo(args[0])
+		o, r := utils.ParseOwnerRepo(args[0])
 		if o != "" && r != "" {
 			return o, r, nil
 		}
@@ -101,15 +102,6 @@ func resolveRepo(owner, repo string, args []string) (string, string, error) {
 	if combined == "" {
 		return "", "", fmt.Errorf("--repo is required (e.g. --repo owner/repo)")
 	}
-	o, r := splitOwnerRepo(combined)
+	o, r := utils.ParseOwnerRepo(combined)
 	return o, r, nil
-}
-
-func splitOwnerRepo(input string) (owner, repo string) {
-	for i := 0; i < len(input); i++ {
-		if input[i] == '/' {
-			return input[:i], input[i+1:]
-		}
-	}
-	return "", input
 }

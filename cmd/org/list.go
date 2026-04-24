@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
+	"gitee-cli/internal/utils"
 	"gitee-cli/pkg/types"
 )
 
@@ -59,12 +60,9 @@ func runList(cobraCmd *cobra.Command, args []string) error {
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 	fmt.Fprintln(w, "LOGIN\tNAME\tDESCRIPTION\tPUBLIC REPOS")
 	for _, o := range orgs {
-		desc := o.Description
+		desc := utils.Truncate(o.Description, 50)
 		if desc == "" {
 			desc = "-"
-		}
-		if len(desc) > 50 {
-			desc = desc[:47] + "..."
 		}
 		fmt.Fprintf(w, "%s\t%s\t%s\t%d\n", o.Login, o.Name, desc, o.PublicRepos)
 	}

@@ -55,11 +55,6 @@ func runEdit(cobraCmd *cobra.Command, args []string) error {
 		Description:  editFlags.description,
 		DefaultBranch: editFlags.defaultBranch,
 	}
-	if editFlags.name != "" || editFlags.description != "" || editFlags.defaultBranch != "" {
-		req.Name = editFlags.name
-		req.Description = editFlags.description
-		req.DefaultBranch = editFlags.defaultBranch
-	}
 
 	path := api.ReposEdit(owner, repoName)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)

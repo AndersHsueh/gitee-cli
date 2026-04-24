@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
+	"gitee-cli/internal/utils"
 	"gitee-cli/pkg/types"
 )
 
@@ -87,16 +88,12 @@ func runList(cobraCmd *cobra.Command, args []string) error {
 		if pr.Head != nil && pr.Base != nil {
 			headToBase = fmt.Sprintf("%s→%s", pr.Head.Ref, pr.Base.Ref)
 		}
-		updated := pr.UpdatedAt
-		if len(updated) > 10 {
-			updated = updated[:10]
-		}
 		state := pr.State
 		if pr.Merged {
 			state = "merged"
 		}
 		fmt.Fprintf(w, "%d\t%s\t%s\t%s\t%s\t%s\n",
-			pr.Number, pr.Title, state, headToBase, pr.User.Login, updated)
+			pr.Number, pr.Title, state, headToBase, pr.User.Login, utils.TruncateDate(pr.UpdatedAt))
 	}
 	return w.Flush()
 }
@@ -109,10 +106,9 @@ func resolvePRRepo(owner, repo string) (string, string, error) {
 	if combined == "" {
 		return "", "", fmt.Errorf("--repo is required (e.g. --repo owner/repo)")
 	}
-	for i := 0; i < len(combined); i++ {
-		if combined[i] == '/' {
-			return combined[:i], combined[i+1:], nil
-		}
+	o, r := utils.ParseOwnerRepo(combined)
+	if o == "" || r == "" {
+		return "", "", fmt.Errorf("invalid --repo format %q, expected owner/repo", combined)
 	}
-	return "", "", fmt.Errorf("invalid --repo format %q, expected owner/repo", combined)
+	return o, r, nil
 }

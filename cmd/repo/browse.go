@@ -7,6 +7,7 @@ import (
 	"runtime"
 
 	"github.com/spf13/cobra"
+	"gitee-cli/internal/utils"
 )
 
 var browseCmd = &cobra.Command{
@@ -22,7 +23,7 @@ func runBrowse(cobraCmd *cobra.Command, args []string) error {
 	var err error
 
 	if len(args) > 0 {
-		owner, repoName = splitOwnerRepo(args[0])
+		owner, repoName = utils.ParseOwnerRepo(args[0])
 	} else {
 		owner, repoName, err = resolveRepo("", "", nil)
 		if err != nil {
@@ -35,11 +36,10 @@ func runBrowse(cobraCmd *cobra.Command, args []string) error {
 	// Try to open browser
 	browser := os.Getenv("BROWSER")
 	if browser == "" {
-		// Try common macOS/Linux browser commands
-		switch {
-		case detectDarwin():
+		switch runtime.GOOS {
+		case "darwin":
 			browser = "open"
-		case detectLinux():
+		case "linux":
 			browser = "xdg-open"
 		default:
 			browser = "open"
@@ -51,17 +51,4 @@ func runBrowse(cobraCmd *cobra.Command, args []string) error {
 	execCmd.Stdout = os.Stdout
 	execCmd.Stderr = os.Stderr
 	return execCmd.Run()
-}
-
-func detectDarwin() bool {
-	return runtime.GOOS == "darwin" || exists("/usr/bin/open")
-}
-
-func detectLinux() bool {
-	return runtime.GOOS == "linux" || exists("/usr/bin/xdg-open")
-}
-
-func exists(path string) bool {
-	_, err := os.Stat(path)
-	return err == nil
 }
