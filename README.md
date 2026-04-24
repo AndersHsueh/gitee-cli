@@ -5,10 +5,191 @@
 [![Go Version](https://img.shields.io/badge/go-1.23+-blue.svg)](https://golang.org)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey.svg)]()
+[![Version](https://img.shields.io/badge/version-v0.1.0-orange.svg)]()
 
 ---
 
 ## 功能概览
+
+```
+gitee auth      # 认证管理（login / logout / status / token）       ✅ 已实现
+gitee issue     # Issue 管理（list / create / view / ...）           ✅ 已实现
+gitee config    # 配置管理（set / get / list / unset）               ✅ 已实现
+gitee search    # 搜索仓库 / Issue / 用户                            ✅ 已实现
+gitee completion # Shell 自动补全（bash / zsh / fish / powershell）  ✅ 已实现
+gitee version   # 版本信息                                           ✅ 已实现
+gitee repo      # 仓库管理                                           🚧 规划中
+gitee pr        # Pull Request                                        🚧 规划中
+gitee gist      # 代码片段                                           🚧 规划中
+gitee org       # 组织管理                                           🚧 规划中
+gitee api       # 直接调用 Gitee API v5                              🚧 规划中
+```
+
+---
+
+## 快速开始
+
+### 从源码构建
+
+```bash
+git clone https://gitee.com/andershsueh/gitee-cli.git
+cd gitee-cli
+go build -o gitee ./cmd/gitee
+sudo mv gitee /usr/local/bin/
+```
+
+### 认证
+
+在 `~/.gitee-cli/settings.json` 中配置 Token（参考 `settings.json.sample`）：
+
+```json
+{
+  "hosts": {
+    "gitee.com": {
+      "token": "your_access_token",
+      "username": "your_username"
+    }
+  }
+}
+```
+
+或使用环境变量：
+
+```bash
+export GITEE_TOKEN=your_access_token
+```
+
+---
+
+## 使用示例
+
+### Issue 管理
+
+```bash
+# 列出仓库 open Issue
+gitee issue list --owner owner --repo repo-name
+
+# 列出所有状态
+gitee issue list --owner owner --repo repo-name --state all
+
+# 创建 Issue
+gitee issue create --owner owner --repo repo-name \
+  --title "发现一个 Bug" --body "复现步骤：..."
+
+# 查看 Issue 详情
+gitee issue view IJXXXX --owner owner --repo repo-name
+
+# JSON 输出
+gitee issue list --owner owner --repo repo-name --output json
+```
+
+### 搜索
+
+```bash
+# 搜索仓库
+gitee search repos "web framework" --language go --sort stars --limit 10
+
+# 搜索用户
+gitee search users "gitee"
+
+# JSON 输出
+gitee search repos "golang" --output json
+```
+
+### 配置管理
+
+```bash
+gitee config set editor vim         # 设置编辑器
+gitee config set protocol https     # 设置协议
+gitee config get protocol           # 读取配置
+gitee config list                   # 查看所有配置
+gitee config unset editor           # 删除配置项
+```
+
+### 认证状态
+
+```bash
+gitee auth status          # 查看当前登录状态
+gitee auth token           # 显示当前 Token
+gitee auth logout          # 登出（--yes 跳过确认）
+```
+
+---
+
+## 全局选项
+
+| 选项 | 说明 | 默认值 |
+|------|------|--------|
+| `--token string` | Access Token（覆盖配置文件） | 读取配置 |
+| `--hostname string` | Gitee 实例地址 | `gitee.com` |
+| `-o, --output string` | 输出格式：`table` \| `json` | `table` |
+| `-P, --paginate` | 自动分页，获取全部结果 | `false` |
+| `--verbose` | 打印 HTTP 请求/响应详情 | `false` |
+| `--timeout int` | 网络超时秒数 | `30` |
+
+**环境变量：**
+
+| 变量 | 说明 |
+|------|------|
+| `GITEE_TOKEN` | Access Token（优先级高于配置文件） |
+| `GITEE_HOSTNAME` | Gitee 实例地址 |
+
+---
+
+## Shell 自动补全
+
+```bash
+# Bash
+echo 'eval "$(gitee completion bash)"' >> ~/.bashrc
+
+# Zsh
+gitee completion zsh > "${fpath[1]}/_gitee"
+
+# Fish
+gitee completion fish > ~/.config/fish/completions/gitee.fish
+
+# PowerShell
+gitee completion powershell >> $PROFILE
+```
+
+---
+
+## 开发
+
+详见 [`documents/developer-guide.md`](documents/developer-guide.md)
+
+```bash
+# 编译
+go build -o gitee ./cmd/gitee
+
+# 测试
+go test ./... -race -count=1
+
+# 功能测试
+bash test/run.sh
+```
+
+### 项目文档
+
+| 文档 | 说明 |
+|------|------|
+| [`documents/FSD.md`](documents/FSD.md) | 功能规格文档 |
+| [`documents/SDD.md`](documents/SDD.md) | 系统设计文档 |
+| [`documents/developer-guide.md`](documents/developer-guide.md) | 开发指导文档 |
+
+---
+
+## 参考资料
+
+- [Gitee API v5 文档](https://gitee.com/api/v5/swagger)
+- [Gitee OAuth2 文档](https://gitee.com/api/v5/oauth_doc)
+- [GitHub gh CLI](https://github.com/cli/cli)（设计参考）
+
+---
+
+## License
+
+[Apache 2.0](LICENSE)
 
 ```
 gitee auth      # OAuth2 登录 / 登出 / 状态查看
