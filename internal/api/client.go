@@ -117,6 +117,24 @@ func (c *Client) Delete(ctx context.Context, path string) error {
 	return checkStatus(resp)
 }
 
+// Put issues a PUT request with a JSON body and decodes the response.
+func (c *Client) Put(ctx context.Context, path string, body, result interface{}) error {
+	req := c.r.R().
+		SetContext(ctx).
+		SetHeader("Content-Type", "application/json")
+	if body != nil {
+		req = req.SetBody(body)
+	}
+	if result != nil {
+		req = req.SetResult(result)
+	}
+	resp, err := req.Put(path)
+	if err != nil {
+		return err
+	}
+	return checkStatus(resp)
+}
+
 // GetRaw returns the raw response body for a GET request.
 func (c *Client) GetRaw(ctx context.Context, path string) ([]byte, *http.Header, error) {
 	resp, err := c.r.R().SetContext(ctx).Get(path)

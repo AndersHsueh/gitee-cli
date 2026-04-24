@@ -18,11 +18,11 @@ gitee config    # 配置管理（set / get / list / unset）               ✅ �
 gitee search    # 搜索仓库 / Issue / 用户                            ✅ 已实现
 gitee completion # Shell 自动补全（bash / zsh / fish / powershell）  ✅ 已实现
 gitee version   # 版本信息                                           ✅ 已实现
-gitee repo      # 仓库管理                                           🚧 规划中
-gitee pr        # Pull Request                                        🚧 规划中
-gitee gist      # 代码片段                                           🚧 规划中
-gitee org       # 组织管理                                           🚧 规划中
-gitee api       # 直接调用 Gitee API v5                              🚧 规划中
+gitee repo      # 仓库管理（list / create / view / fork / edit / delete / clone / browse）  ✅ 已实现
+gitee pr        # Pull Request（list / create / view / merge / close / reopen / review / diff） ✅ 已实现
+gitee gist      # 代码片段（list / create / view / edit / delete / star）                  ✅ 已实现
+gitee org       # 组织管理（list / view / members / repos / issues）                       ✅ 已实现
+gitee api       # 直接调用 Gitee API v5（GET / POST / PUT / PATCH / DELETE）              ✅ 已实现
 ```
 
 ---

@@ -2,15 +2,7 @@ package types
 
 import "time"
 
-type User struct {
-	ID        int64  `json:"id"`
-	Login     string `json:"login"`
-	Name      string `json:"name"`
-	Email     string `json:"email"`
-	AvatarURL string `json:"avatar_url"`
-	HTMLURL   string `json:"html_url"`
-	Type      string `json:"type"`
-}
+// User is now in user.go
 
 type Label struct {
 	ID    int64  `json:"id"`
