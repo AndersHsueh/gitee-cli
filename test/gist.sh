@@ -98,11 +98,11 @@ if output=$("$BINARY" gist create --description "test" 2>&1); then
     # 某些实现会进入 stdin 读取模式，这也是合理的
     skip "gist create 无文件参数行为待确认（可能读取 stdin）"
 else
-    exit_code=$?
-    if [[ $exit_code -eq 1 ]] || [[ $exit_code -eq 2 ]]; then
-        pass "gist create 缺少内容时正确报错（exit $exit_code）"
+    err_code=$?
+    if [[ $err_code -eq 1 ]] || [[ $err_code -eq 2 ]]; then
+        pass "gist create 缺少内容时正确报错"
     else
-        fail "gist create 错误退出码: $exit_code"
+        fail "gist create 错误退出码: $err_code"
     fi
 fi
 

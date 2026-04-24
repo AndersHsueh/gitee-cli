@@ -35,7 +35,7 @@ var listCmd = &cobra.Command{
 func init() {
 	f := listCmd.Flags()
 	f.StringVar(&listFlags.owner, "owner", "", "Filter by owner username")
-	f.StringVarP(&listFlags.visibility, "visibility", "v", "all", "Filter by visibility: public|private|internal|all")
+	f.StringVar(&listFlags.visibility, "visibility", "all", "Filter by visibility: public|private|internal|all")
 	f.IntVarP(&listFlags.limit, "limit", "L", 30, "Maximum number of repositories")
 	f.StringVar(&listFlags.sort, "sort", "full_name", "Sort by: created|updated|pushed|full_name|stars")
 	f.StringVar(&listFlags.direction, "direction", "asc", "Sort direction: asc|desc")

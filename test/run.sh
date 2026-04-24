@@ -26,7 +26,7 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 # 测试模块列表
-MODULES=("auth" "repo" "issue" "pr" "gist" "org" "search" "api" "config" "completion")
+MODULES=("auth" "repo" "issue" "pr" "gist" "org" "search" "api" "config" "completion" "repo_view" "pagination")
 
 log_info()  { echo -e "${BLUE}[INFO]${NC}  $*"; }
 log_pass()  { echo -e "${GREEN}[PASS]${NC}  $*"; }

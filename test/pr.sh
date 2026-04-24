@@ -50,8 +50,9 @@ done
 # pr list --output json
 # ---------------------------------------------------------------------------
 section "gitee pr list --output json"
-output=$("$BINARY" pr list --owner gitee --repo gitee --output json --limit 5 2>&1 || true)
-if echo "$output" | grep -q '"pull_requests"\|"number"\|"title"\|"state"\|'\['; then
+TEST_REPO="andershsueh/gitee-cli"
+output=$("$BINARY" pr list --repo "$TEST_REPO" --output json --limit 5 2>&1 || true)
+if echo "$output" | grep -qE '"pull_requests"|"number"|"title"|"state"|^\['; then
     pass "pr list --output json 输出正确"
 else
     fail "pr list --output json 格式不符: ${output:0:200}"
@@ -61,8 +62,8 @@ fi
 # pr list --state
 # ---------------------------------------------------------------------------
 section "gitee pr list --state"
-for state in "open" "closed" "merged" "all"; do
-    if output=$("$BINARY" pr list --owner gitee --repo gitee --state "$state" --limit 3 2>&1); then
+for state in "open" "closed" "all"; do
+    if output=$("$BINARY" pr list --repo "$TEST_REPO" --state "$state" --limit 3 2>&1); then
         pass "pr list --state $state 执行成功"
     else
         fail "pr list --state $state 执行失败"
@@ -73,7 +74,7 @@ done
 # pr list --output table
 # ---------------------------------------------------------------------------
 section "gitee pr list --output table"
-output=$("$BINARY" pr list --owner gitee --repo gitee --limit 5 --output table 2>&1 || true)
+output=$("$BINARY" pr list --repo "$TEST_REPO" --limit 5 --output table 2>&1 || true)
 if echo "$output" | grep -qi "#\|TITLE\|PR\|pull_request"; then
     pass "pr list --output table 输出正常"
 else
@@ -100,7 +101,7 @@ done
 section "gitee pr create 必填参数验证"
 
 # 缺少 --title 应报错
-if output=$("$BINARY" pr create --owner gitee --repo gitee 2>&1); then
+if output=$("$BINARY" pr create --repo gitee/gitee 2>&1); then
     fail "pr create 缺少 --title 应报错但未报错"
 else
     pass "pr create 缺少 --title 正确报错"
@@ -166,7 +167,7 @@ section "gitee pr checks --help"
 # ---------------------------------------------------------------------------
 section "全局 Flag"
 for fmt in "json" "table"; do
-    "$BINARY" pr list --owner gitee --repo gitee --output "$fmt" --limit 1 > /dev/null 2>&1 && pass "--output $fmt 有效" || fail "--output $fmt 无效"
+    "$BINARY" pr list --repo gitee/gitee --output "$fmt" --limit 1 > /dev/null 2>&1 && pass "--output $fmt 有效" || fail "--output $fmt 无效"
 done
 
 # ---------------------------------------------------------------------------

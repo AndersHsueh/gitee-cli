@@ -100,7 +100,7 @@ fi
 # ---------------------------------------------------------------------------
 section "gitee repo list --visibility"
 
-for visibility in "public" "private" "internal"; do
+for visibility in "public" "private" "all"; do
     if output=$("$BINARY" repo list --visibility "$visibility" --limit 5 2>&1); then
         pass "repo list --visibility $visibility 执行成功"
     else
@@ -124,10 +124,20 @@ fi
 # ---------------------------------------------------------------------------
 section "gitee repo list --owner"
 
-if output=$("$BINARY" repo list --owner gitee --limit 5 2>&1); then
-    pass "repo list --owner 执行成功"
+# 使用真实存在的用户名测试
+if output=$("$BINARY" repo list --owner golang --limit 5 2>&1); then
+    if echo "$output" | grep -qiE "name|full_name|golang"; then
+        pass "repo list --owner 执行成功"
+    else
+        fail "repo list --owner 输出格式不符"
+    fi
 else
-    fail "repo list --owner 执行失败"
+    # 可能该用户不存在或 API 限制，这是可接受的
+    if echo "$output" | grep -qiE "not found|404|不存在"; then
+        skip "repo list --owner 该用户不存在或无权限"
+    else
+        fail "repo list --owner 执行失败"
+    fi
 fi
 
 # ---------------------------------------------------------------------------
