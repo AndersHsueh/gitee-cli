@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"text/tabwriter"
 	"time"
 
@@ -44,7 +45,12 @@ func runList(cobraCmd *cobra.Command, args []string) error {
 
 	var gists []types.Gist
 	if err := client.Get(ctx, path, &gists); err != nil {
-		return fmt.Errorf("listing gists: %w", err)
+		// Gitee API returns 404 when there are no gists, treat as empty result
+		if isNotFoundError(err) {
+			gists = []types.Gist{}
+		} else {
+			return fmt.Errorf("listing gists: %w", err)
+		}
 	}
 
 	if cmd.GlobalOutput == "json" {
@@ -73,4 +79,13 @@ func runList(cobraCmd *cobra.Command, args []string) error {
 			g.ID, desc, vis, len(g.Files), utils.TruncateDate(g.UpdatedAt))
 	}
 	return w.Flush()
+}
+
+// isNotFoundError checks if the error is an HTTP 404 not found error.
+func isNotFoundError(err error) bool {
+	if err == nil {
+		return false
+	}
+	errStr := err.Error()
+	return strings.Contains(errStr, "404") && strings.Contains(errStr, "not found")
 }

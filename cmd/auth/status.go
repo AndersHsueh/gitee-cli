@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -12,52 +13,147 @@ import (
 )
 
 type userResponse struct {
-	ID    int64  `json:"id"`
-	Login string `json:"login"`
-	Name  string `json:"name"`
-	Email string `json:"email"`
+	ID           int64   `json:"id"`
+	Login        string  `json:"login"`
+	Name         string  `json:"name"`
+	Email        string  `json:"email"`
+	AvatarURL    string  `json:"avatar_url"`
+	HTMLURL      string  `json:"html_url"`
+	Blog         string  `json:"blog"`
+	Bio          string  `json:"bio"`
+	PublicRepos  int     `json:"public_repos"`
+	PublicGists  int     `json:"public_gists"`
+	Followers    int     `json:"followers"`
+	Following    int     `json:"following"`
+	CreatedAt    string  `json:"created_at"`
+	UpdatedAt    string  `json:"updated_at"`
+	Type         string  `json:"type"`
+	StarredURL   string  `json:"starred_url"`
+	SubscriptionsURL string `json:"subscriptions_url"`
+	OrganizationsURL string `json:"organizations_url"`
 }
 
 var statusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "Show authentication status",
-	RunE: func(cobraCmd *cobra.Command, args []string) error {
-		hostname := cmd.GlobalHostname
-		token := cmd.GlobalToken
-		if token == "" {
-			token = config.GetToken(hostname)
-		}
-		if token == "" {
-			return fmt.Errorf("not authenticated. Set GITEE_TOKEN or run 'gitee auth login'")
-		}
+	Example: `  gitee auth status
+  gitee auth status --hostname enterprise.gitee.com`,
+	RunE: runStatus,
+}
 
-		apiClient, err := cmd.NewAPIClient()
-		if err != nil {
-			return err
-		}
+func init() {
+	statusCmd.Flags().Bool("show-token", false, "Show full token (use with caution)")
+}
 
-		var user userResponse
-		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
-		defer cancel()
+func runStatus(cobraCmd *cobra.Command, args []string) error {
+	hostname := cmd.GlobalHostname
+	token := cmd.GlobalToken
+	showToken, _ := cobraCmd.Flags().GetBool("show-token")
 
-		if err := apiClient.Get(ctx, "/user", &user); err != nil {
-			return fmt.Errorf("verifying token: %w", err)
-		}
+	if token == "" {
+		token = config.GetToken(hostname)
+	}
+	if token == "" {
+		return fmt.Errorf("not authenticated. Run 'gitee auth login' to authenticate")
+	}
 
-		green := color.New(color.FgGreen).SprintFunc()
-		bold := color.New(color.Bold).SprintFunc()
+	apiClient, err := cmd.NewAPIClient()
+	if err != nil {
+		return err
+	}
 
-		fmt.Printf("%s Logged in to %s as %s\n",
-			green("✓"),
-			bold(hostname),
-			bold(user.Login),
-		)
-		if user.Name != "" {
-			fmt.Printf("  Name: %s\n", user.Name)
-		}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	defer cancel()
+
+	var user userResponse
+	if err := apiClient.Get(ctx, "/user", &user); err != nil {
+		return fmt.Errorf("verifying token: %w", err)
+	}
+
+	green := color.New(color.FgGreen).SprintFunc()
+	bold := color.New(color.Bold).SprintFunc()
+	cyan := color.New(color.FgCyan).SprintFunc()
+
+	fmt.Printf("\n")
+	fmt.Printf("┌─────────────────────────────────────────────────┐\n")
+	fmt.Printf("│  %s  Authenticated to %s  │\n", green("✓"), bold(hostname))
+	fmt.Printf("└─────────────────────────────────────────────────┘\n")
+	fmt.Printf("\n")
+
+	// User info
+	fmt.Printf("%s %s\n", bold("User:"), bold(user.Login))
+	if user.Name != "" && user.Name != user.Login {
+		fmt.Printf("  Name:     %s\n", user.Name)
+	}
+	if user.Email != "" {
+		fmt.Printf("  Email:    %s\n", user.Email)
+	}
+	if user.HTMLURL != "" {
+		fmt.Printf("  Profile:  %s\n", cyan(user.HTMLURL))
+	}
+	if user.Bio != "" {
+		fmt.Printf("  Bio:      %s\n", user.Bio)
+	}
+	fmt.Printf("  User ID:  %d\n", user.ID)
+
+	// Stats
+	fmt.Printf("\n%s\n", bold("Stats:"))
+	fmt.Printf("  Repos:      %d\n", user.PublicRepos)
+	fmt.Printf("  Gists:      %d\n", user.PublicGists)
+	fmt.Printf("  Followers:  %d\n", user.Followers)
+	fmt.Printf("  Following:  %d\n", user.Following)
+
+	// Token info
+	fmt.Printf("\n%s\n", bold("Token:"))
+	if showToken {
+		fmt.Printf("  Token:    %s\n", token)
+		fmt.Printf("  %s\n", color.New(color.FgYellow).SprintfFunc()("  ⚠️  Warning: Exposing token in plain text!"))
+	} else {
 		// Redact token: show only last 4 chars
-		masked := "****" + token[len(token)-4:]
-		fmt.Printf("  Token: %s\n", masked)
-		return nil
-	},
+		masked := token[:4] + "..." + token[len(token)-4:]
+		fmt.Printf("  Token:    %s\n", masked)
+		fmt.Printf("  Hint:     Use --show-token to display full token\n")
+	}
+
+	// Token source
+	tokenSource := "config file"
+	if cmd.GlobalToken != "" {
+		tokenSource = "GITEE_TOKEN environment variable or --token flag"
+	}
+	fmt.Printf("  Source:   %s\n", tokenSource)
+
+	// Scope info (if available in config)
+	if scopes := config.GetScopes(hostname); len(scopes) > 0 {
+		fmt.Printf("\n%s\n", bold("Scopes:"))
+		for _, scope := range scopes {
+			fmt.Printf("  - %s\n", scope)
+		}
+	}
+
+	fmt.Printf("\n")
+	return nil
+}
+
+// GetUserInfo fetches detailed user information.
+func GetUserInfo() (*userResponse, error) {
+	apiClient, err := cmd.NewAPIClient()
+	if err != nil {
+		return nil, err
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	defer cancel()
+
+	var user userResponse
+	if err := apiClient.Get(ctx, "/user", &user); err != nil {
+		return nil, err
+	}
+
+	return &user, nil
+}
+
+// FormatUserJSON formats user info as JSON.
+func FormatUserJSON(user *userResponse) string {
+	b, _ := json.MarshalIndent(user, "", "  ")
+	return string(b)
 }

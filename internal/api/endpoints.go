@@ -131,3 +131,20 @@ func OrgRepos(org string) string {
 func OrgIssues(org string) string {
 	return fmt.Sprintf("/orgs/%s/issues", org)
 }
+
+// Label endpoints
+func LabelsList(owner, repo string) string {
+	return fmt.Sprintf("/repos/%s/%s/labels", owner, repo)
+}
+
+func LabelsCreate(owner, repo string) string {
+	return fmt.Sprintf("/repos/%s/%s/labels", owner, repo)
+}
+
+func LabelGet(owner, repo string, name string) string {
+	return fmt.Sprintf("/repos/%s/%s/labels/%s", owner, repo, name)
+}
+
+func LabelDelete(owner, repo string, name string) string {
+	return fmt.Sprintf("/repos/%s/%s/labels/%s", owner, repo, name)
+}

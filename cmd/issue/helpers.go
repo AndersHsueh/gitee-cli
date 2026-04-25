@@ -1,15 +1,11 @@
 package issue
 
 import (
-	"context"
 	"fmt"
 	"strings"
-	"time"
 
-	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"gitee-cli/cmd"
-	"gitee-cli/pkg/types"
 )
 
 // resolveRepo returns owner and repoName from --owner/--repo flags or the
@@ -54,45 +50,9 @@ var closeCmd = stubCmd("close <number>", "Close an issue")
 var reopenCmd = stubCmd("reopen <number>", "Reopen an issue")
 var commentCmd = stubCmd("comment <number>", "Add a comment to an issue")
 
-var labelCmd = &cobra.Command{
-	Use:   "label",
-	Short: "Manage issue labels",
-}
-
-var labelListCmd = &cobra.Command{
-	Use:   "list",
-	Short: "List labels in a repository",
-	RunE: func(c *cobra.Command, args []string) error {
-		owner, _ := c.Flags().GetString("owner")
-		repo, _ := c.Flags().GetString("repo")
-		o, r, err := resolveRepo(owner, repo)
-		if err != nil {
-			return err
-		}
-		apiClient, err := cmd.NewAPIClient()
-		if err != nil {
-			return err
-		}
-		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
-		defer cancel()
-		var labels []types.Label
-		path := fmt.Sprintf("/repos/%s/%s/labels", o, r)
-		if err := apiClient.Get(ctx, path, &labels); err != nil {
-			return err
-		}
-		for _, l := range labels {
-			fmt.Printf("  %s  %s\n", color.New(color.FgHiBlack).Sprintf("#%s", l.Color), l.Name)
-		}
-		return nil
-	},
-}
-
 func init() {
 	for _, c := range []*cobra.Command{editCmd, closeCmd, reopenCmd, commentCmd} {
 		c.Flags().String("owner", "", "Repository owner")
 		c.Flags().String("repo", "", "Repository name or owner/repo")
 	}
-	labelCmd.AddCommand(labelListCmd)
-	labelListCmd.Flags().String("owner", "", "Repository owner")
-	labelListCmd.Flags().String("repo", "", "Repository name or owner/repo")
 }
