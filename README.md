@@ -12,17 +12,17 @@
 ## 功能概览
 
 ```
-gitee auth      # 认证管理（login / logout / status / token）       ✅ 已实现
-gitee issue     # Issue 管理（list / create / view / ...）           ✅ 已实现
-gitee config    # 配置管理（set / get / list / unset）               ✅ 已实现
-gitee search    # 搜索仓库 / Issue / 用户                            ✅ 已实现
+gitee auth      # 认证管理（login / logout / status / token）            ✅ 已实现
+gitee issue     # Issue 管理（list / create / view / edit / close / reopen / comment） ✅ 已实现
+gitee config    # 配置管理（set / get / list / unset）                  ✅ 已实现
+gitee search    # 搜索仓库 / Issue / 用户                             ✅ 已实现
 gitee completion # Shell 自动补全（bash / zsh / fish / powershell）  ✅ 已实现
-gitee version   # 版本信息                                           ✅ 已实现
-gitee repo      # 仓库管理（list / create / view / fork / edit / delete / clone / browse）  ✅ 已实现
-gitee pr        # Pull Request（list / create / view / merge / close / reopen / review / diff） ✅ 已实现
-gitee gist      # 代码片段（list / create / view / edit / delete / star）                  ✅ 已实现
-gitee org       # 组织管理（list / view / members / repos / issues）                       ✅ 已实现
-gitee api       # 直接调用 Gitee API v5（GET / POST / PUT / PATCH / DELETE）              ✅ 已实现
+gitee version   # 版本信息                                            ✅ 已实现
+gitee repo      # 仓库管理（list / create / view / fork / edit / delete / clone / browse / branches） ✅ 已实现
+gitee pr        # Pull Request（list / create / view / merge / review / comments / diff） ✅ 已实现
+gitee gist      # 代码片段（list / create / view / edit / delete / star / unstar） ✅ 已实现
+gitee org       # 组织管理（list / view / members / repos / issues）    ✅ 已实现
+gitee api       # 直接调用 Gitee API v5（GET / POST / PUT / PATCH / DELETE） ✅ 已实现
 ```
 
 ---
@@ -193,10 +193,10 @@ bash test/run.sh
 
 ```
 gitee auth      # OAuth2 登录 / 登出 / 状态查看
-gitee repo      # 仓库管理（列出、创建、克隆、Fork、查看、编辑、删除）
-gitee issue     # Issue 管理（列出、创建、查看、编辑、关闭、评论）
-gitee pr        # Pull Request（列出、创建、查看、合并、审查、diff）
-gitee gist      # 代码片段（列出、创建、查看、编辑、删除、Star）
+gitee repo      # 仓库管理（列出、创建、克隆、Fork、查看、编辑、删除、分支）
+gitee issue     # Issue 管理（列出、创建、查看、编辑、关闭、重开、评论）
+gitee pr        # Pull Request（列出、创建、查看、合并、审查、评论、diff）
+gitee gist      # 代码片段（列出、创建、查看、编辑、删除、Star、取消Star）
 gitee org       # 组织管理（列出、查看、成员、仓库）
 gitee search    # 搜索仓库 / Issue / 用户
 gitee api       # 直接调用 Gitee API v5（调试 / 自动化脚本）
