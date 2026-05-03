@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
@@ -91,39 +90,6 @@ var commentCmd = &cobra.Command{
 	Short: "Add a comment to an issue",
 	Example: `  gitee issue comment 42 --repo owner/repo --body "Comment text"`,
 	RunE:  runComment,
-}
-
-var labelCmd = &cobra.Command{
-	Use:   "label",
-	Short: "Manage issue labels",
-}
-
-var labelListCmd = &cobra.Command{
-	Use:   "list",
-	Short: "List labels in a repository",
-	RunE: func(c *cobra.Command, args []string) error {
-		owner, _ := c.Flags().GetString("owner")
-		repo, _ := c.Flags().GetString("repo")
-		o, r, err := resolveRepo(owner, repo)
-		if err != nil {
-			return err
-		}
-		apiClient, err := cmd.NewAPIClient()
-		if err != nil {
-			return err
-		}
-		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
-		defer cancel()
-		var labels []types.Label
-		path := fmt.Sprintf("/repos/%s/%s/labels", o, r)
-		if err := apiClient.Get(ctx, path, &labels); err != nil {
-			return err
-		}
-		for _, l := range labels {
-			fmt.Printf("  %s  %s\n", color.New(color.FgHiBlack).Sprintf("#%s", l.Color), l.Name)
-		}
-		return nil
-	},
 }
 
 func init() {

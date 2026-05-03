@@ -86,3 +86,40 @@ func GetToken(hostname string) string {
 	}
 	return ""
 }
+
+// GetScopes returns the OAuth scopes for the given hostname.
+func GetScopes(hostname string) []string {
+	s, err := Load()
+	if err != nil {
+		return nil
+	}
+	if hc, ok := s.Hosts[hostname]; ok {
+		return hc.Scopes
+	}
+	return nil
+}
+
+// GetUsername returns the username for the given hostname.
+func GetUsername(hostname string) string {
+	s, err := Load()
+	if err != nil {
+		return ""
+	}
+	if hc, ok := s.Hosts[hostname]; ok {
+		return hc.Username
+	}
+	return ""
+}
+
+// GetAllHosts returns all configured hosts.
+func GetAllHosts() []string {
+	s, err := Load()
+	if err != nil {
+		return nil
+	}
+	hosts := make([]string, 0, len(s.Hosts))
+	for h := range s.Hosts {
+		hosts = append(hosts, h)
+	}
+	return hosts
+}

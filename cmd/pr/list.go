@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"text/tabwriter"
 	"time"
 
@@ -67,7 +68,12 @@ func runList(cobraCmd *cobra.Command, args []string) error {
 
 	var prs []types.PullRequest
 	if err := client.Get(ctx, path, &prs); err != nil {
-		return fmt.Errorf("listing PRs: %w", err)
+		// Gitee API returns 404 when there are no PRs, treat as empty result
+		if isNotFoundError(err) {
+			prs = []types.PullRequest{}
+		} else {
+			return fmt.Errorf("listing PRs: %w", err)
+		}
 	}
 
 	if cmd.GlobalOutput == "json" {
@@ -111,4 +117,13 @@ func resolvePRRepo(owner, repo string) (string, string, error) {
 		return "", "", fmt.Errorf("invalid --repo format %q, expected owner/repo", combined)
 	}
 	return o, r, nil
+}
+
+// isNotFoundError checks if the error is an HTTP 404 not found error.
+func isNotFoundError(err error) bool {
+	if err == nil {
+		return false
+	}
+	errStr := err.Error()
+	return strings.Contains(errStr, "404") && strings.Contains(errStr, "not found")
 }

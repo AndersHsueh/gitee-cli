@@ -5,10 +5,11 @@ import "time"
 // User is now in user.go
 
 type Label struct {
-	ID    int64  `json:"id"`
-	Name  string `json:"name"`
-	Color string `json:"color"`
-	URL   string `json:"url"`
+	ID          int64  `json:"id"`
+	Name        string `json:"name"`
+	Color       string `json:"color"`
+	URL         string `json:"url"`
+	Description string `json:"description,omitempty"`
 }
 
 type Milestone struct {
@@ -55,4 +56,16 @@ type IssueEditRequest struct {
 
 type IssueCommentRequest struct {
 	Body string `json:"body"`
+}
+
+type LabelCreateRequest struct {
+	Name        string `json:"name"`
+	Color       string `json:"color,omitempty"`
+	Description string `json:"description,omitempty"`
+}
+
+type LabelUpdateRequest struct {
+	Name        string `json:"name,omitempty"`
+	Color       string `json:"color,omitempty"`
+	Description string `json:"description,omitempty"`
 }
