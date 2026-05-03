@@ -57,7 +57,7 @@ func runCreate(cobraCmd *cobra.Command, args []string) error {
 
 	// Interactive mode
 	if createFlags.interactive {
-		fmt.Println("=== Gist Creator (Interactive Mode) ===\n")
+		fmt.Println("=== Gist Creator (Interactive Mode) ===")
 
 		desc, err := terminal.PromptDefault("Gist description", "My snippet")
 		if err != nil {
