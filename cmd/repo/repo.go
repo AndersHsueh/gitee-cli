@@ -19,4 +19,5 @@ func init() {
 	RepoCmd.AddCommand(deleteCmd)
 	RepoCmd.AddCommand(cloneCmd)
 	RepoCmd.AddCommand(browseCmd)
+	RepoCmd.AddCommand(branchesCmd)
 }

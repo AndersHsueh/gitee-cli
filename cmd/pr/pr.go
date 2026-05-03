@@ -19,4 +19,5 @@ func init() {
 	PRCmd.AddCommand(reopenCmd)
 	PRCmd.AddCommand(reviewCmd)
 	PRCmd.AddCommand(diffCmd)
+	PRCmd.AddCommand(commentsCmd)
 }

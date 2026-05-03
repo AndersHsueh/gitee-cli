@@ -17,4 +17,5 @@ func init() {
 	GistCmd.AddCommand(editCmd)
 	GistCmd.AddCommand(deleteCmd)
 	GistCmd.AddCommand(starCmd)
+	GistCmd.AddCommand(unstarCmd)
 }

@@ -57,6 +57,10 @@ func IssuesEdit(owner, repo string, number int) string {
 	return fmt.Sprintf("/repos/%s/%s/issues/%d", owner, repo, number)
 }
 
+func IssuesComment(owner, repo string, number int) string {
+	return fmt.Sprintf("/repos/%s/%s/issues/%d/comments", owner, repo, number)
+}
+
 // Pull requests endpoints
 func PRsList(owner, repo string) string {
 	return fmt.Sprintf("/repos/%s/%s/pulls", owner, repo)

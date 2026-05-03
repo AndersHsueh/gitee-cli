@@ -55,6 +55,9 @@ func runEdit(cobraCmd *cobra.Command, args []string) error {
 		Description:  editFlags.description,
 		DefaultBranch: editFlags.defaultBranch,
 	}
+	if editFlags.privateValue {
+		req.Private = &editFlags.privateValue
+	}
 
 	path := api.ReposEdit(owner, repoName)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)

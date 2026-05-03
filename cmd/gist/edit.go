@@ -46,6 +46,14 @@ func runEdit(cobraCmd *cobra.Command, args []string) error {
 	req := types.GistEditRequest{
 		Description: editFlags.description,
 	}
+	if editFlags.filename != "" && editFlags.content != "" {
+		req.Files = map[string]struct {
+			Content  string `json:"content,omitempty"`
+			Filename string `json:"filename,omitempty"`
+		}{
+			editFlags.filename: {Content: editFlags.content, Filename: editFlags.filename},
+		}
+	}
 
 	path := api.GistEdit(gistID)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)

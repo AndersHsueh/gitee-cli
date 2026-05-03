@@ -43,3 +43,16 @@ type IssueCreateRequest struct {
 	Assignees       string `json:"assignees,omitempty"`
 	MilestoneNumber int    `json:"milestone_number,omitempty"`
 }
+
+type IssueEditRequest struct {
+	Title     string `json:"title,omitempty"`
+	Body      string `json:"body,omitempty"`
+	Labels    string `json:"labels,omitempty"`
+	Assignees string `json:"assignees,omitempty"`
+	Milestone int    `json:"milestone_number,omitempty"`
+	State     string `json:"state,omitempty"`
+}
+
+type IssueCommentRequest struct {
+	Body string `json:"body"`
+}

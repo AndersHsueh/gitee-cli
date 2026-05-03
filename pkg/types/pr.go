@@ -71,3 +71,11 @@ type PRReviewRequest struct {
 		Body     string `json:"body"`
 	} `json:"comments,omitempty"`
 }
+
+// PRComment represents a comment on a pull request.
+type PRComment struct {
+	ID        int64  `json:"id"`
+	Body      string `json:"body"`
+	User      User   `json:"user"`
+	CreatedAt string `json:"created_at"`
+}
