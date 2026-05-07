@@ -29,3 +29,7 @@ Thumbs.db
 # Test
 coverage.txt
 coverage.out
+
+# Claude Code
+agent.md
+claude.md

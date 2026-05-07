@@ -110,7 +110,7 @@ var labelDeleteCmd = &cobra.Command{
 }
 
 func init() {
-	IssueCmd.AddCommand(labelCmd)
+	// IssueCmd.AddCommand(labelCmd) is already called in issue.go
 
 	// List command flags
 	labelListCmd.Flags().StringVar(&labelListFlags.owner, "owner", "", "Repository owner")
