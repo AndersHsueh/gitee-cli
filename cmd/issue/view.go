@@ -26,14 +26,10 @@ var viewCmd = &cobra.Command{
 }
 
 func init() {
-	viewCmd.Flags().StringVarP(&viewFlags.repo, "repo", "R", "", "Repository (owner/repo)")
 }
 
 func runView(cobraCmd *cobra.Command, args []string) error {
-	repo := viewFlags.repo
-	if repo == "" {
-		repo = cmd.GlobalRepo
-	}
+	repo := cmd.GlobalRepo
 	if repo == "" {
 		return fmt.Errorf("--repo is required")
 	}

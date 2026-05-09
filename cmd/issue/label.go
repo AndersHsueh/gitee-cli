@@ -19,27 +19,23 @@ import (
 
 // Label command flags
 var labelListFlags struct {
-	owner  string
 	repo   string
 	limit  int
 	filter string
 }
 
 var labelViewFlags struct {
-	owner string
-	repo  string
-	name  string
+	repo string
+	name string
 }
 
 var labelCreateFlags struct {
-	owner      string
 	repo       string
 	name       string
 	labelColor string
 }
 
 var labelUpdateFlags struct {
-	owner      string
 	repo       string
 	name       string
 	newName    string
@@ -47,9 +43,8 @@ var labelUpdateFlags struct {
 }
 
 var labelDeleteFlags struct {
-	owner string
-	repo  string
-	name  string
+	repo string
+	name string
 }
 
 // Command definitions
@@ -113,31 +108,26 @@ func init() {
 	IssueCmd.AddCommand(labelCmd)
 
 	// List command flags
-	labelListCmd.Flags().StringVar(&labelListFlags.owner, "owner", "", "Repository owner")
 	labelListCmd.Flags().StringVarP(&labelListFlags.repo, "repo", "R", "", "Repository name or owner/repo")
 	labelListCmd.Flags().IntVarP(&labelListFlags.limit, "limit", "L", 100, "Maximum number of labels to fetch")
 	labelListCmd.Flags().StringVar(&labelListFlags.filter, "color", "", "Filter labels by color")
 
 	// View command flags
-	labelViewCmd.Flags().StringVar(&labelViewFlags.owner, "owner", "", "Repository owner")
 	labelViewCmd.Flags().StringVarP(&labelViewFlags.repo, "repo", "R", "", "Repository name or owner/repo")
 	labelViewCmd.Flags().StringVarP(&labelViewFlags.name, "name", "n", "", "Label name (required)")
 
 	// Create command flags
-	labelCreateCmd.Flags().StringVar(&labelCreateFlags.owner, "owner", "", "Repository owner")
 	labelCreateCmd.Flags().StringVarP(&labelCreateFlags.repo, "repo", "R", "", "Repository name or owner/repo")
 	labelCreateCmd.Flags().StringVarP(&labelCreateFlags.name, "name", "n", "", "Label name (required)")
 	labelCreateCmd.Flags().StringVarP(&labelCreateFlags.labelColor, "color", "c", "gray", "Label color (6 hex digits, e.g. ff0000)")
 
 	// Update command flags
-	labelUpdateCmd.Flags().StringVar(&labelUpdateFlags.owner, "owner", "", "Repository owner")
 	labelUpdateCmd.Flags().StringVarP(&labelUpdateFlags.repo, "repo", "R", "", "Repository name or owner/repo")
 	labelUpdateCmd.Flags().StringVarP(&labelUpdateFlags.name, "name", "n", "", "Current label name (required)")
 	labelUpdateCmd.Flags().StringVar(&labelUpdateFlags.newName, "new-name", "", "New label name")
 	labelUpdateCmd.Flags().StringVarP(&labelUpdateFlags.labelColor, "color", "c", "", "New label color")
 
 	// Delete command flags
-	labelDeleteCmd.Flags().StringVar(&labelDeleteFlags.owner, "owner", "", "Repository owner")
 	labelDeleteCmd.Flags().StringVarP(&labelDeleteFlags.repo, "repo", "R", "", "Repository name or owner/repo")
 	labelDeleteCmd.Flags().StringVarP(&labelDeleteFlags.name, "name", "n", "", "Label name to delete (required)")
 
@@ -145,7 +135,7 @@ func init() {
 }
 
 func runLabelList(c *cobra.Command, args []string) error {
-	owner, repoName, err := resolveLabelRepo(labelListFlags.owner, labelListFlags.repo)
+	_, repoName, err := resolveLabelRepo(labelListFlags.repo)
 	if err != nil {
 		return err
 	}
@@ -155,7 +145,7 @@ func runLabelList(c *cobra.Command, args []string) error {
 		return err
 	}
 
-	path := api.LabelList(owner, repoName)
+	path := api.LabelList("", repoName)
 	query := url.Values{}
 	query.Set("per_page", fmt.Sprintf("%d", labelListFlags.limit))
 	if labelListFlags.filter != "" {
@@ -200,7 +190,7 @@ func runLabelView(c *cobra.Command, args []string) error {
 		return fmt.Errorf("label name is required (use --name or -n)")
 	}
 
-	owner, repoName, err := resolveLabelRepo(labelViewFlags.owner, labelViewFlags.repo)
+	_, repoName, err := resolveLabelRepo(labelViewFlags.repo)
 	if err != nil {
 		return err
 	}
@@ -212,7 +202,7 @@ func runLabelView(c *cobra.Command, args []string) error {
 
 	// URL encode the label name
 	encodedName := url.QueryEscape(labelViewFlags.name)
-	path := api.LabelGet(owner, repoName, encodedName)
+	path := api.LabelGet("", repoName, encodedName)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
 	defer cancel()
@@ -220,7 +210,7 @@ func runLabelView(c *cobra.Command, args []string) error {
 	var label types.Label
 	if err := client.Get(ctx, path, &label); err != nil {
 		if strings.Contains(err.Error(), "404") || strings.Contains(err.Error(), "not found") {
-			return fmt.Errorf("label %q not found in %s/%s", labelViewFlags.name, owner, repoName)
+			return fmt.Errorf("label %q not found in %s", labelViewFlags.name, repoName)
 		}
 		return fmt.Errorf("getting label: %w", err)
 	}
@@ -256,7 +246,7 @@ func runLabelCreate(c *cobra.Command, args []string) error {
 		return fmt.Errorf("label name is required (use --name or -n)")
 	}
 
-	owner, repoName, err := resolveLabelRepo(labelCreateFlags.owner, labelCreateFlags.repo)
+	_, repoName, err := resolveLabelRepo(labelCreateFlags.repo)
 	if err != nil {
 		return err
 	}
@@ -277,7 +267,7 @@ func runLabelCreate(c *cobra.Command, args []string) error {
 		Color: labelColor,
 	}
 
-	path := api.LabelCreate(owner, repoName)
+	path := api.LabelCreate("", repoName)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
 	defer cancel()
 
@@ -314,7 +304,7 @@ func runLabelUpdate(c *cobra.Command, args []string) error {
 		return fmt.Errorf("at least one of --new-name or --color is required")
 	}
 
-	owner, repoName, err := resolveLabelRepo(labelUpdateFlags.owner, labelUpdateFlags.repo)
+	_, repoName, err := resolveLabelRepo(labelUpdateFlags.repo)
 	if err != nil {
 		return err
 	}
@@ -340,7 +330,7 @@ func runLabelUpdate(c *cobra.Command, args []string) error {
 
 	// Use current name for the API endpoint
 	encodedName := url.QueryEscape(labelUpdateFlags.name)
-	path := api.LabelGet(owner, repoName, encodedName)
+	path := api.LabelGet("", repoName, encodedName)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
 	defer cancel()
@@ -375,7 +365,7 @@ func runLabelDelete(c *cobra.Command, args []string) error {
 		return fmt.Errorf("label name is required (use --name or -n)")
 	}
 
-	owner, repoName, err := resolveLabelRepo(labelDeleteFlags.owner, labelDeleteFlags.repo)
+	_, repoName, err := resolveLabelRepo(labelDeleteFlags.repo)
 	if err != nil {
 		return err
 	}
@@ -387,7 +377,7 @@ func runLabelDelete(c *cobra.Command, args []string) error {
 
 	// Confirm deletion
 	yellow := color.New(color.FgYellow).SprintFunc()
-	fmt.Printf("%s Delete label %q from %s/%s? [y/N] ", yellow("?"), labelDeleteFlags.name, owner, repoName)
+	fmt.Printf("%s Delete label %q from %s/%s? [y/N] ", yellow("?"), labelDeleteFlags.name, "", repoName)
 
 	var confirm string
 	fmt.Scanln(&confirm)
@@ -398,7 +388,7 @@ func runLabelDelete(c *cobra.Command, args []string) error {
 
 	// URL encode the label name
 	encodedName := url.QueryEscape(labelDeleteFlags.name)
-	path := api.LabelDelete(owner, repoName, encodedName)
+	path := api.LabelDelete("", repoName, encodedName)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
 	defer cancel()
@@ -413,21 +403,18 @@ func runLabelDelete(c *cobra.Command, args []string) error {
 	return nil
 }
 
-func resolveLabelRepo(owner, repo string) (string, string, error) {
+func resolveLabelRepo(repo string) (string, string, error) {
 	combined := repo
 	if combined == "" {
 		combined = cmd.GlobalRepo
 	}
 	if combined == "" {
-		return "", "", fmt.Errorf("--repo is required (e.g. --repo owner/repo or --owner owner --repo name)")
+		return "", "", fmt.Errorf("--repo is required (e.g. --repo owner/repo)")
 	}
 
 	parts := strings.SplitN(combined, "/", 2)
 	if len(parts) == 2 && parts[0] != "" && parts[1] != "" {
 		return parts[0], parts[1], nil
-	}
-	if owner != "" {
-		return owner, combined, nil
 	}
 	return "", "", fmt.Errorf("invalid --repo format %q, expected owner/repo", combined)
 }

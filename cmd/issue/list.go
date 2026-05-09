@@ -33,21 +33,20 @@ RunE: runList,
 }
 
 func init() {
-f := listCmd.Flags()
-f.StringVar(&listFlags.state, "state", "open", "Filter by state: open|closed|all")
-f.StringVar(&listFlags.labels, "labels", "", "Filter by labels (comma-separated)")
-f.StringVar(&listFlags.owner, "owner", "", "Repository owner")
-f.StringVarP(&listFlags.repo, "repo", "R", "", "Repository name or owner/repo")
-f.StringVar(&listFlags.assignee, "assignee", "", "Filter by assignee username")
-f.StringVar(&listFlags.milestone, "milestone", "", "Filter by milestone")
-f.IntVarP(&listFlags.limit, "limit", "L", 30, "Maximum number of issues to list")
+	f := listCmd.Flags()
+	f.StringVar(&listFlags.state, "state", "open", "Filter by state: open|closed|all")
+	f.StringVar(&listFlags.labels, "labels", "", "Filter by labels (comma-separated)")
+	f.StringVar(&listFlags.owner, "owner", "", "Repository owner")
+	f.StringVar(&listFlags.assignee, "assignee", "", "Filter by assignee username")
+	f.StringVar(&listFlags.milestone, "milestone", "", "Filter by milestone")
+	f.IntVarP(&listFlags.limit, "limit", "L", 30, "Maximum number of issues to list")
 }
 
 func runList(cobraCmd *cobra.Command, args []string) error {
-owner, repoName, err := resolveRepo(listFlags.owner, listFlags.repo)
-if err != nil {
-return err
-}
+	owner, repoName, err := resolveRepo(listFlags.owner, cmd.GlobalRepo)
+	if err != nil {
+	return err
+	}
 
 client, err := cmd.NewAPIClient()
 if err != nil {

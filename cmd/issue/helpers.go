@@ -115,10 +115,6 @@ func init() {
 	f.StringVarP(&commentFlags.repo, "repo", "R", "", "Repository name or owner/repo")
 	f.StringVar(&commentFlags.body, "body", "", "Comment body (required)")
 	_ = commentCmd.MarkFlagRequired("body")
-
-	labelCmd.AddCommand(labelListCmd)
-	labelListCmd.Flags().String("owner", "", "Repository owner")
-	labelListCmd.Flags().String("repo", "", "Repository name or owner/repo")
 }
 
 func runEdit(cobraCmd *cobra.Command, args []string) error {
