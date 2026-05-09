@@ -13,10 +13,6 @@ import (
 	"gitee-cli/pkg/types"
 )
 
-var viewFlags struct {
-	repo string
-}
-
 var viewCmd = &cobra.Command{
 	Use:   "view <number>",
 	Short: "View details of an issue",
@@ -29,16 +25,10 @@ func init() {
 }
 
 func runView(cobraCmd *cobra.Command, args []string) error {
-	repo := cmd.GlobalRepo
-	if repo == "" {
-		return fmt.Errorf("--repo is required")
+	owner, repoName, err := resolveRepo("", cmd.GlobalRepo)
+	if err != nil {
+		return err
 	}
-
-	parts := strings.SplitN(repo, "/", 2)
-	if len(parts) != 2 {
-		return fmt.Errorf("invalid --repo format, expected owner/repo")
-	}
-	owner, repoName := parts[0], parts[1]
 	number := args[0]
 
 	client, err := cmd.NewAPIClient()
