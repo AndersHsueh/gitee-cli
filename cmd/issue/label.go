@@ -135,7 +135,7 @@ func init() {
 }
 
 func runLabelList(c *cobra.Command, args []string) error {
-	_, repoName, err := resolveLabelRepo(labelListFlags.repo)
+	owner, repoName, err := resolveLabelRepo(labelListFlags.repo)
 	if err != nil {
 		return err
 	}
@@ -145,7 +145,7 @@ func runLabelList(c *cobra.Command, args []string) error {
 		return err
 	}
 
-	path := api.LabelList("", repoName)
+	path := api.LabelList(owner, repoName)
 	query := url.Values{}
 	query.Set("per_page", fmt.Sprintf("%d", labelListFlags.limit))
 	if labelListFlags.filter != "" {
@@ -190,7 +190,7 @@ func runLabelView(c *cobra.Command, args []string) error {
 		return fmt.Errorf("label name is required (use --name or -n)")
 	}
 
-	_, repoName, err := resolveLabelRepo(labelViewFlags.repo)
+	owner, repoName, err := resolveLabelRepo(labelViewFlags.repo)
 	if err != nil {
 		return err
 	}
@@ -202,7 +202,7 @@ func runLabelView(c *cobra.Command, args []string) error {
 
 	// URL encode the label name
 	encodedName := url.QueryEscape(labelViewFlags.name)
-	path := api.LabelGet("", repoName, encodedName)
+	path := api.LabelGet(owner, repoName, encodedName)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
 	defer cancel()
@@ -246,7 +246,7 @@ func runLabelCreate(c *cobra.Command, args []string) error {
 		return fmt.Errorf("label name is required (use --name or -n)")
 	}
 
-	_, repoName, err := resolveLabelRepo(labelCreateFlags.repo)
+	owner, repoName, err := resolveLabelRepo(labelCreateFlags.repo)
 	if err != nil {
 		return err
 	}
@@ -267,7 +267,7 @@ func runLabelCreate(c *cobra.Command, args []string) error {
 		Color: labelColor,
 	}
 
-	path := api.LabelCreate("", repoName)
+	path := api.LabelCreate(owner, repoName)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
 	defer cancel()
 
@@ -304,7 +304,7 @@ func runLabelUpdate(c *cobra.Command, args []string) error {
 		return fmt.Errorf("at least one of --new-name or --color is required")
 	}
 
-	_, repoName, err := resolveLabelRepo(labelUpdateFlags.repo)
+	owner, repoName, err := resolveLabelRepo(labelUpdateFlags.repo)
 	if err != nil {
 		return err
 	}
@@ -330,7 +330,7 @@ func runLabelUpdate(c *cobra.Command, args []string) error {
 
 	// Use current name for the API endpoint
 	encodedName := url.QueryEscape(labelUpdateFlags.name)
-	path := api.LabelGet("", repoName, encodedName)
+	path := api.LabelGet(owner, repoName, encodedName)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
 	defer cancel()
@@ -365,7 +365,7 @@ func runLabelDelete(c *cobra.Command, args []string) error {
 		return fmt.Errorf("label name is required (use --name or -n)")
 	}
 
-	_, repoName, err := resolveLabelRepo(labelDeleteFlags.repo)
+	owner, repoName, err := resolveLabelRepo(labelDeleteFlags.repo)
 	if err != nil {
 		return err
 	}
@@ -377,7 +377,7 @@ func runLabelDelete(c *cobra.Command, args []string) error {
 
 	// Confirm deletion
 	yellow := color.New(color.FgYellow).SprintFunc()
-	fmt.Printf("%s Delete label %q from %s/%s? [y/N] ", yellow("?"), labelDeleteFlags.name, "", repoName)
+	fmt.Printf("%s Delete label %q from %s/%s? [y/N] ", yellow("?"), labelDeleteFlags.name, owner, repoName)
 
 	var confirm string
 	fmt.Scanln(&confirm)
@@ -388,7 +388,7 @@ func runLabelDelete(c *cobra.Command, args []string) error {
 
 	// URL encode the label name
 	encodedName := url.QueryEscape(labelDeleteFlags.name)
-	path := api.LabelDelete("", repoName, encodedName)
+	path := api.LabelDelete(owner, repoName, encodedName)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
 	defer cancel()
