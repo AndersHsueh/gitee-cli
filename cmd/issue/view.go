@@ -21,9 +21,6 @@ var viewCmd = &cobra.Command{
 	RunE:    runView,
 }
 
-func init() {
-}
-
 func runView(cobraCmd *cobra.Command, args []string) error {
 	owner, repoName, err := resolveRepo("", cmd.GlobalRepo)
 	if err != nil {

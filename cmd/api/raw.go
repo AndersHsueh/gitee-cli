@@ -18,7 +18,6 @@ var rawFlags struct {
 	method string
 	fields []string
 	raw    bool
-	header []string
 }
 
 var rawCmd = &cobra.Command{
@@ -44,7 +43,6 @@ Useful for testing or accessing endpoints not yet covered by dedicated commands.
 func init() {
 	rawCmd.Flags().StringArrayVar(&rawFlags.fields, "field", []string{}, "Form field (key=value)")
 	rawCmd.Flags().BoolVar(&rawFlags.raw, "raw", false, "Output raw response body")
-	rawCmd.Flags().StringArrayVar(&rawFlags.header, "header", []string{}, "Custom header (key=value)")
 
 	// Add raw as a subcommand for backwards compatibility
 	apiCmd.AddCommand(rawCmd)

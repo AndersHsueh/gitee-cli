@@ -14,11 +14,10 @@ import (
 )
 
 var mergeFlags struct {
-	owner        string
-	repo         string
-	squash       bool
-	squashMsg    string
-	deleteBranch bool
+	owner     string
+	repo      string
+	squash    bool
+	squashMsg string
 }
 
 var mergeCmd = &cobra.Command{
@@ -35,7 +34,6 @@ func init() {
 	f.StringVarP(&mergeFlags.repo, "repo", "R", "", "Repository name or owner/repo")
 	f.BoolVar(&mergeFlags.squash, "squash", false, "Squash commits when merging")
 	f.StringVar(&mergeFlags.squashMsg, "squash-message", "", "Commit message for squash merge")
-	f.BoolVar(&mergeFlags.deleteBranch, "delete-branch", false, "Delete source branch after merge")
 }
 
 func runMerge(cobraCmd *cobra.Command, args []string) error {

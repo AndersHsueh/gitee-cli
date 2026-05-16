@@ -3,7 +3,6 @@ package config
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 
 	giteeconfig "gitee-cli/internal/config"
 	"github.com/spf13/cobra"
@@ -127,5 +126,4 @@ var unsetCmd = &cobra.Command{
 
 func init() {
 	ConfigCmd.AddCommand(listCmd, getCmd, setCmd, unsetCmd)
-	_ = os.Stderr // suppress unused import
 }

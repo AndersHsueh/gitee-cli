@@ -19,7 +19,6 @@ var listFlags struct {
 	state     string
 	labels    string
 	owner     string
-	repo      string
 	assignee  string
 	milestone string
 	limit     int
