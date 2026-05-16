@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"time"
 
 	"gitee-cli/cmd"
@@ -37,8 +38,10 @@ func runComments(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	var prNum int
-	fmt.Sscanf(args[0], "%d", &prNum)
+	prNum, err := strconv.Atoi(args[0])
+	if err != nil {
+		return fmt.Errorf("invalid PR number %q: must be an integer", args[0])
+	}
 
 	client, err := cmd.NewAPIClient()
 	if err != nil {

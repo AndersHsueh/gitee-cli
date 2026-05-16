@@ -3,6 +3,7 @@ package pr
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"gitee-cli/cmd"
@@ -48,8 +49,10 @@ func runReview(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	var prNum int
-	fmt.Sscanf(args[0], "%d", &prNum)
+	prNum, err := strconv.Atoi(args[0])
+	if err != nil {
+		return fmt.Errorf("invalid PR number %q: must be an integer", args[0])
+	}
 
 	// Determine review event
 	event := "COMMENT"
