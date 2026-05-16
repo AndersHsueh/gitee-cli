@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"gitee-cli/cmd"
@@ -109,9 +110,7 @@ func runStatus(cobraCmd *cobra.Command, args []string) error {
 		fmt.Printf("  Token:    %s\n", token)
 		fmt.Printf("  %s\n", color.New(color.FgYellow).SprintfFunc()("  ⚠️  Warning: Exposing token in plain text!"))
 	} else {
-		// Redact token: show only last 4 chars
-		masked := token[:4] + "..." + token[len(token)-4:]
-		fmt.Printf("  Token:    %s\n", masked)
+		fmt.Printf("  Token:    %s\n", maskToken(token))
 		fmt.Printf("  Hint:     Use --show-token to display full token\n")
 	}
 
@@ -156,4 +155,13 @@ func GetUserInfo() (*userResponse, error) {
 func FormatUserJSON(user *userResponse) string {
 	b, _ := json.MarshalIndent(user, "", "  ")
 	return string(b)
+}
+
+// maskToken returns a redacted form of the token. Tokens shorter than 8
+// characters are fully masked to avoid revealing meaningful prefixes.
+func maskToken(token string) string {
+	if len(token) < 8 {
+		return strings.Repeat("*", len(token))
+	}
+	return token[:4] + "..." + token[len(token)-4:]
 }
