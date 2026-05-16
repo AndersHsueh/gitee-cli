@@ -4,11 +4,14 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/http"
+	"strconv"
 	"time"
 
+	"github.com/spf13/cobra"
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
-	"github.com/spf13/cobra"
+	"gitee-cli/pkg/types"
 )
 
 var diffFlags struct {
@@ -39,25 +42,44 @@ func runDiff(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	var prNum int
-	fmt.Sscanf(args[0], "%d", &prNum)
+	prNum, err := strconv.Atoi(args[0])
+	if err != nil {
+		return fmt.Errorf("invalid PR number %q: must be an integer", args[0])
+	}
 
 	client, err := cmd.NewAPIClient()
 	if err != nil {
 		return err
 	}
 
-	path := api.PRsGet(owner, repoName, prNum)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
 	defer cancel()
 
-	// Get raw response (which will be JSON containing diff_url)
-	body, _, err := client.GetRaw(ctx, path)
-	if err != nil {
-		return fmt.Errorf("getting PR diff: %w", err)
+	var pr types.PullRequest
+	if err := client.Get(ctx, api.PRsGet(owner, repoName, prNum), &pr); err != nil {
+		return fmt.Errorf("getting PR: %w", err)
 	}
 
-	// Output the raw response (could be diff or JSON)
-	io.WriteString(cobraCmd.OutOrStdout(), string(body))
-	return nil
+	if pr.DiffURL == "" {
+		return fmt.Errorf("PR #%d has no diff_url", prNum)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, pr.DiffURL, nil)
+	if err != nil {
+		return fmt.Errorf("building diff request: %w", err)
+	}
+
+	httpClient := &http.Client{Timeout: time.Duration(cmd.GlobalTimeout) * time.Second}
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("fetching diff: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("diff request returned HTTP %d", resp.StatusCode)
+	}
+
+	_, err = io.Copy(cobraCmd.OutOrStdout(), resp.Body)
+	return err
 }
