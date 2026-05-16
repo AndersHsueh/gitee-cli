@@ -29,6 +29,12 @@ var rootCmd = &cobra.Command{
 Work with repositories, issues, pull requests, gists and more.`,
 	SilenceUsage:  true,
 	SilenceErrors: true,
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		if NoColor {
+			color.NoColor = true
+		}
+		return nil
+	},
 }
 
 // RegisterCommands adds all sub-command groups to rootCmd.
@@ -75,10 +81,6 @@ func NewAPIClient() (*api.Client, error) {
 	baseURL := GlobalAPIURL
 	if baseURL == "" {
 		baseURL = fmt.Sprintf("https://%s/api/v5", GlobalHostname)
-	}
-
-	if NoColor {
-		color.NoColor = true
 	}
 
 	return api.NewClient(token, baseURL, GlobalVerbose, GlobalTimeout), nil
