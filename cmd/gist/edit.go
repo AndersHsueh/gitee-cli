@@ -2,7 +2,6 @@ package gist
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -111,19 +110,4 @@ func runEdit(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	return nil
-}
-
-// GistEditRequestExtended extends the types.GistEditRequest to handle multi-file edits properly
-type GistEditRequestExtended struct {
-	Description string `json:"description,omitempty"`
-	Files       map[string]struct {
-		Content  string `json:"content,omitempty"`
-		Filename string `json:"filename,omitempty"`
-	} `json:"files,omitempty"`
-}
-
-// MarshalJSON implements json.Marshaler for proper multi-file edit format
-func (r GistEditRequestExtended) MarshalJSON() ([]byte, error) {
-	type alias GistEditRequestExtended
-	return json.Marshal((*alias)(&r))
 }
