@@ -6,8 +6,8 @@ import (
 	"os/exec"
 	"runtime"
 
-	"github.com/spf13/cobra"
 	"gitee-cli/internal/utils"
+	"github.com/spf13/cobra"
 )
 
 var browseCmd = &cobra.Command{

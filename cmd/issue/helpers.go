@@ -6,10 +6,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/spf13/cobra"
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
 	"gitee-cli/pkg/types"
+	"github.com/spf13/cobra"
 )
 
 // resolveRepo returns owner and repoName from --owner/--repo flags or the
@@ -65,31 +65,31 @@ var commentFlags struct {
 }
 
 var editCmd = &cobra.Command{
-	Use:   "edit <number>",
-	Short: "Edit an issue",
+	Use:     "edit <number>",
+	Short:   "Edit an issue",
 	Example: `  gitee issue edit 42 --repo owner/repo --title "New title"`,
-	RunE:  runEdit,
+	RunE:    runEdit,
 }
 
 var closeCmd = &cobra.Command{
-	Use:   "close <number>",
-	Short: "Close an issue",
+	Use:     "close <number>",
+	Short:   "Close an issue",
 	Example: `  gitee issue close 42 --repo owner/repo`,
-	RunE:  runClose,
+	RunE:    runClose,
 }
 
 var reopenCmd = &cobra.Command{
-	Use:   "reopen <number>",
-	Short: "Reopen an issue",
+	Use:     "reopen <number>",
+	Short:   "Reopen an issue",
 	Example: `  gitee issue reopen 42 --repo owner/repo`,
-	RunE:  runReopen,
+	RunE:    runReopen,
 }
 
 var commentCmd = &cobra.Command{
-	Use:   "comment <number>",
-	Short: "Add a comment to an issue",
+	Use:     "comment <number>",
+	Short:   "Add a comment to an issue",
 	Example: `  gitee issue comment 42 --repo owner/repo --body "Comment text"`,
-	RunE:  runComment,
+	RunE:    runComment,
 }
 
 func init() {

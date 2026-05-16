@@ -9,11 +9,11 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/spf13/cobra"
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
 	"gitee-cli/internal/config"
 	"gitee-cli/internal/utils"
+	"github.com/spf13/cobra"
 )
 
 var SearchCmd = &cobra.Command{

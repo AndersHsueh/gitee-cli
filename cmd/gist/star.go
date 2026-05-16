@@ -5,16 +5,16 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/spf13/cobra"
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
+	"github.com/spf13/cobra"
 )
 
 var starCmd = &cobra.Command{
-	Use:   "star <id>",
-	Short: "Star a gist",
+	Use:     "star <id>",
+	Short:   "Star a gist",
 	Example: `  gitee gist star abc123`,
-	RunE: runStar,
+	RunE:    runStar,
 }
 
 func runStar(cobraCmd *cobra.Command, args []string) error {

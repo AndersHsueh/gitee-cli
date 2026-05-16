@@ -6,9 +6,9 @@ import (
 	"io"
 	"time"
 
-	"github.com/spf13/cobra"
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
+	"github.com/spf13/cobra"
 )
 
 var diffFlags struct {
@@ -17,10 +17,10 @@ var diffFlags struct {
 }
 
 var diffCmd = &cobra.Command{
-	Use:   "diff <number>",
-	Short: "Show pull request diff",
+	Use:     "diff <number>",
+	Short:   "Show pull request diff",
 	Example: `  gitee pr diff 42 --repo owner/repo`,
-	RunE: runDiff,
+	RunE:    runDiff,
 }
 
 func init() {

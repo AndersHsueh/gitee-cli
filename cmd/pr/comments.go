@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/spf13/cobra"
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
 	"gitee-cli/pkg/types"
+	"github.com/spf13/cobra"
 )
 
 var commentsFlags struct {
@@ -18,11 +18,11 @@ var commentsFlags struct {
 }
 
 var commentsCmd = &cobra.Command{
-	Use:   "comments <number>",
-	Short: "List comments on a pull request",
+	Use:     "comments <number>",
+	Short:   "List comments on a pull request",
 	Example: `  gitee pr comments 42 --repo owner/repo`,
-	Args:  cobra.ExactArgs(1),
-	RunE:  runComments,
+	Args:    cobra.ExactArgs(1),
+	RunE:    runComments,
 }
 
 func init() {

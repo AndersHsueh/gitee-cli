@@ -5,16 +5,16 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/spf13/cobra"
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
+	"github.com/spf13/cobra"
 )
 
 var deleteCmd = &cobra.Command{
-	Use:   "delete <id>",
-	Short: "Delete a gist",
+	Use:     "delete <id>",
+	Short:   "Delete a gist",
 	Example: `  gitee gist delete abc123`,
-	RunE: runDelete,
+	RunE:    runDelete,
 }
 
 func runDelete(cobraCmd *cobra.Command, args []string) error {

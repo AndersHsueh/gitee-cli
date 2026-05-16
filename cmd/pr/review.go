@@ -5,19 +5,19 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/spf13/cobra"
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
 	"gitee-cli/pkg/types"
+	"github.com/spf13/cobra"
 )
 
 var reviewFlags struct {
-	owner   string
-	repo    string
-	approve bool
+	owner          string
+	repo           string
+	approve        bool
 	requestChanges bool
-	comment bool
-	body    string
+	comment        bool
+	body           string
 }
 
 var reviewCmd = &cobra.Command{

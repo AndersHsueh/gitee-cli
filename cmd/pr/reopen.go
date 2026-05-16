@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/spf13/cobra"
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
 	"gitee-cli/pkg/types"
+	"github.com/spf13/cobra"
 )
 
 var reopenFlags struct {
@@ -17,10 +17,10 @@ var reopenFlags struct {
 }
 
 var reopenCmd = &cobra.Command{
-	Use:   "reopen <number>",
-	Short: "Reopen a pull request",
+	Use:     "reopen <number>",
+	Short:   "Reopen a pull request",
 	Example: `  gitee pr reopen 42 --repo owner/repo`,
-	RunE: runReopen,
+	RunE:    runReopen,
 }
 
 func init() {

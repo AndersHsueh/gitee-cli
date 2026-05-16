@@ -6,29 +6,29 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/fatih/color"
-	"github.com/spf13/cobra"
 	"gitee-cli/cmd"
 	"gitee-cli/internal/config"
+	"github.com/fatih/color"
+	"github.com/spf13/cobra"
 )
 
 type userResponse struct {
-	ID           int64   `json:"id"`
-	Login        string  `json:"login"`
-	Name         string  `json:"name"`
-	Email        string  `json:"email"`
-	AvatarURL    string  `json:"avatar_url"`
-	HTMLURL      string  `json:"html_url"`
-	Blog         string  `json:"blog"`
-	Bio          string  `json:"bio"`
-	PublicRepos  int     `json:"public_repos"`
-	PublicGists  int     `json:"public_gists"`
-	Followers    int     `json:"followers"`
-	Following    int     `json:"following"`
-	CreatedAt    string  `json:"created_at"`
-	UpdatedAt    string  `json:"updated_at"`
-	Type         string  `json:"type"`
-	StarredURL   string  `json:"starred_url"`
+	ID               int64  `json:"id"`
+	Login            string `json:"login"`
+	Name             string `json:"name"`
+	Email            string `json:"email"`
+	AvatarURL        string `json:"avatar_url"`
+	HTMLURL          string `json:"html_url"`
+	Blog             string `json:"blog"`
+	Bio              string `json:"bio"`
+	PublicRepos      int    `json:"public_repos"`
+	PublicGists      int    `json:"public_gists"`
+	Followers        int    `json:"followers"`
+	Following        int    `json:"following"`
+	CreatedAt        string `json:"created_at"`
+	UpdatedAt        string `json:"updated_at"`
+	Type             string `json:"type"`
+	StarredURL       string `json:"starred_url"`
 	SubscriptionsURL string `json:"subscriptions_url"`
 	OrganizationsURL string `json:"organizations_url"`
 }

@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/spf13/cobra"
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
 	"gitee-cli/pkg/types"
+	"github.com/spf13/cobra"
 )
 
 var branchesFlags struct {
@@ -18,10 +18,10 @@ var branchesFlags struct {
 }
 
 var branchesCmd = &cobra.Command{
-	Use:   "branches",
-	Short: "List branches in a repository",
+	Use:     "branches",
+	Short:   "List branches in a repository",
 	Example: `  gitee repo branches --repo owner/repo`,
-	RunE:  runBranches,
+	RunE:    runBranches,
 }
 
 func init() {

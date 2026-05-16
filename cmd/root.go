@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/fatih/color"
-	"github.com/spf13/cobra"
 	"gitee-cli/internal/api"
 	"gitee-cli/internal/config"
+	"github.com/fatih/color"
+	"github.com/spf13/cobra"
 )
 
 // Global flag values populated by PersistentPreRunE.

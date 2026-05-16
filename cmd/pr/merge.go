@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/fatih/color"
-	"github.com/spf13/cobra"
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
 	"gitee-cli/pkg/types"
+	"github.com/fatih/color"
+	"github.com/spf13/cobra"
 )
 
 var mergeFlags struct {

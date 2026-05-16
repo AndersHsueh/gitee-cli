@@ -8,16 +8,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fatih/color"
-	"github.com/spf13/cobra"
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
 	"gitee-cli/pkg/types"
+	"github.com/fatih/color"
+	"github.com/spf13/cobra"
 )
 
 var editFlags struct {
 	description string
-	files      []string
+	files       []string
 }
 
 var editCmd = &cobra.Command{
@@ -115,7 +115,7 @@ func runEdit(cobraCmd *cobra.Command, args []string) error {
 
 // GistEditRequestExtended extends the types.GistEditRequest to handle multi-file edits properly
 type GistEditRequestExtended struct {
-	Description string            `json:"description,omitempty"`
+	Description string `json:"description,omitempty"`
 	Files       map[string]struct {
 		Content  string `json:"content,omitempty"`
 		Filename string `json:"filename,omitempty"`

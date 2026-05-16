@@ -6,9 +6,9 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/spf13/cobra"
 	"gitee-cli/cmd"
 	"gitee-cli/internal/config"
+	"github.com/spf13/cobra"
 )
 
 var cloneCmd = &cobra.Command{

@@ -8,10 +8,10 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/spf13/cobra"
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
 	"gitee-cli/pkg/types"
+	"github.com/spf13/cobra"
 )
 
 var viewFlags struct {
@@ -19,10 +19,10 @@ var viewFlags struct {
 }
 
 var viewCmd = &cobra.Command{
-	Use:   "view [<org>]",
-	Short: "View organization details",
+	Use:     "view [<org>]",
+	Short:   "View organization details",
 	Example: `  gitee org view my-org`,
-	RunE: runView,
+	RunE:    runView,
 }
 
 func init() {

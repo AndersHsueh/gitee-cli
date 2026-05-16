@@ -5,21 +5,21 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/fatih/color"
-	"github.com/spf13/cobra"
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
 	"gitee-cli/pkg/types"
+	"github.com/fatih/color"
+	"github.com/spf13/cobra"
 )
 
 var createFlags struct {
-	owner   string
-	repo    string
-	title   string
-	body    string
-	source  string
-	target  string
-	draft   bool
+	owner  string
+	repo   string
+	title  string
+	body   string
+	source string
+	target string
+	draft  bool
 }
 
 var createCmd = &cobra.Command{

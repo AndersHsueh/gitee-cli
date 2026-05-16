@@ -10,11 +10,11 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/fatih/color"
-	"github.com/spf13/cobra"
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
 	"gitee-cli/pkg/types"
+	"github.com/fatih/color"
+	"github.com/spf13/cobra"
 )
 
 // Label command flags
@@ -69,7 +69,7 @@ var labelListCmd = &cobra.Command{
 	Short: "List labels in a repository",
 	Example: `  gitee issue label list --repo owner/repo
   gitee issue label list --repo owner/repo --limit 50`,
-	RunE:  runLabelList,
+	RunE: runLabelList,
 }
 
 var labelViewCmd = &cobra.Command{
@@ -77,7 +77,7 @@ var labelViewCmd = &cobra.Command{
 	Short: "View label details",
 	Example: `  gitee issue label view --repo owner/repo --name bug
   gitee issue label view -R owner/repo -n enhancement`,
-	RunE:  runLabelView,
+	RunE: runLabelView,
 }
 
 var labelCreateCmd = &cobra.Command{
@@ -85,7 +85,7 @@ var labelCreateCmd = &cobra.Command{
 	Short: "Create a new label",
 	Example: `  gitee issue label create --repo owner/repo --name bug --color ff0000
   gitee issue label create --repo owner/repo --name enhancement --color 00ff00`,
-	RunE:  runLabelCreate,
+	RunE: runLabelCreate,
 }
 
 var labelUpdateCmd = &cobra.Command{
@@ -93,7 +93,7 @@ var labelUpdateCmd = &cobra.Command{
 	Short: "Update an existing label",
 	Example: `  gitee issue label update --repo owner/repo --name bug --color 00ff00
   gitee issue label update --repo owner/repo --name bug --new-name fixed-bug`,
-	RunE:  runLabelUpdate,
+	RunE: runLabelUpdate,
 }
 
 var labelDeleteCmd = &cobra.Command{
@@ -101,7 +101,7 @@ var labelDeleteCmd = &cobra.Command{
 	Short: "Delete a label",
 	Example: `  gitee issue label delete --repo owner/repo --name bug
   gitee issue label delete -R owner/repo -n wontfix`,
-	RunE:  runLabelDelete,
+	RunE: runLabelDelete,
 }
 
 func init() {

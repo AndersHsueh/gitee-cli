@@ -8,10 +8,10 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/spf13/cobra"
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
 	"gitee-cli/pkg/types"
+	"github.com/spf13/cobra"
 )
 
 var orgRepoFlags struct {
@@ -20,10 +20,10 @@ var orgRepoFlags struct {
 }
 
 var repoCmd = &cobra.Command{
-	Use:   "repos <org>",
-	Short: "List organization repositories",
+	Use:     "repos <org>",
+	Short:   "List organization repositories",
 	Example: `  gitee org repos my-org`,
-	RunE: runOrgRepos,
+	RunE:    runOrgRepos,
 }
 
 func init() {

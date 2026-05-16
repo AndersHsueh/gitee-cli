@@ -8,10 +8,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"gitee-cli/pkg/types"
 	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gitee-cli/pkg/types"
 )
 
 func newTestClient(t *testing.T, handler http.HandlerFunc) (*Client, *httptest.Server) {

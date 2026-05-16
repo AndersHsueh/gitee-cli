@@ -5,17 +5,17 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/spf13/cobra"
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
+	"github.com/spf13/cobra"
 )
 
 var unstarCmd = &cobra.Command{
-	Use:   "unstar <id>",
-	Short: "Unstar a gist",
+	Use:     "unstar <id>",
+	Short:   "Unstar a gist",
 	Example: `  gitee gist unstar <gistID>`,
-	Args:  cobra.ExactArgs(1),
-	RunE:  runUnstar,
+	Args:    cobra.ExactArgs(1),
+	RunE:    runUnstar,
 }
 
 func runUnstar(c *cobra.Command, args []string) error {

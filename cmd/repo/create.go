@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/fatih/color"
-	"github.com/spf13/cobra"
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
 	"gitee-cli/pkg/types"
+	"github.com/fatih/color"
+	"github.com/spf13/cobra"
 )
 
 var createFlags struct {
@@ -54,8 +54,8 @@ func runCreate(cobraCmd *cobra.Command, args []string) error {
 		Description:       createFlags.description,
 		Private:           createFlags.private,
 		AutoInit:          createFlags.autoInit,
-		GitignoreTemplate:  createFlags.gitignore,
-		LicenseTemplate:    createFlags.license,
+		GitignoreTemplate: createFlags.gitignore,
+		LicenseTemplate:   createFlags.license,
 		Organization:      createFlags.org,
 	}
 

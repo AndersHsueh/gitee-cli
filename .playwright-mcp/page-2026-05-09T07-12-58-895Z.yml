@@ -1,0 +1,80 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e4]:
+      - generic "MiniMax" [ref=e23]
+      - generic [ref=e7]:
+        - generic [ref=e24]: 转人工
+        - text: 
+        - generic [ref=e9] [cursor=pointer]: 
+        - generic [ref=e61] [cursor=pointer]: 
+        - text:  
+    - text: 
+    - generic [ref=e12]:
+      - text: 
+      - list [ref=e13]:
+        - listitem
+        - listitem
+        - listitem [ref=e25]: MiniMax客服机器人 为您服务
+        - listitem [ref=e26]:
+          - paragraph [ref=e28]: MiniMax客服机器人 15:11:45
+          - generic [ref=e31]:
+            - generic [ref=e32]:
+              - paragraph [ref=e33]: 您好,欢迎使用 MiniMax 开放平台业务客服 👋
+              - paragraph [ref=e34]: 我可以帮您解答模型选型、定价计费、API 接入、报错排查等业务问题。
+              - paragraph [ref=e35]: 下方是高频问题,可直接点击查看;也可以在输入框直接描述您的具体问题。
+            - link "MiniMax 开放平台有哪些模型可以调用?" [ref=e36] [cursor=pointer]:
+              - /url: javascript:void(0)
+            - link "Token Plan 是什么?有哪些套餐?" [ref=e37] [cursor=pointer]:
+              - /url: javascript:void(0)
+            - link "怎么订阅 Token Plan?" [ref=e38] [cursor=pointer]:
+              - /url: javascript:void(0)
+            - link "怎么获取 API Key?" [ref=e39] [cursor=pointer]:
+              - /url: javascript:void(0)
+            - link "怎么申请 API 发票?" [ref=e40] [cursor=pointer]:
+              - /url: javascript:void(0)
+            - link "Claude Code 怎么接入 MiniMax?" [ref=e41] [cursor=pointer]:
+              - /url: javascript:void(0)
+            - link "API 报错(401 / 2061 / 2062)怎么排查?" [ref=e42] [cursor=pointer]:
+              - /url: javascript:void(0)
+            - link "怎么提升 API 速率限制?" [ref=e43] [cursor=pointer]:
+              - /url: javascript:void(0)
+        - listitem [ref=e53]:
+          - paragraph [ref=e54]: 15:12:34
+          - generic [ref=e56]:
+            - text: 
+            - generic [ref=e57]:
+              - text: 出图和视频API一直返回HTTP 404，账号已认证成功，base_url配置为
+              - link "https://api.minimaxi.com/" [ref=e58] [cursor=pointer]:
+                - /url: https://api.minimaxi.com/
+              - text: ，配额显示正常但生成接口全部404
+        - listitem [ref=e62]:
+          - paragraph [ref=e64]: MiniMax客服机器人 15:12:45
+          - generic [ref=e65]:
+            - generic [ref=e67]:
+              - text: "{\"reasoning_analysis\": \"用户反馈出图和视频API一直返回HTTP 404，账号已认证成功，base_url配置为"
+              - link "https://api.minimaxi.com/" [ref=e68] [cursor=pointer]:
+                - /url: https://api.minimaxi.com/
+              - text: ，配额显示正常但生成接口全部404。首先，我需要查看公司知识库中是否有相关的404错误排查信息。在提供的知识库中，主要涉及MCP工具配置、文件管理接口、Claude Code客户端报错（401）、错误码与速率限制等内容，但没有直接提到404错误的排查步骤。不过，知识库中提到了国内服务的Base URL是
+              - link "https://api.minimaxi.com" [ref=e69] [cursor=pointer]:
+                - /url: https://api.minimaxi.com
+              - text: "，用户已经配置了这个URL，所以可能不是Base URL的问题。404错误通常表示资源未找到，可能的原因包括接口路径错误、API Key权限不足、文件ID错误等。根据文件管理接口的信息，用户可能在调用文件检索或下载接口时使用了错误的file_id，或者接口端点不正确。例如，文件检索接口的端点是GET /v1/files/retrieve?file_id={file_id}"
+            - generic "此消息由AI生成" [ref=e70]:
+              - generic [ref=e71]: 
+              - text: 此消息由AI生成
+    - generic [ref=e14]:
+      - list [ref=e46]:
+        - listitem [ref=e47] [cursor=pointer]: 常见问题
+      - text: 
+      - generic [ref=e15]:
+        - text:  
+        - generic [ref=e16]:
+          - textbox [ref=e17] [cursor=pointer]:
+            - /placeholder: " "
+          - generic [ref=e19] [cursor=pointer]: 
+        - generic [ref=e21] [cursor=pointer]: 
+        - text: 
+      - text:               
+    - link "由容联七陌提供技术服务" [ref=e49] [cursor=pointer]:
+      - /url: "#"
+    - text:            
+  - text:   center 

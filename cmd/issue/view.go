@@ -7,18 +7,18 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fatih/color"
-	"github.com/spf13/cobra"
 	"gitee-cli/cmd"
 	"gitee-cli/pkg/types"
+	"github.com/fatih/color"
+	"github.com/spf13/cobra"
 )
 
 var viewCmd = &cobra.Command{
-	Use:   "view <number>",
-	Short: "View details of an issue",
-	Args:  cobra.ExactArgs(1),
+	Use:     "view <number>",
+	Short:   "View details of an issue",
+	Args:    cobra.ExactArgs(1),
 	Example: `  gitee issue view 42 --repo owner/repo`,
-	RunE: runView,
+	RunE:    runView,
 }
 
 func init() {

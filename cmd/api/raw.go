@@ -9,16 +9,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/spf13/cobra"
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
+	"github.com/spf13/cobra"
 )
 
 var rawFlags struct {
-	method  string
-	fields  []string
-	raw     bool
-	header  []string
+	method string
+	fields []string
+	raw    bool
+	header []string
 }
 
 var rawCmd = &cobra.Command{

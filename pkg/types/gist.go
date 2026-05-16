@@ -2,17 +2,17 @@ package types
 
 // Gist represents a Gitee gist.
 type Gist struct {
-	ID          string          `json:"id"`
-	URL         string          `json:"url"`
-	HTMLURL     string          `json:"html_url"`
+	ID          string              `json:"id"`
+	URL         string              `json:"url"`
+	HTMLURL     string              `json:"html_url"`
 	Files       map[string]GistFile `json:"files"`
-	Public      bool            `json:"public"`
-	Description string          `json:"description"`
-	Comments    int             `json:"comments"`
-	User        *User           `json:"user"`
-	CreatedAt   string          `json:"created_at"`
-	UpdatedAt   string          `json:"updated_at"`
-	GistURL     string          `json:"gist_url"`
+	Public      bool                `json:"public"`
+	Description string              `json:"description"`
+	Comments    int                 `json:"comments"`
+	User        *User               `json:"user"`
+	CreatedAt   string              `json:"created_at"`
+	UpdatedAt   string              `json:"updated_at"`
+	GistURL     string              `json:"gist_url"`
 }
 
 // GistFile represents a file within a gist.
@@ -39,7 +39,7 @@ type GistFileContent struct {
 
 // GistEditRequest is used when editing a gist.
 type GistEditRequest struct {
-	Description string            `json:"description,omitempty"`
+	Description string `json:"description,omitempty"`
 	Files       map[string]struct {
 		Content  string `json:"content,omitempty"`
 		Filename string `json:"filename,omitempty"`

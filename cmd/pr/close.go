@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/spf13/cobra"
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
 	"gitee-cli/pkg/types"
+	"github.com/spf13/cobra"
 )
 
 var closeFlags struct {
@@ -17,10 +17,10 @@ var closeFlags struct {
 }
 
 var closeCmd = &cobra.Command{
-	Use:   "close <number>",
-	Short: "Close a pull request",
+	Use:     "close <number>",
+	Short:   "Close a pull request",
 	Example: `  gitee pr close 42 --repo owner/repo`,
-	RunE: runClose,
+	RunE:    runClose,
 }
 
 func init() {
