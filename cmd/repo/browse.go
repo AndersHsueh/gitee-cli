@@ -6,8 +6,9 @@ import (
 	"os/exec"
 	"runtime"
 
-	"gitee-cli/internal/utils"
 	"github.com/spf13/cobra"
+	"gitee-cli/cmd"
+	"gitee-cli/internal/utils"
 )
 
 var browseCmd = &cobra.Command{
@@ -31,7 +32,7 @@ func runBrowse(cobraCmd *cobra.Command, args []string) error {
 		}
 	}
 
-	url := fmt.Sprintf("https://gitee.com/%s/%s", owner, repoName)
+	url := fmt.Sprintf("https://%s/%s/%s", cmd.GlobalHostname, owner, repoName)
 
 	// Try to open browser
 	browser := os.Getenv("BROWSER")
