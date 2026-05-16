@@ -61,10 +61,6 @@ func runList(cobraCmd *cobra.Command, args []string) error {
 
 	var repos []types.Repository
 	if err := client.Get(ctx, path, &repos); err != nil {
-		// Provide friendlier error message for --owner with non-existent user
-		if listFlags.owner != "" {
-			return fmt.Errorf("user %q not found or has no public repositories (HTTP 404). Check the username or ensure the user exists on Gitee", listFlags.owner)
-		}
 		return fmt.Errorf("listing repositories: %w", err)
 	}
 
