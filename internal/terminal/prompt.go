@@ -150,13 +150,3 @@ func SelectMulti(message string, options []string) ([]int, error) {
 		}
 	}
 }
-
-// Password displays a password prompt without echoing input.
-func Password(message string) (string, error) {
-	fmt.Print(message + ": ")
-	password, err := bufio.NewReader(os.Stdin).ReadString('\n')
-	if err != nil {
-		return "", err
-	}
-	return strings.TrimSpace(password), nil
-}
