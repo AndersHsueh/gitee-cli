@@ -55,7 +55,7 @@ func runEdit(cobraCmd *cobra.Command, args []string) error {
 		Description:   editFlags.description,
 		DefaultBranch: editFlags.defaultBranch,
 	}
-	if editFlags.privateValue {
+	if cobraCmd.Flags().Changed("private") {
 		req.Private = &editFlags.privateValue
 	}
 
