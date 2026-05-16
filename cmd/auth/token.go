@@ -25,8 +25,6 @@ var tokenCmd = &cobra.Command{
 	},
 }
 
-var logoutYes bool
-
 var logoutCmd = &cobra.Command{
 	Use:   "logout",
 	Short: "Log out and remove stored token",
@@ -51,6 +49,3 @@ var logoutCmd = &cobra.Command{
 	},
 }
 
-func init() {
-	logoutCmd.Flags().BoolVar(&logoutYes, "yes", false, "Skip confirmation prompt")
-}

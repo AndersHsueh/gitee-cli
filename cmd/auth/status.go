@@ -2,7 +2,6 @@ package auth
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -131,30 +130,6 @@ func runStatus(cobraCmd *cobra.Command, args []string) error {
 
 	fmt.Printf("\n")
 	return nil
-}
-
-// GetUserInfo fetches detailed user information.
-func GetUserInfo() (*userResponse, error) {
-	apiClient, err := cmd.NewAPIClient()
-	if err != nil {
-		return nil, err
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
-	defer cancel()
-
-	var user userResponse
-	if err := apiClient.Get(ctx, "/user", &user); err != nil {
-		return nil, err
-	}
-
-	return &user, nil
-}
-
-// FormatUserJSON formats user info as JSON.
-func FormatUserJSON(user *userResponse) string {
-	b, _ := json.MarshalIndent(user, "", "  ")
-	return string(b)
 }
 
 // maskToken returns a redacted form of the token. Tokens shorter than 8
