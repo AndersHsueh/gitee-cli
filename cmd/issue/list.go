@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"gitee-cli/cmd"
+	"gitee-cli/internal/utils"
 	"gitee-cli/pkg/types"
 	"github.com/spf13/cobra"
 )
@@ -97,10 +98,7 @@ func runList(cobraCmd *cobra.Command, args []string) error {
 		if labelStr == "" {
 			labelStr = "-"
 		}
-		title := i.Title
-		if len(title) > 60 {
-			title = title[:57] + "..."
-		}
+		title := utils.Truncate(i.Title, 60)
 		updated := i.UpdatedAt.Format("2006-01-02")
 		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", i.Number, title, i.State, labelStr, updated)
 	}

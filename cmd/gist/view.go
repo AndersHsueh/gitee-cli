@@ -8,6 +8,7 @@ import (
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
+	"gitee-cli/internal/utils"
 	"gitee-cli/pkg/types"
 	"github.com/spf13/cobra"
 )
@@ -79,9 +80,7 @@ func runView(cobraCmd *cobra.Command, args []string) error {
 					content = string(rawResp)
 				}
 			}
-			if len(content) > 100 {
-				content = content[:100] + "..."
-			}
+			content = utils.Truncate(content, 100)
 			fmt.Println(content)
 		}
 	}
