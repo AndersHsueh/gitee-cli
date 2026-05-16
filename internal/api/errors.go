@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/go-resty/resty/v2"
 )
@@ -57,4 +58,13 @@ func http_status_message(code int) string {
 	default:
 		return fmt.Sprintf("unexpected status %d", code)
 	}
+}
+
+// IsNotFound reports whether err indicates an HTTP 404 response.
+func IsNotFound(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "404") && strings.Contains(msg, "not found")
 }
