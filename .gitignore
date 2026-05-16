@@ -33,3 +33,9 @@ coverage.out
 # Claude Code
 agent.md
 claude.md
+CLAUDE.md
+AGENTS.md
+
+# Guide docs (local only)
+issue-fix-guide*.md
+如何编写一份给minimax的可靠开发引导.md
