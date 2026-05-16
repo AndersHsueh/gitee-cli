@@ -80,11 +80,7 @@ func runSearchRepos(c *cobra.Command, args []string) error {
 
 	var result []interface{}
 	if err := client.Get(ctx, path, &result); err != nil {
-		// Gitee may 400 on unsupported params; retry without filters
-		if result == nil {
-			path2 := fmt.Sprintf("/search/repositories?q=%s&per_page=%d", q, reposFlags.limit)
-			_ = client.Get(ctx, path2, &result)
-		}
+		return fmt.Errorf("search repos: %w", err)
 	}
 
 	return printSearchResults(result, "repos")
