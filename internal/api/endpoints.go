@@ -45,20 +45,20 @@ func IssuesList(owner, repo string) string {
 	return fmt.Sprintf("/repos/%s/%s/issues", owner, repo)
 }
 
-func IssuesGet(owner, repo string, number int) string {
-	return fmt.Sprintf("/repos/%s/%s/issues/%d", owner, repo, number)
+func IssuesGet(owner, repo, number string) string {
+	return fmt.Sprintf("/repos/%s/%s/issues/%s", owner, repo, number)
 }
 
 func IssuesCreate(owner string) string {
 	return fmt.Sprintf("/repos/%s/issues", owner)
 }
 
-func IssuesEdit(owner, repo string, number int) string {
-	return fmt.Sprintf("/repos/%s/%s/issues/%d", owner, repo, number)
+func IssuesEdit(owner, repo, number string) string {
+	return fmt.Sprintf("/repos/%s/%s/issues/%s", owner, repo, number)
 }
 
-func IssuesComment(owner, repo string, number int) string {
-	return fmt.Sprintf("/repos/%s/%s/issues/%d/comments", owner, repo, number)
+func IssuesComment(owner, repo, number string) string {
+	return fmt.Sprintf("/repos/%s/%s/issues/%s/comments", owner, repo, number)
 }
 
 // Pull requests endpoints

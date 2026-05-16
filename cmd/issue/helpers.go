@@ -125,8 +125,7 @@ func runEdit(cobraCmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	var issueNum int
-	fmt.Sscanf(args[0], "%d", &issueNum)
+	issueNum := args[0]
 
 	client, err := cmd.NewAPIClient()
 	if err != nil {
@@ -158,7 +157,7 @@ func runEdit(cobraCmd *cobra.Command, args []string) error {
 	if err := client.Patch(ctx, path, req, &issue); err != nil {
 		return fmt.Errorf("editing issue: %w", err)
 	}
-	fmt.Printf("Issue #%d updated\n", issueNum)
+	fmt.Printf("Issue #%s updated\n", issueNum)
 	return nil
 }
 
@@ -170,8 +169,7 @@ func runClose(cobraCmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	var issueNum int
-	fmt.Sscanf(args[0], "%d", &issueNum)
+	issueNum := args[0]
 
 	client, err := cmd.NewAPIClient()
 	if err != nil {
@@ -187,7 +185,7 @@ func runClose(cobraCmd *cobra.Command, args []string) error {
 	if err := client.Patch(ctx, path, req, &issue); err != nil {
 		return fmt.Errorf("closing issue: %w", err)
 	}
-	fmt.Printf("Issue #%d closed\n", issueNum)
+	fmt.Printf("Issue #%s closed\n", issueNum)
 	return nil
 }
 
@@ -199,8 +197,7 @@ func runReopen(cobraCmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	var issueNum int
-	fmt.Sscanf(args[0], "%d", &issueNum)
+	issueNum := args[0]
 
 	client, err := cmd.NewAPIClient()
 	if err != nil {
@@ -216,7 +213,7 @@ func runReopen(cobraCmd *cobra.Command, args []string) error {
 	if err := client.Patch(ctx, path, req, &issue); err != nil {
 		return fmt.Errorf("reopening issue: %w", err)
 	}
-	fmt.Printf("Issue #%d reopened\n", issueNum)
+	fmt.Printf("Issue #%s reopened\n", issueNum)
 	return nil
 }
 
@@ -228,8 +225,7 @@ func runComment(cobraCmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	var issueNum int
-	fmt.Sscanf(args[0], "%d", &issueNum)
+	issueNum := args[0]
 
 	client, err := cmd.NewAPIClient()
 	if err != nil {
@@ -244,6 +240,6 @@ func runComment(cobraCmd *cobra.Command, args []string) error {
 	if err := client.Post(ctx, path, req, nil); err != nil {
 		return fmt.Errorf("commenting on issue: %w", err)
 	}
-	fmt.Printf("Comment added to issue #%d\n", issueNum)
+	fmt.Printf("Comment added to issue #%s\n", issueNum)
 	return nil
 }
