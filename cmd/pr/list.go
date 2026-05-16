@@ -117,10 +117,14 @@ func resolvePRRepo(owner, repo string) (string, string, error) {
 		return "", "", fmt.Errorf("--repo is required (e.g. --repo owner/repo)")
 	}
 	o, r := utils.ParseOwnerRepo(combined)
-	if o == "" || r == "" {
-		return "", "", fmt.Errorf("invalid --repo format %q, expected owner/repo", combined)
+	if o != "" && r != "" {
+		return o, r, nil
 	}
-	return o, r, nil
+	// combined 不是 owner/repo 形式；如果显式给了 --owner，把 combined 当 repo 名
+	if owner != "" && combined != "" && !strings.Contains(combined, "/") {
+		return owner, combined, nil
+	}
+	return "", "", fmt.Errorf("invalid --repo format %q, expected owner/repo", combined)
 }
 
 // isNotFoundError checks if the error is an HTTP 404 not found error.
