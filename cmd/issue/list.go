@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
 	"text/tabwriter"
@@ -53,17 +54,19 @@ func runList(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	path := fmt.Sprintf("/repos/%s/%s/issues?state=%s&per_page=%d",
-		owner, repoName, listFlags.state, listFlags.limit)
+	qv := url.Values{}
+	qv.Set("state", listFlags.state)
+	qv.Set("per_page", fmt.Sprintf("%d", listFlags.limit))
 	if listFlags.labels != "" {
-		path += "&labels=" + listFlags.labels
+		qv.Set("labels", listFlags.labels)
 	}
 	if listFlags.assignee != "" {
-		path += "&assignee=" + listFlags.assignee
+		qv.Set("assignee", listFlags.assignee)
 	}
 	if listFlags.milestone != "" {
-		path += "&milestone=" + listFlags.milestone
+		qv.Set("milestone", listFlags.milestone)
 	}
+	path := fmt.Sprintf("/repos/%s/%s/issues?%s", owner, repoName, qv.Encode())
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
 	defer cancel()

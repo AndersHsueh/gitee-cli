@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
 	"text/tabwriter"
@@ -67,16 +68,19 @@ func runSearchRepos(c *cobra.Command, args []string) error {
 	defer cancel()
 
 	// Build path
-	path := fmt.Sprintf("/search/repositories?q=%s&per_page=%d", q, reposFlags.limit)
+	qv := url.Values{}
+	qv.Set("q", q)
+	qv.Set("per_page", fmt.Sprintf("%d", reposFlags.limit))
 	if reposFlags.sort != "" {
-		path += "&sort=" + reposFlags.sort
+		qv.Set("sort", reposFlags.sort)
 	}
 	if reposFlags.order != "" {
-		path += "&order=" + reposFlags.order
+		qv.Set("order", reposFlags.order)
 	}
 	if reposFlags.language != "" {
-		path += "&language=" + reposFlags.language
+		qv.Set("language", reposFlags.language)
 	}
+	path := "/search/repositories?" + qv.Encode()
 
 	var result []interface{}
 	if err := client.Get(ctx, path, &result); err != nil {
@@ -115,13 +119,16 @@ func runSearchIssues(c *cobra.Command, args []string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
 	defer cancel()
 
-	path := fmt.Sprintf("/search/issues?q=%s&per_page=%d", q, issuesFlags.limit)
+	qv := url.Values{}
+	qv.Set("q", q)
+	qv.Set("per_page", fmt.Sprintf("%d", issuesFlags.limit))
 	if issuesFlags.state != "" && issuesFlags.state != "all" {
-		path += "&state=" + issuesFlags.state
+		qv.Set("state", issuesFlags.state)
 	}
 	if issuesFlags.labels != "" {
-		path += "&labels=" + issuesFlags.labels
+		qv.Set("labels", issuesFlags.labels)
 	}
+	path := "/search/issues?" + qv.Encode()
 
 	var result interface{}
 	if err := client.Get(ctx, path, &result); err != nil {
@@ -169,7 +176,10 @@ func runSearchUsers(c *cobra.Command, args []string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
 	defer cancel()
 
-	path := fmt.Sprintf("/search/users?q=%s&per_page=%d", q, usersFlags.limit)
+	qv := url.Values{}
+	qv.Set("q", q)
+	qv.Set("per_page", fmt.Sprintf("%d", usersFlags.limit))
+	path := "/search/users?" + qv.Encode()
 
 	var result interface{}
 	if err := client.Get(ctx, path, &result); err != nil {

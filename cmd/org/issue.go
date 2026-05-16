@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
 	"text/tabwriter"
@@ -52,10 +53,13 @@ func runOrgIssues(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	path := fmt.Sprintf("%s?state=%s&per_page=%d", api.OrgIssues(org), orgIssueFlags.state, orgIssueFlags.limit)
+	qv := url.Values{}
+	qv.Set("state", orgIssueFlags.state)
+	qv.Set("per_page", fmt.Sprintf("%d", orgIssueFlags.limit))
 	if orgIssueFlags.labels != "" {
-		path += "&labels=" + orgIssueFlags.labels
+		qv.Set("labels", orgIssueFlags.labels)
 	}
+	path := api.OrgIssues(org) + "?" + qv.Encode()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
 	defer cancel()
