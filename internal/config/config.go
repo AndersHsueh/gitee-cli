@@ -61,14 +61,46 @@ func Load() (*Settings, error) {
 
 func Save(s *Settings) error {
 	path := SettingsPath()
-	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0700); err != nil {
 		return err
 	}
 	data, err := json.MarshalIndent(s, "", "  ")
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path, data, 0600)
+
+	// 写到同目录的临时文件，再 rename 原子替换。
+	// 同目录 rename 在 POSIX 和 Windows 上都是原子的，保证读者要么看到旧文件、
+	// 要么看到完整的新文件，不会出现半截 JSON。
+	tmp, err := os.CreateTemp(dir, ".settings-*.tmp")
+	if err != nil {
+		return err
+	}
+	tmpPath := tmp.Name()
+
+	// 任何出错都要清理掉临时文件，避免遗留垃圾。
+	cleanup := func() { _ = os.Remove(tmpPath) }
+
+	if _, err := tmp.Write(data); err != nil {
+		_ = tmp.Close()
+		cleanup()
+		return err
+	}
+	if err := tmp.Chmod(0600); err != nil {
+		_ = tmp.Close()
+		cleanup()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		cleanup()
+		return err
+	}
+	if err := os.Rename(tmpPath, path); err != nil {
+		cleanup()
+		return err
+	}
+	return nil
 }
 
 // GetToken returns the token for the given hostname.
