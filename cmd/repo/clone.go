@@ -6,9 +6,8 @@ import (
 	"os/exec"
 	"strings"
 
-	"gitee-cli/cmd"
-	"gitee-cli/internal/config"
 	"github.com/spf13/cobra"
+	"gitee-cli/cmd"
 )
 
 var cloneCmd = &cobra.Command{
@@ -50,12 +49,5 @@ func runClone(cobraCmd *cobra.Command, args []string) error {
 }
 
 func buildGitURL(repo string) string {
-	token := cmd.GlobalToken
-	if token == "" {
-		token = config.GetToken(cmd.GlobalHostname)
-	}
-	if token != "" {
-		return fmt.Sprintf("https://%s@gitee.com/%s", token, repo)
-	}
-	return "https://gitee.com/" + repo
+	return fmt.Sprintf("https://%s/%s", cmd.GlobalHostname, repo)
 }
