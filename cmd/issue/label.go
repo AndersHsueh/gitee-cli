@@ -12,6 +12,7 @@ import (
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
+	"gitee-cli/internal/utils"
 	"gitee-cli/pkg/types"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
@@ -404,19 +405,10 @@ func runLabelDelete(c *cobra.Command, args []string) error {
 }
 
 func resolveLabelRepo(repo string) (string, string, error) {
-	combined := repo
-	if combined == "" {
-		combined = cmd.GlobalRepo
+	if repo == "" {
+		repo = cmd.GlobalRepo
 	}
-	if combined == "" {
-		return "", "", fmt.Errorf("--repo is required (e.g. --repo owner/repo)")
-	}
-
-	parts := strings.SplitN(combined, "/", 2)
-	if len(parts) == 2 && parts[0] != "" && parts[1] != "" {
-		return parts[0], parts[1], nil
-	}
-	return "", "", fmt.Errorf("invalid --repo format %q, expected owner/repo", combined)
+	return utils.ResolveRepo("", repo, nil)
 }
 
 func isValidHexColor(s string) bool {

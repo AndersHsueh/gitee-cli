@@ -1,6 +1,9 @@
 package utils
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 // Truncate truncates a string to maxLen runes, adding "..." if truncated.
 // Uses rune count (not byte count) so it never splits multi-byte UTF-8.
@@ -33,4 +36,30 @@ func ParseOwnerRepo(input string) (owner, repo string) {
 		return "", input
 	}
 	return input[:idx], input[idx+1:]
+}
+
+// ResolveRepo 从 --owner/--repo flag 和全局 --repo flag 中解析 owner 和 repo。
+// 优先使用 args（位置参数），其次使用显式 owner+repo，最后使用全局 --repo。
+func ResolveRepo(owner, repo string, args []string) (string, string, error) {
+	if len(args) > 0 {
+		o, r := ParseOwnerRepo(args[0])
+		if o != "" && r != "" {
+			return o, r, nil
+		}
+	}
+	if owner != "" && repo != "" {
+		return owner, repo, nil
+	}
+	combined := repo
+	if combined == "" {
+		combined = ""
+	}
+	if combined == "" {
+		return "", "", fmt.Errorf("--repo is required (e.g. --repo owner/repo)")
+	}
+	o, r := ParseOwnerRepo(combined)
+	if o == "" || r == "" {
+		return "", "", fmt.Errorf("invalid --repo format %q, expected owner/repo", combined)
+	}
+	return o, r, nil
 }

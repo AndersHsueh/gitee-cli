@@ -84,24 +84,6 @@ func runView(cobraCmd *cobra.Command, args []string) error {
 	return w.Flush()
 }
 
-// resolveRepo returns owner and repoName from flags or args.
 func resolveRepo(owner, repo string, args []string) (string, string, error) {
-	if len(args) > 0 {
-		o, r := utils.ParseOwnerRepo(args[0])
-		if o != "" && r != "" {
-			return o, r, nil
-		}
-	}
-	if owner != "" && repo != "" {
-		return owner, repo, nil
-	}
-	combined := repo
-	if combined == "" {
-		combined = cmd.GlobalRepo
-	}
-	if combined == "" {
-		return "", "", fmt.Errorf("--repo is required (e.g. --repo owner/repo)")
-	}
-	o, r := utils.ParseOwnerRepo(combined)
-	return o, r, nil
+	return utils.ResolveRepo(owner, repo, args)
 }

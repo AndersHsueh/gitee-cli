@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"strings"
 	"text/tabwriter"
 	"time"
 
@@ -109,20 +108,8 @@ func runList(cobraCmd *cobra.Command, args []string) error {
 }
 
 func resolvePRRepo(owner, repo string) (string, string, error) {
-	combined := repo
-	if combined == "" {
-		combined = cmd.GlobalRepo
+	if repo == "" {
+		repo = cmd.GlobalRepo
 	}
-	if combined == "" {
-		return "", "", fmt.Errorf("--repo is required (e.g. --repo owner/repo)")
-	}
-	o, r := utils.ParseOwnerRepo(combined)
-	if o != "" && r != "" {
-		return o, r, nil
-	}
-	// combined 不是 owner/repo 形式；如果显式给了 --owner，把 combined 当 repo 名
-	if owner != "" && combined != "" && !strings.Contains(combined, "/") {
-		return owner, combined, nil
-	}
-	return "", "", fmt.Errorf("invalid --repo format %q, expected owner/repo", combined)
+	return utils.ResolveRepo(owner, repo, nil)
 }
