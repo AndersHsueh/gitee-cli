@@ -51,11 +51,26 @@ var searchReposCmd = &cobra.Command{
 }
 
 func init() {
-	f := searchReposCmd.Flags()
-	f.StringVar(&reposFlags.language, "language", "", "Filter by programming language")
-	f.StringVar(&reposFlags.sort, "sort", "", "Sort by: stars|forks|updated")
-	f.StringVar(&reposFlags.order, "order", "desc", "Sort order: asc|desc")
-	f.IntVarP(&reposFlags.limit, "limit", "L", 20, "Maximum number of results")
+	// repos flags
+	{
+		f := searchReposCmd.Flags()
+		f.StringVar(&reposFlags.language, "language", "", "Filter by programming language")
+		f.StringVar(&reposFlags.sort, "sort", "", "Sort by: stars|forks|updated")
+		f.StringVar(&reposFlags.order, "order", "desc", "Sort order: asc|desc")
+		f.IntVarP(&reposFlags.limit, "limit", "L", 20, "Maximum number of results")
+	}
+	// issues flags
+	{
+		f := searchIssuesCmd.Flags()
+		f.StringVar(&issuesFlags.state, "state", "open", "Filter by state: open|closed|all")
+		f.StringVar(&issuesFlags.labels, "labels", "", "Filter by labels")
+		f.IntVarP(&issuesFlags.limit, "limit", "L", 20, "Maximum number of results")
+	}
+	// users flags
+	{
+		f := searchUsersCmd.Flags()
+		f.IntVarP(&usersFlags.limit, "limit", "L", 20, "Maximum number of results")
+	}
 
 	SearchCmd.AddCommand(searchReposCmd, searchIssuesCmd, searchUsersCmd)
 }
@@ -67,7 +82,6 @@ func runSearchRepos(c *cobra.Command, args []string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
 	defer cancel()
 
-	// Build path
 	qv := url.Values{}
 	qv.Set("q", q)
 	qv.Set("per_page", fmt.Sprintf("%d", reposFlags.limit))
@@ -105,13 +119,6 @@ var searchIssuesCmd = &cobra.Command{
 	RunE:  runSearchIssues,
 }
 
-func init() {
-	f := searchIssuesCmd.Flags()
-	f.StringVar(&issuesFlags.state, "state", "open", "Filter by state: open|closed|all")
-	f.StringVar(&issuesFlags.labels, "labels", "", "Filter by labels")
-	f.IntVarP(&issuesFlags.limit, "limit", "L", 20, "Maximum number of results")
-}
-
 func runSearchIssues(c *cobra.Command, args []string) error {
 	q := args[0]
 	client := newSearchClient()
@@ -135,12 +142,10 @@ func runSearchIssues(c *cobra.Command, args []string) error {
 		return fmt.Errorf("search issues: %w", err)
 	}
 
-	// Convert to array for unified printing
 	var items []interface{}
 	if arr, ok := result.([]interface{}); ok {
 		items = arr
 	} else if m, ok := result.(map[string]interface{}); ok {
-		// Some API responses are wrapped in an object
 		if arr, ok := m["items"].([]interface{}); ok {
 			items = arr
 		} else {
@@ -162,11 +167,6 @@ var searchUsersCmd = &cobra.Command{
 	Short: "Search users",
 	Args:  cobra.MinimumNArgs(1),
 	RunE:  runSearchUsers,
-}
-
-func init() {
-	f := searchUsersCmd.Flags()
-	f.IntVarP(&usersFlags.limit, "limit", "L", 20, "Maximum number of results")
 }
 
 func runSearchUsers(c *cobra.Command, args []string) error {
