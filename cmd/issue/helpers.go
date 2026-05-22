@@ -3,39 +3,20 @@ package issue
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
+	"gitee-cli/internal/utils"
 	"gitee-cli/pkg/types"
 	"github.com/spf13/cobra"
 )
 
-// resolveRepo returns owner and repoName from --owner/--repo flags or the
-// combined --repo owner/repo flag on the root command.
 func resolveRepo(owner, repo string) (string, string, error) {
-	// If both are provided explicitly, use them
-	if owner != "" && repo != "" {
-		return owner, repo, nil
+	if repo == "" {
+		repo = cmd.GlobalRepo
 	}
-	// Try combined format
-	combined := repo
-	if combined == "" {
-		combined = cmd.GlobalRepo
-	}
-	if combined == "" {
-		return "", "", fmt.Errorf("--repo is required (e.g. --repo owner/repo or --owner owner --repo name)")
-	}
-	parts := strings.SplitN(combined, "/", 2)
-	if len(parts) == 2 && parts[0] != "" && parts[1] != "" {
-		return parts[0], parts[1], nil
-	}
-	// If owner is set separately
-	if owner != "" {
-		return owner, combined, nil
-	}
-	return "", "", fmt.Errorf("invalid --repo format %q, expected owner/repo", combined)
+	return utils.ResolveRepo(owner, repo, nil)
 }
 
 var editFlags struct {
