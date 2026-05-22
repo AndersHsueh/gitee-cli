@@ -36,7 +36,10 @@ type Preferences struct {
 }
 
 func SettingsPath() string {
-	home, _ := os.UserHomeDir()
+	home, err := os.UserHomeDir()
+	if err != nil {
+		home = "."
+	}
 	return filepath.Join(home, ".gitee-cli", "settings.json")
 }
 
