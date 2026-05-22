@@ -3,8 +3,6 @@ package pr
 import (
 	"context"
 	"fmt"
-	"io"
-	"net/http"
 	"strconv"
 	"time"
 
@@ -64,22 +62,11 @@ func runDiff(cobraCmd *cobra.Command, args []string) error {
 		return fmt.Errorf("PR #%d has no diff_url", prNum)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, pr.DiffURL, nil)
-	if err != nil {
-		return fmt.Errorf("building diff request: %w", err)
-	}
-
-	httpClient := &http.Client{Timeout: time.Duration(cmd.GlobalTimeout) * time.Second}
-	resp, err := httpClient.Do(req)
+	body, _, err := client.GetRaw(ctx, pr.DiffURL)
 	if err != nil {
 		return fmt.Errorf("fetching diff: %w", err)
 	}
-	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("diff request returned HTTP %d", resp.StatusCode)
-	}
-
-	_, err = io.Copy(cobraCmd.OutOrStdout(), resp.Body)
+	_, err = cobraCmd.OutOrStdout().Write(body)
 	return err
 }
