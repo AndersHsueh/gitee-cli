@@ -274,6 +274,17 @@ golangci-lint run ./...
 ./test/run.sh
 ```
 
+### 测试覆盖
+
+| 包 | 测试函数 | 覆盖内容 |
+|---|---------|---------|
+| `internal/api` | 21 | HTTP 客户端、错误处理、端点构建 |
+| `internal/utils` | 4 | 字符串截断、日期处理、仓库名解析 |
+| `internal/config` | 5 | 配置路径、加载/保存、偏好设置 |
+| `cmd/pr` | 2 | PR 审批事件值、API 端点 |
+| `pkg/types` | 2 | PRReviewRequest 序列化/反序列化 |
+| **合计** | **34+** | **5 包、7 测试文件** |
+
 ### 项目文档
 
 | 文档 | 说明 |
@@ -290,6 +301,24 @@ golangci-lint run ./...
 - [Gitee OAuth2 文档](https://gitee.com/api/v5/oauth_doc)
 - [GitHub gh CLI](https://github.com/cli/cli)（设计参考）
 - [GitLab glab CLI](https://github.com/gitlab-org/cli)（设计参考）
+
+---
+
+## 更新日志
+
+### v0.3.5 (2026-05-22)
+
+- **修复**: PR review 端点 `/reviews` → `/review`（单数），修复 API 404 问题
+- **修复**: PR review 事件值规范化（`APPROVE` → `approve` 等）
+- **优化**: `APIError` 实现 `Unwrap()` / `Is()` 方法，`IsNotFound` 改用 `errors.As`
+- **优化**: 统一 `resolveRepo` 实现到 `utils.ResolveRepo`，消除 4 处重复代码
+- **优化**: `pr/diff` 复用 resty 客户端连接池，替代每次新建 `http.Client`
+- **优化**: `config.UserHomeDir()` 错误处理，容器环境兼容
+- **优化**: 统一 `userResponse` 到 `types.User`，消除重复类型定义
+- **优化**: 合并 `search.go` 中三个 `init()` 函数为一个
+- **优化**: 移除 `pagination.go` 中未使用的类型
+- **新增**: `internal/output` 包，提供统一 `NewTableWriter()`
+- **新增**: 7 个测试文件，测试覆盖从 1→5 包，共 34+ 测试函数
 
 ---
 
