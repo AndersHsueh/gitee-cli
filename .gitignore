@@ -3,6 +3,7 @@ gitee
 gitee.exe
 dist/
 bin/
+.cache/
 
 # Go
 *.exe
@@ -29,6 +30,11 @@ Thumbs.db
 # Test
 coverage.txt
 coverage.out
+coverage.html
+*.coverprofile
+
+# CI / CD
+.gitee-ci/
 
 # Claude Code
 agent.md

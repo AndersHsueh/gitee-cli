@@ -79,7 +79,7 @@ func PRsMerge(owner, repo string, number int) string {
 }
 
 func PRsReview(owner, repo string, number int) string {
-	return fmt.Sprintf("/repos/%s/%s/pulls/%d/reviews", owner, repo, number)
+	return fmt.Sprintf("/repos/%s/%s/pulls/%d/review", owner, repo, number)
 }
 
 func PRsComments(owner, repo string, number int) string {

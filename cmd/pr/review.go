@@ -55,11 +55,11 @@ func runReview(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Determine review event
-	event := "COMMENT"
+	event := "comment"
 	if reviewFlags.approve {
-		event = "APPROVE"
+		event = "approve"
 	} else if reviewFlags.requestChanges {
-		event = "REQUEST_CHANGES"
+		event = "request_changes"
 	}
 
 	client, err := cmd.NewAPIClient()
