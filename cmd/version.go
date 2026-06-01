@@ -6,7 +6,16 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const Version = "0.4.1"
+// Version is the semantic version of gitee-cli.
+//
+// Declared as `var` (not `const`) so it can be overridden at build time via:
+//
+//	go build -ldflags "-X gitee-cli/cmd.Version=v0.4.1" ./cmd/gitee
+//
+// This is how scripts/release.sh stamps the right version into release
+// binaries without editing source code. The default value below is the
+// fallback for `go build` without ldflags (e.g. local dev).
+var Version = "0.4.2"
 
 var versionCmd = &cobra.Command{
 	Use:   "version",

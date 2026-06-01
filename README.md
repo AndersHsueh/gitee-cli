@@ -5,7 +5,8 @@
 [![Go Version](https://img.shields.io/badge/go-1.25+-blue.svg)](https://golang.org)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey.svg)]()
-[![Version](https://img.shields.io/badge/version-v0.4.1-orange.svg)]()
+[![Version](https://img.shields.io/badge/version-v0.4.2-orange.svg)](https://gitee.com/andershsueh/gitee-cli/releases/latest)
+[![Downloads](https://img.shields.io/badge/downloads-releases-blue.svg)](https://gitee.com/andershsueh/gitee-cli/releases/latest)
 
 ---
 
@@ -98,6 +99,26 @@ gitee issue comment 42 --body "Fixed in PR #${PR_NUM}"  # 闭环！
 ### 致其他 CLI 维护者
 
 如果你的工具被 AI Agent 调用（Claude Code / Cursor / Cline / ...），考虑加一个 `--agent-help`。这是一次几个小时的工作 + 几百行结构化文本，能让你的工具被 Agent 使用的可靠性提升一个量级。
+
+---
+
+## 📦 下载安装
+
+**不要 Go 环境？直接下编译好的二进制。**
+
+前往 **https://gitee.com/andershsueh/gitee-cli/releases/latest** 下载对应平台：
+- `gitee-linux-amd64.tar.gz` — Linux (Intel/AMD 服务器、桌面)
+- `gitee-linux-arm64.tar.gz` — Linux (树莓派、Apple Silicon、ARM 服务器)
+- `gitee-darwin-amd64.tar.gz` — macOS (Intel Mac)
+- `gitee-darwin-arm64.tar.gz` — macOS (M1 / M2 / M3 / M4)
+- `gitee-windows-amd64.exe.zip` — Windows 64-bit
+- `SHA256SUMS.txt` — 校验和
+
+校验下载完整性：
+```bash
+sha256sum -c SHA256SUMS.txt   # Linux / macOS
+# 或 certutil -hashfile gitee-windows-amd64.exe.zip SHA256  (Windows PowerShell)
+```
 
 ---
 
@@ -379,6 +400,22 @@ golangci-lint run ./...
 ---
 
 ## 更新日志
+
+### v0.4.2 (2026-06-02)
+
+- **🆕 新增**: 完整的 release 工作流（gitee-cli 现在用户**不用 Go 环境**也能用）
+  - `scripts/build-release.sh` — 5 平台交叉编译（linux/amd64, linux/arm64, darwin/amd64, darwin/arm64, windows/amd64）
+  - `scripts/release.sh` — 一键 build + tar.gz/zip 打包 + SHA256SUMS
+  - `cmd/version.go`: `const Version` → `var Version`，支持 `-ldflags` 注入（**不再需要手动改源码**来 bump 版本号）
+  - `release-guide.md` (gitignored, 本地 only) — 给本地 AI agent fleet 看的发布手册，claude-code / codex / 未来的 agent 看到这个文档就知道怎么 release
+  - README 新增 **📦 下载** 段，链接到 `https://gitee.com/andershsueh/gitee-cli/releases/latest`（**以后发新版本 README 一行不用改**）
+- **工作流**: 以后切新版本只需要：
+  ```bash
+  bash scripts/release.sh           # build + package + checksums
+  git tag -a vX.Y.Z -m "..."         # 标 tag
+  git push origin vX.Y.Z             # push tag
+  # 然后去 Gitee 网页 → 新建发布 → 选 tag → 拖 dist/ 里 6 个文件上传
+  ```
 
 ### v0.4.1 (2026-06-02)
 
