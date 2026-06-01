@@ -21,6 +21,13 @@ var (
 	GlobalRepo     string
 	NoColor        bool
 	GlobalAgentHelp bool // --agent-help: show agent-targeted help (more verbose, machine-friendly)
+
+	// Pagination controls (root persistent flags). Bound in init() so any
+	// subcommand can read them via cmd.GlobalPaginate / GlobalPage / etc.
+	GlobalPaginate bool
+	GlobalPage     int
+	GlobalPerPage  int
+	GlobalLimit    int
 )
 
 var rootCmd = &cobra.Command{
@@ -79,10 +86,10 @@ func init() {
 	pf.StringVar(&GlobalRepo, "repo", "", "Target repository in owner/repo format")
 	pf.BoolVar(&NoColor, "no-color", false, "Disable color output")
 	pf.BoolVar(&GlobalAgentHelp, "agent-help", false, "Show agent-targeted help (long, structured, includes orchestration hints and pre/post-conditions). Available on selected commands.")
-	pf.BoolP("paginate", "P", false, "Paginate through all results")
-	pf.Int("page", 1, "Page number")
-	pf.Int("per-page", 30, "Results per page (max 100)")
-	pf.Int("limit", 0, "Maximum number of results (0 = no limit)")
+	pf.BoolVarP(&GlobalPaginate, "paginate", "P", false, "Paginate through all results (combines with --limit for total cap)")
+	pf.IntVar(&GlobalPage, "page", 1, "Page number to fetch when --paginate is not set")
+	pf.IntVar(&GlobalPerPage, "per-page", 30, "Results per page (max 100)")
+	pf.IntVar(&GlobalLimit, "limit", 30, "Maximum number of results to return (0 = no limit). With --paginate, this is a TOTAL cap across pages.")
 }
 
 // NewAPIClient builds an authenticated API client using the resolved token.

@@ -5,7 +5,7 @@
 [![Go Version](https://img.shields.io/badge/go-1.25+-blue.svg)](https://golang.org)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey.svg)]()
-[![Version](https://img.shields.io/badge/version-v0.4.0-orange.svg)]()
+[![Version](https://img.shields.io/badge/version-v0.4.1-orange.svg)]()
 
 ---
 
@@ -379,6 +379,27 @@ golangci-lint run ./...
 ---
 
 ## 更新日志
+
+### v0.4.1 (2026-06-02)
+
+- **🐛 修复**: `gitee issue list` 和 `gitee pr list` 之前不真正分页——只发一次请求，多页内容会被静默丢弃
+  - `--limit` 之前是"每页大小"（错误），现在是"**总数上限**"（与 flag 名一致）
+  - `--paginate` 之前存在但 list 命令没接，**现在真正生效**
+  - `--per-page` 全局 flag 之前未绑定变量，现在可以真正控制每页大小
+- **🆕 新增**: `internal/api.FetchAllPages[T]` 泛型分页辅助函数，所有 list 类命令的"取全部"标准实现
+- **测试**: 7 个新的 `FetchAllPages` 测试覆盖单页 / 多页 / 短尾页 / 限额 / 空结果 / 保留现有 query 参数 / 验证错误
+- **使用示例**（修复后的推荐用法）：
+  ```bash
+  # 取所有 open issues（agent 流水线场景）
+  gitee issue list --repo owner/repo --paginate --limit 0
+
+  # 取所有 PR
+  gitee pr list --repo owner/repo --paginate --limit 0
+
+  # 还是可以单页（行为不变）
+  gitee issue list --repo owner/repo
+  ```
+- **Default 行为不变**: 不加 `--paginate` 时仍只取 1 页 30 条，与之前完全一致
 
 ### v0.4.0 (2026-06-02)
 
