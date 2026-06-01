@@ -20,13 +20,20 @@ var (
 	GlobalTimeout  int
 	GlobalRepo     string
 	NoColor        bool
+	GlobalAgentHelp bool // --agent-help: show agent-targeted help (more verbose, machine-friendly)
 )
 
 var rootCmd = &cobra.Command{
 	Use:   "gitee",
 	Short: "Gitee CLI — manage Gitee from your terminal",
 	Long: `gitee-cli is a OpenSource command-line tool for Gitee, Author: AndersHsueh
-Work with repositories, issues, pull requests, gists and more.`,
+Work with repositories, issues, pull requests, gists and more.
+
+gitee-cli is designed for BOTH human and AI Agent use. Most "write" commands
+support a separate --agent-help flag that prints extended documentation
+optimized for agents: pre/post-conditions, idempotency, side effects,
+common errors, and orchestration hints. Run 'gitee --agent-help' for an
+overview of which commands currently have agent help.`,
 	SilenceUsage:  true,
 	SilenceErrors: true,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
@@ -34,6 +41,15 @@ Work with repositories, issues, pull requests, gists and more.`,
 			color.NoColor = true
 		}
 		return nil
+	},
+	RunE: func(c *cobra.Command, args []string) error {
+		// Default behavior when no subcommand is given: show help.
+		// --agent-help on the root command shows an overview of agent help coverage.
+		if GlobalAgentHelp {
+			fmt.Print(rootAgentHelp)
+			return nil
+		}
+		return c.Help()
 	},
 }
 
@@ -62,6 +78,7 @@ func init() {
 	pf.IntVar(&GlobalTimeout, "timeout", 30, "HTTP timeout in seconds")
 	pf.StringVar(&GlobalRepo, "repo", "", "Target repository in owner/repo format")
 	pf.BoolVar(&NoColor, "no-color", false, "Disable color output")
+	pf.BoolVar(&GlobalAgentHelp, "agent-help", false, "Show agent-targeted help (long, structured, includes orchestration hints and pre/post-conditions). Available on selected commands.")
 	pf.BoolP("paginate", "P", false, "Paginate through all results")
 	pf.Int("page", 1, "Page number")
 	pf.Int("per-page", 30, "Results per page (max 100)")

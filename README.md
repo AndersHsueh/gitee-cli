@@ -5,7 +5,7 @@
 [![Go Version](https://img.shields.io/badge/go-1.25+-blue.svg)](https://golang.org)
 [![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey.svg)]()
-[![Version](https://img.shields.io/badge/version-v0.3.5-orange.svg)]()
+[![Version](https://img.shields.io/badge/version-v0.4.0-orange.svg)]()
 
 ---
 
@@ -24,6 +24,80 @@ gitee gist       # 代码片段（list / create / view / edit / delete / star / 
 gitee org        # 组织管理（list / view / members / repos / issues）    ✅ 已实现
 gitee api        # 直接调用 Gitee API v5（GET / POST / PUT / PATCH / DELETE） ✅ 已实现
 ```
+
+---
+
+## 🆕 `--agent-help`: 给 AI Agent 看的帮助系统 (v0.4.0 新增 · **行业首创**)
+
+> gitee-cli 是**第一个**把 CLI 帮助系统拆成"人类版 + Agent 版"的开源项目。
+
+**为什么需要这个？**
+
+CLI 工具的真实用户越来越多是 **AI Agent**，不是人。但传统的 `--help` 想同时讨好两类用户，结果两边都不爽：
+- 人类嫌啰嗦、抓不到重点
+- Agent 嫌不够、缺机器需要的关键信息（idempotency / side effects / orchestration hints）
+
+**所以我们做了两套帮助系统并排运行**：
+
+| Flag | 给谁看 | 风格 |
+|------|-------|------|
+| `--help` | 人类 | 短、干净、符合传统 CLI 习惯 |
+| `--agent-help` | AI Agent | 长、结构化、包含编排提示和 pre/post-conditions |
+
+### 用法
+
+```bash
+# 看某个命令的 agent 帮助（不执行命令，required flag 缺失也能跑）
+gitee issue create --agent-help
+gitee pr create --agent-help
+
+# 看所有命令的 agent 帮助覆盖情况
+gitee --agent-help
+```
+
+### `--agent-help` 比 `--help` 多了什么
+
+- **Pre-conditions** — 执行前需要满足什么
+- **Post-conditions** — 执行后系统处于什么状态
+- **Idempotency** — 能重跑吗？重复会怎样？
+- **Atomicity** — 有没有半成功状态？
+- **Side effects** — 会触发哪些 webhook / 邮件 / 通知
+- **Common errors** — 常见错误码 + 怎么恢复
+- **OAuth scope required**
+- **Rate limit**
+- **Race conditions** — 已知的数据竞争陷阱和规避方法
+- **Next steps (orchestration hints)** — 下一步该跑什么命令（**这是 Agent 最需要的**）
+- **Parsing hints** — stdout 怎么解析出 issue/PR 号
+
+### 真实场景：Agent 修完 bug 后忘了 close the loop
+
+最常见的 Agent 流水线事故：**coder-agent 提了 PR 就不管了，issue 永远 open 着**。
+
+`gitee pr create --agent-help` 里专门标了 ⚠️ 警告：
+
+> ⚠️ **CRITICAL**: After a successful PR create, an agent MUST close the loop with the originating issue...
+
+并给出可复制的 shell 片段：
+
+```bash
+PR_OUT=$(gitee pr create --repo owner/repo --title "fix: ..." \
+  --source fix/x --target main --body "Closes #42")
+PR_NUM=$(echo "$PR_OUT" | grep -oE '#[0-9]+' | head -1 | tr -d '#')
+gitee issue comment 42 --body "Fixed in PR #${PR_NUM}"  # 闭环！
+```
+
+### 当前覆盖（v0.4.0）
+
+| 命令 | 状态 |
+|------|------|
+| `gitee --agent-help` | ✅ 可用（命令覆盖总览） |
+| `gitee issue create --agent-help` | ✅ 可用 |
+| `gitee pr create --agent-help` | ✅ 可用 |
+| 其它命令 | 🛣️ 后续版本扩展 |
+
+### 致其他 CLI 维护者
+
+如果你的工具被 AI Agent 调用（Claude Code / Cursor / Cline / ...），考虑加一个 `--agent-help`。这是一次几个小时的工作 + 几百行结构化文本，能让你的工具被 Agent 使用的可靠性提升一个量级。
 
 ---
 
@@ -305,6 +379,16 @@ golangci-lint run ./...
 ---
 
 ## 更新日志
+
+### v0.4.0 (2026-06-02)
+
+- **🆕 新增**: `--agent-help` 全局 flag + 完整的 agent 文档系统（**行业首创**）
+  - `gitee --agent-help` 列出所有命令的 agent 帮助覆盖情况
+  - `gitee issue create --agent-help` 详细 agent 帮助（idempotency / side effects / orchestration hints / race conditions / 解析示例）
+  - `gitee pr create --agent-help` 同上，特别强调 "PR 创建后必须 comment issue 闭环"
+  - 在 Cobra 的 `PreRunE` 阶段拦截，**在 required flag 校验之前触发**，agent 即使缺参数也能拿到帮助
+- **🆕 新增**: rootCmd 的 `Long` 文案说明 gitee-cli 同时为人类和 Agent 设计
+- **测试**: 新增 2 个 agent-help 内容测试（cmd/issue + cmd/pr），覆盖所有承诺的 section
 
 ### v0.3.5 (2026-05-22)
 

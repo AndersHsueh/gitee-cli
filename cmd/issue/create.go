@@ -3,6 +3,7 @@ package issue
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -30,6 +31,15 @@ var createCmd = &cobra.Command{
   # With body and labels
   gitee issue create --repo owner/repo --title "Feature request" \
     --body "Please add dark mode" --labels "enhancement,help wanted"`,
+	// PreRunE fires BEFORE ValidateRequiredFlags, so an agent can request
+	// --agent-help even when required flags (e.g. --title) are missing.
+	PreRunE: func(c *cobra.Command, args []string) error {
+		if cmd.GlobalAgentHelp {
+			fmt.Print(issueCreateAgentHelp)
+			os.Exit(0)
+		}
+		return nil
+	},
 	RunE: runCreate,
 }
 
@@ -45,6 +55,8 @@ func init() {
 }
 
 func runCreate(cobraCmd *cobra.Command, args []string) error {
+	// --agent-help handling is in PreRunE (runs before required-flag validation).
+
 	// Resolve --repo: local flag > global --repo
 	repo := createFlags.repo
 	if repo == "" {
@@ -105,3 +117,120 @@ func runCreate(cobraCmd *cobra.Command, args []string) error {
 	fmt.Printf("  URL   : %s\n", color.CyanString(issue.HTMLURL))
 	return nil
 }
+
+// issueCreateAgentHelp is the agent-targeted help for `gitee issue create`.
+// It is intentionally long, structured, and includes machine-relevant
+// details (idempotency, side effects, orchestration hints) that the
+// default --help omits because they're noise for humans.
+//
+// Maintainer note: keep this in sync with the actual command behavior.
+// When flags change, update the relevant section here.
+const issueCreateAgentHelp = `# gitee issue create — Agent Help
+
+## Purpose
+Create a new issue in a Gitee repository. Use this when an automated check
+(e.g. test agent) finds a defect, or when an agent needs to file a feature
+request / task on behalf of the user.
+
+## Pre-conditions
+- Authenticated: token present in config (~/.gitee-cli/settings.json),
+  env var (GITEE_TOKEN), or --token flag. Verify with: gitee auth status
+- Repository exists: --repo (or --owner + --repo) points to an accessible repo
+- Write access: token must have write permission on the target repo
+- --title is non-empty (enforced by Cobra MarkFlagRequired)
+
+## Required flags
+  --title / -t    Issue title (required, non-empty)
+
+## Optional flags
+  --body / -b       Issue body, Markdown supported
+  --labels / -l     Comma-separated label names (must already exist on the repo)
+  --assignees / -a  Comma-separated usernames
+  --milestone / -m  Milestone number
+  --repo / -R       owner/repo format (falls back to global --repo, then git remote)
+
+## Idempotency
+NOT idempotent. Each invocation creates a NEW issue with a fresh number.
+Re-running this command creates a duplicate. There is no "create or update"
+semantic on the Gitee API; use ` + "`" + `gitee issue edit` + "`" + ` to modify an existing one.
+
+## Atomicity
+Atomic. Either the issue is created and a number is returned, or no
+change happens. There is no partial-success state.
+
+## Side effects
+- Email notification sent to all repo watchers
+- Webhooks subscribed to "Issue" events fire
+- The new issue is in "open" state by default
+- The issue is visible immediately in the repo's issue list (web UI)
+
+## Post-conditions (on success)
+- An issue with a new unique number exists in the repo
+- Stdout includes the issue number (#N) and URL
+- The issue is in "open" state
+- The new issue does NOT have a label/assignee unless --labels/--assignees were passed
+
+## Output (stdout, table mode)
+  Creating issue in owner/repo...
+  ✓ Issue #42 created
+    Title : Bug: ...
+    State : open
+    URL   : https://gitee.com/owner/repo/issues/42
+
+## Parsing the issue number
+The issue number is in the success line. Robust parsing:
+  OUT=$(gitee issue create --repo owner/repo --title "..." --body "...")
+  ISSUE_NUM=$(echo "$OUT" | grep -oE '#[0-9]+' | head -1 | tr -d '#')
+
+## Common errors
+- 401 Unauthorized:  token expired or invalid  →  gitee auth login
+- 403 Forbidden:     token lacks write scope   →  check token permissions
+- 404 Not Found:     repo doesn't exist        →  verify owner/repo spelling
+- 422 Unprocessable: validation failed         →  check title is non-empty, labels exist
+
+## Race condition warning ⚠️
+DO NOT call ` + "`" + `gitee issue list` + "`" + ` immediately after to verify creation.
+Gitee API indexing can lag 1-2 seconds; a follow-up list may not return
+the new issue even though it was created. Use the issue number from THIS
+output directly — do not re-list to find it.
+
+## Next steps (orchestration hints)
+After a successful issue create, an agent typically wants to:
+1. Record the issue number from stdout (do NOT re-list to find it)
+2. If this is a test-reported bug: continue with the test report workflow
+3. If you need to add details: ` + "`" + `gitee issue edit {N} --body "..."` + "`" + ` (NOT create)
+4. If the issue should be closed: ` + "`" + `gitee issue close {N}` + "`" + `
+5. To link a future PR to this issue: include ` + "`" + `Closes #N` + "`" + ` in the PR body
+
+## OAuth scope required
+projects (write)
+
+## Rate limit
+Gitee API v5: 1000 requests/hour for authenticated users.
+Each call to this command counts as 1 request.
+
+## Example (agent-friendly, closing the loop)
+  # 1. Create the issue
+  OUT=$(gitee issue create --repo owner/repo \
+    --title "Bug: crash on startup" --body "Steps to reproduce...")
+  ISSUE_NUM=$(echo "$OUT" | grep -oE '#[0-9]+' | head -1 | tr -d '#')
+
+  # 2. Add labels (separate call, idempotent)
+  gitee issue edit "$ISSUE_NUM" --labels "bug,priority/high"
+
+  # 3. After fixing, create a PR that references this issue
+  gitee pr create --repo owner/repo --title "fix: handle null pointer" \
+    --source fix/null-pointer --target main --body "Closes #${ISSUE_NUM}"
+
+  # 4. After PR is merged, close the issue
+  gitee issue close "$ISSUE_NUM" --reason completed
+
+## See also
+- ` + "`" + `gitee issue view N` + "`" + `        — read an issue
+- ` + "`" + `gitee issue edit N` + "`" + `        — modify title/body/labels (idempotent)
+- ` + "`" + `gitee issue close N` + "`" + `       — close an issue
+- ` + "`" + `gitee issue comment N` + "`" + `     — add a comment
+- ` + "`" + `gitee pr create` + "`" + `           — create a PR (link via "Closes #N" in body)
+- ` + "`" + `gitee --agent-help` + "`" + `        — overview of all commands with agent help
+`
+
