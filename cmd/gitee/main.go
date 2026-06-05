@@ -15,6 +15,7 @@ import (
 	"gitee-cli/cmd/repo"
 	"gitee-cli/cmd/search"
 	"gitee-cli/cmd/ssh-key"
+	"gitee-cli/cmd/status"
 	"gitee-cli/cmd/webhook"
 )
 
@@ -38,6 +39,8 @@ func main() {
 		gpgkey.GPGKeyCmd,
 		// P1b additions
 		webhook.WebhookCmd,
+		// P2a additions
+		status.StatusCmd,
 	)
 	cmd.Execute()
 }

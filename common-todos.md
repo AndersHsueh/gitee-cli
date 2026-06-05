@@ -166,11 +166,16 @@
 
 ## P2 — 增强 / 辅助类
 
-### 11. `gitee status` — 缺失 ❌
+### 11. `gitee status` — ✅ 完成（v0.9.0）
 **gh 对应**：`gh status` — 汇总当前仓库相关的 issue/PR/notification
-**Gitee API 状态**：部分支持（可查当前 user 的 issue/PR 列表，但 notification API 不完整）
-**待实现**：
-- [ ] `gitee status` — 列出当前 repo 相关的 open issue / 待 review PR（基于 `--repo` 推断）
+**Gitee API 状态**：部分支持（issue ?assignee= 服务端过滤可用，PR 无 reviewer 过滤，需客户端过滤）
+**实现要点**：
+- 自动检测当前 repo：`git remote get-url origin` → 解析 owner/repo（支持 https / ssh / 企业版）
+- `--repo` 全局 flag 覆盖
+- 两节输出：**Issues assigned to you**（服务端 `?assignee=<me>`） + **PRs awaiting your review**（拉全部 open PR 客户端过滤 `User.Login != me`）
+- JSON / table 两种输出
+- 非 git 目录 / origin 非 Gitee → exit 0 + 清晰提示（不 fallback，避免误报）
+- 🆕 v0.9.0 配套新增 `internal/utils/git.go`（`IsInsideWorkTree`, `GitRemoteURL`, `ParseGiteeRemoteURL`, `CurrentBranch`），17 个表驱动单测
 
 ---
 

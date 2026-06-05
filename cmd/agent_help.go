@@ -38,7 +38,7 @@ gitee-cli ships TWO help systems side-by-side:
 ## How to invoke
   gitee <command> [subcommand] --agent-help
 
-## Coverage matrix (v0.8.0)
+## Coverage matrix (v0.9.0)
 
 ### repo — Repository management
   gitee repo list           --agent-help   ❌ not yet
@@ -131,6 +131,9 @@ gitee-cli ships TWO help systems side-by-side:
 ### api — Raw API access
   gitee api                 --agent-help   ❌ not yet (escape hatch — see --help)
 
+### status — Cross-repo activity summary  🆕 v0.9.0
+  gitee status              --agent-help   ✅ available  🆕 v0.9.0
+
 ### auth, config, search, completion, version
   These are operational / config commands. --agent-help is not needed for
   them; consult --help.
@@ -144,9 +147,11 @@ gitee-cli ships TWO help systems side-by-side:
   v0.6.0       Add agent identity signature in body (P1)
   v0.7.0  ✅  P1b: webhook (list/create/view/edit/delete/test)
   v0.8.0  ✅  P1c: issue comments list, pr ready/comment/edit/checks
-  v0.8.0       P2: status, alias, extension (next)
-  v0.8.0       P3: pipeline (Gitee Go)
-  v0.8.0       Help topics: environment, exit-codes, formatting, reference
+  v0.9.0  ✅  P2a: status (issues assigned / PRs awaiting review)
+  v0.9.0       P2b: extension (next)
+  v0.9.0       P2c: alias
+  v0.9.0       P3: pipeline (Gitee Go)
+  v0.9.0       Help topics: environment, exit-codes, formatting, reference
 
 ## Design philosophy
 gitee-cli is built on the principle that CLIs increasingly have TWO users:
