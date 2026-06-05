@@ -133,6 +133,15 @@ gitee-cli ships TWO help systems side-by-side:
 ### status — Cross-repo activity summary  🆕 v0.9.0
   gitee status              --agent-help   ✅ available  🆕 v0.9.0
 
+### extension — gitee-cli extension management  🆕 v0.9.0
+  gitee extension list      --agent-help   ✅ available  🆕 v0.9.0
+  gitee extension install   --agent-help   ✅ available  🆕 v0.9.0
+  gitee extension remove    --agent-help   ✅ available  🆕 v0.9.0
+  gitee extension upgrade   --agent-help   ✅ available  🆕 v0.9.0
+  gitee extension create    --agent-help   ✅ available  🆕 v0.9.0
+  External extensions (from ~/.gitee-cli/extensions/) are loaded at startup
+  via ` + "`" + `gitee <name>` + "`" + `; --no-extensions disables that loader.
+
 ### auth, config, search, completion, version
   These are operational / config commands. --agent-help is not needed for
   them; consult --help.
@@ -147,7 +156,7 @@ gitee-cli ships TWO help systems side-by-side:
   v0.7.0  ✅  P1b: webhook (list/create/view/edit/delete/test)
   v0.8.0  ✅  P1c: issue comments list, pr ready/comment/edit/checks
   v0.9.0  ✅  P2a: status (issues assigned / PRs awaiting review)
-  v0.9.0       P2b: extension (next)
+  v0.9.0  ✅  P2b: extension (5 verb + dynamic load + --no-extensions flag)
   v0.9.0       P2c: alias
   v0.9.0       P3: pipeline (Gitee Go)
   v0.9.0       Help topics: environment, exit-codes, formatting, reference

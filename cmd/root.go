@@ -28,6 +28,12 @@ var (
 	GlobalPage     int
 	GlobalPerPage  int
 	GlobalLimit    int
+
+	// --no-extensions: skip dynamic loader (e.g. for CI / debug). The
+	// built-in `gitee extension` verb is unaffected; only the
+	// dynamic commands synthesized from ~/.gitee-cli/extensions/* are
+	// suppressed.
+	GlobalNoExtensions bool
 )
 
 var rootCmd = &cobra.Command{
@@ -68,6 +74,49 @@ func RegisterCommands(subCmds ...*cobra.Command) {
 	}
 }
 
+// RegisterDynamicCommands calls each loader and attaches the returned
+// *cobra.Commands to rootCmd. Call this from main() AFTER
+// RegisterCommands — the loader sees the live set of built-ins and
+// silently drops any extension whose name collides with one of them
+// (logging a warning to stderr; the user gets the built-in).
+//
+// If GlobalNoExtensions is set, the loaders are NOT called at all
+// (the --no-extensions flag short-circuits the whole subsystem). The
+// built-in `gitee extension` verb is unaffected — it still works, it
+// just doesn't see any dynamically loaded commands.
+func RegisterDynamicCommands(loaders ...func() ([]*cobra.Command, error)) {
+	if GlobalNoExtensions {
+		return
+	}
+	reserved := reservedNames()
+	for _, load := range loaders {
+		cmds, err := load()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "warning: extension loader failed: %v\n", err)
+			continue
+		}
+		for _, c := range cmds {
+			if reserved[c.Name()] {
+				fmt.Fprintf(os.Stderr, "warning: extension %q skipped (collides with built-in command)\n", c.Name())
+				continue
+			}
+			rootCmd.AddCommand(c)
+		}
+	}
+}
+
+// reservedNames returns the set of command names already on rootCmd.
+// Used by RegisterDynamicCommands to filter out extension name
+// collisions with built-ins (we'd rather keep the built-in than let
+// a user-installed extension shadow e.g. `gitee auth`).
+func reservedNames() map[string]bool {
+	out := make(map[string]bool, len(rootCmd.Commands()))
+	for _, c := range rootCmd.Commands() {
+		out[c.Name()] = true
+	}
+	return out
+}
+
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, color.RedString("Error:"), err)
@@ -90,6 +139,7 @@ func init() {
 	pf.IntVar(&GlobalPage, "page", 1, "Page number to fetch when --paginate is not set")
 	pf.IntVar(&GlobalPerPage, "per-page", 30, "Results per page (max 100)")
 	pf.IntVar(&GlobalLimit, "limit", 30, "Maximum number of results to return (0 = no limit). With --paginate, this is a TOTAL cap across pages.")
+	pf.BoolVar(&GlobalNoExtensions, "no-extensions", false, "Skip loading external extensions (the built-in 'gitee extension' verb is unaffected)")
 }
 
 // NewAPIClient builds an authenticated API client using the resolved token.

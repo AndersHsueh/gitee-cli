@@ -5,6 +5,7 @@ import (
 	"gitee-cli/cmd/api"
 	"gitee-cli/cmd/auth"
 	"gitee-cli/cmd/config"
+	cmdext "gitee-cli/cmd/extension"
 	"gitee-cli/cmd/gist"
 	"gitee-cli/cmd/issue"
 	"gitee-cli/cmd/label"
@@ -16,6 +17,7 @@ import (
 	"gitee-cli/cmd/ssh-key"
 	"gitee-cli/cmd/status"
 	"gitee-cli/cmd/webhook"
+	gitext "gitee-cli/internal/extension"
 )
 
 func main() {
@@ -41,6 +43,11 @@ func main() {
 		webhook.WebhookCmd,
 		// P2a additions
 		status.StatusCmd,
+		// P2b additions
+		cmdext.ExtensionCmd,
 	)
+	// Dynamic loaders: register extension commands from
+	// ~/.gitee-cli/extensions/. Skipped when --no-extensions is set.
+	cmd.RegisterDynamicCommands(gitext.LoadCommands)
 	cmd.Execute()
 }
