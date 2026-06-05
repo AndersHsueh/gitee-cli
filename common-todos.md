@@ -269,7 +269,7 @@ gh 提供了多个 help topic：
 
 ---
 
-## 2026-06-05 工作结束总结
+## 2026-06-05 P1b 工作结束总结（上午 session）
 
 **今日完成**：P1b（webhook）实施
 - 新增 7 个 cobra command 文件（parent + list/create/view/edit/delete/test）+ 6 个 content test
@@ -289,8 +289,41 @@ gh 提供了多个 help topic：
 
 **测试状态**：`go test ./... -count=1` 全部通过（13 个有 test 的包，含新的 cmd/webhook）
 
-**uncommitted changes**：P0 + P1a + P1b 全部改动在工作区，未 commit。下次接手可直接 `git add -A && git commit -m "feat: P0 + P1a + P1b command coverage"` 提交。
+**Commit 状态**：✅ 已 commit `15af55e`（`feat: expand command coverage — P0 + P1a + P1b`），已打 tag `temp-p1b-ready` 并推 origin。
+
+---
+
+## 2026-06-05 P1c 工作结束总结（下午 session）
+
+**今日完成**：P1c（issue + pr 增强）实施 + simplify 清理
+- 新增 5 个 cobra command 文件（`cmd/issue/comments.go` + `cmd/pr/{ready,comment,edit,checks}.go`）+ 5 个 content test
+- `pkg/types/issue.go` +`IssueComment`
+- `pkg/types/pr.go` +`PREditRequest` +`PRCommentRequest` +`CheckRun` +`CheckRunOutput`；PullRequest 加 `Draft` + `Locked` read-only 字段
+- `internal/api/endpoints.go` +3 个 builder（`IssueCommentsList` / `PRsEdit` / `PRsChecks`），+3 个 endpoint test
+- Bug fix: `cmd/pr/pr.go:42` 删了重复的 `PRCmd.AddCommand(checkoutCmd)`（保留 `checkout.go:63` 的 init 注册）
+- `cmd/agent_help.go` coverage matrix 升级 v0.7.0 → v0.8.0，roadmap 标记 P1c 完成
+- common-todos.md P1c 6 标 🚫（Gitee v5 API 不支持）+ 5 标 ✅ + 状态行 + 当日总结段
+
+**关键设计决策**（按 Gitee v5 swagger spec 5.4.92 验证）：
+- **6 项 Gitee API 不支持**（issue delete / pin / transfer / lock + pr lock / update-branch）→ 按用户决策不创建空壳 cobra 文件
+- **5 项 Gitee 实际支持** → 全部实施：issue comments list / pr ready / pr comment (singular create) / pr edit / pr checks
+- `pr edit` 用 `BoolPtrIfChanged` / `StringPtrIfChanged` partial PATCH 模式，4 个字段（title/body/state/draft）
+- `pr checks` 两步取数：先 `GET /pulls/{n}` 取 head ref，再 `GET /commits/{ref}/check-runs?pull_request_id={n}&filter=latest`
+- `pr ready` 用 `*bool` 指针显式发 `false`（不能用 `omitempty` 否则被吃）
+- 4 个新 PR 子命令都加 `--id / -i` flag（与 webhook 已有模式一致，错误消息从"撒谎"变成真实）
+
+**Simplify 清理**（4 agent 并行 review 后修 3 项 / 跳 16 项）：
+- `internal/utils/utils.go` +3 函数：`StringPtr` / `StringPtrIfChanged` / `BoolPtrIfChanged`（cmd/webhook + cmd/pr 共用）
+- `cmd/webhook/edit.go` 删本地 `boolPtrIfChanged` → 改用 `utils.BoolPtrIfChanged`
+- `cmd/pr/edit.go` 删本地 `stringPtrIfChanged` + `boolPtrIfChanged` → 改用 utils 版
+- `cmd/pr/ready.go` 用 `utils.BoolPtr(false)` 替换 inline `draft := false; &draft`
+
+**测试状态**：`go vet ./...` 干净；`go test ./... -count=1` 全部通过（**14 个有 test 的包**，含 4 个新 PR test + issue comments test）。
+
+**Commit 状态**：✅ 已 commit `fc213c9`（`feat: P1c — issue comments list, pr ready/comment/edit/checks (v0.8.0)`），已打 tag `temp-p1c-ready` 并推 origin。
+
+**uncommitted changes**：无。下次接手可继续 P2（status / alias / extension）。
 
 **下次接手读这两个文件**：
-- `common-todos.md`（本文件）— 看 P1c / P2 / P3 / help topics 还有哪些没做
-- 上一轮 plan 文件 — P1a + P1b 的实施模式可作为后续命令组的复用模板
+- `common-todos.md`（本文件）— 看 P2 / P3 / help topics 还有哪些没做
+- 上一轮 plan 文件 — P1a + P1b + P1c 的实施模式可作为后续命令组的复用模板
