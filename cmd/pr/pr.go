@@ -39,5 +39,12 @@ func init() {
 	PRCmd.AddCommand(reviewCmd)
 	PRCmd.AddCommand(diffCmd)
 	PRCmd.AddCommand(commentsCmd)
-	PRCmd.AddCommand(checkoutCmd)
+	// checkoutCmd is registered in cmd/pr/checkout.go's init() (source of
+	// truth) to avoid double-registration that would cause "command
+	// already registered" warnings at startup.
+	// P1c additions
+	PRCmd.AddCommand(readyCmd)
+	PRCmd.AddCommand(commentCmd)
+	PRCmd.AddCommand(editCmd)
+	PRCmd.AddCommand(checksCmd)
 }

@@ -38,7 +38,7 @@ gitee-cli ships TWO help systems side-by-side:
 ## How to invoke
   gitee <command> [subcommand] --agent-help
 
-## Coverage matrix (v0.7.0)
+## Coverage matrix (v0.8.0)
 
 ### repo — Repository management
   gitee repo list           --agent-help   ❌ not yet
@@ -62,6 +62,7 @@ gitee-cli ships TWO help systems side-by-side:
   gitee issue close         --agent-help   ❌ not yet
   gitee issue reopen        --agent-help   ❌ not yet
   gitee issue comment       --agent-help   ❌ not yet
+  gitee issue comments      --agent-help   ✅ available  🆕 v0.8.0
   gitee issue label         --agent-help   ❌ not yet (legacy path; use 'gitee label')
 
 ### pr — Pull Request management
@@ -74,7 +75,11 @@ gitee-cli ships TWO help systems side-by-side:
   gitee pr reopen           --agent-help   ❌ not yet
   gitee pr diff             --agent-help   ❌ not yet
   gitee pr comments         --agent-help   ❌ not yet
+  gitee pr comment          --agent-help   ✅ available  🆕 v0.8.0
   gitee pr checkout         --agent-help   ✅ available  🆕 v0.5.0
+  gitee pr ready            --agent-help   ✅ available  🆕 v0.8.0
+  gitee pr edit             --agent-help   ✅ available  🆕 v0.8.0
+  gitee pr checks           --agent-help   ✅ available  🆕 v0.8.0
 
 ### gist — Code snippets
   gitee gist list           --agent-help   ❌ not yet
@@ -138,10 +143,10 @@ gitee-cli ships TWO help systems side-by-side:
   v0.6.0  ✅  P1a: ssh-key, gpg-key, gist clone
   v0.6.0       Add agent identity signature in body (P1)
   v0.7.0  ✅  P1b: webhook (list/create/view/edit/delete/test)
-  v0.7.0       P1c: issue + pr enhancements (next)
-  v0.7.0       P2: status, alias, extension
-  v0.7.0       P3: pipeline (Gitee Go)
-  v0.7.0       Help topics: environment, exit-codes, formatting, reference
+  v0.8.0  ✅  P1c: issue comments list, pr ready/comment/edit/checks
+  v0.8.0       P2: status, alias, extension (next)
+  v0.8.0       P3: pipeline (Gitee Go)
+  v0.8.0       Help topics: environment, exit-codes, formatting, reference
 
 ## Design philosophy
 gitee-cli is built on the principle that CLIs increasingly have TWO users:

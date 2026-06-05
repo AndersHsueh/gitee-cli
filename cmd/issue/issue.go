@@ -19,4 +19,5 @@ func init() {
 	IssueCmd.AddCommand(reopenCmd)
 	IssueCmd.AddCommand(commentCmd)
 	IssueCmd.AddCommand(labelCmd)
+	IssueCmd.AddCommand(commentsCmd)
 }

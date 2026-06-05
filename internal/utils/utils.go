@@ -5,6 +5,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/spf13/cobra"
 )
 
 // Truncate truncates a string to maxLen runes, adding "..." if truncated.
@@ -99,6 +101,31 @@ func ParseInt64Arg(flagVal int64, args []string, name string) (int64, error) {
 // BoolPtr returns a pointer to b. Useful for optional bool fields in
 // PATCH payloads where the API distinguishes "true" / "false" / "unset".
 func BoolPtr(b bool) *bool { return &b }
+
+// StringPtr is the string counterpart to BoolPtr. Useful for optional
+// string fields in PATCH payloads (e.g. webhook password, PR title).
+func StringPtr(s string) *string { return &s }
+
+// BoolPtrIfChanged returns nil if the user did not pass the flag (cobra
+// Changed() = false → "leave unchanged"), otherwise returns a pointer to
+// the new bool value. This is the cobra-idiomatic way to disambiguate
+// "unset" from "set to false" on a BoolVar flag.
+func BoolPtrIfChanged(c *cobra.Command, name string, v bool) *bool {
+	if !c.Flags().Changed(name) {
+		return nil
+	}
+	return &v
+}
+
+// StringPtrIfChanged is the string counterpart to BoolPtrIfChanged.
+// Returns nil if the user did not pass the flag, otherwise a pointer to
+// the new string value.
+func StringPtrIfChanged(c *cobra.Command, name string, v string) *string {
+	if !c.Flags().Changed(name) {
+		return nil
+	}
+	return &v
+}
 
 // ResolveKeyInput accepts either a path to a public key file or the raw
 // public key text itself. If raw refers to an existing, readable regular

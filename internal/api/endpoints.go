@@ -236,3 +236,26 @@ func WebhookDelete(owner, repo string, id int64) string {
 func WebhookTest(owner, repo string, id int64) string {
 	return fmt.Sprintf("/repos/%s/%s/hooks/%d/tests", owner, repo, id)
 }
+
+// Issue comments list endpoint (P1c)
+// GET /repos/{owner}/{repo}/issues/{number}/comments — distinct from the
+// existing IssuesComment POST builder (which is the create endpoint).
+func IssueCommentsList(owner, repo, number string) string {
+	return fmt.Sprintf("/repos/%s/%s/issues/%s/comments", owner, repo, number)
+}
+
+// PR edit endpoint (P1c)
+// Gitee v5 PATCHes on the PR resource for edit, ready, draft toggle etc.
+// — no separate /edit sub-path. Same path as PRsGet, different method.
+func PRsEdit(owner, repo string, number int) string {
+	return fmt.Sprintf("/repos/%s/%s/pulls/%d", owner, repo, number)
+}
+
+// PR check-runs endpoint (P1c)
+// Gitee v5 surfaces CI status via the GitHub-style "Checks" API at
+// /repos/{owner}/{repo}/commits/{ref}/check-runs. To show the latest
+// build status of a PR, fetch the PR (for head ref), then fetch check-runs
+// with ?pull_request_id={id}&filter=latest.
+func PRsChecks(owner, repo, ref string) string {
+	return fmt.Sprintf("/repos/%s/%s/commits/%s/check-runs", owner, repo, url.QueryEscape(ref))
+}

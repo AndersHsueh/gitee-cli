@@ -84,11 +84,11 @@ func runEdit(cobraCmd *cobra.Command, args []string) error {
 		URL:                editFlags.url,
 		Title:              editFlags.title,
 		Password:           editFlags.password,
-		PushEvents:         boolPtrIfChanged(cobraCmd, "push-events", editFlags.pushEvents),
-		TagPushEvents:      boolPtrIfChanged(cobraCmd, "tag-push-events", editFlags.tagPushEvents),
-		IssuesEvents:       boolPtrIfChanged(cobraCmd, "issues-events", editFlags.issuesEvents),
-		NoteEvents:         boolPtrIfChanged(cobraCmd, "note-events", editFlags.noteEvents),
-		MergeRequestEvents: boolPtrIfChanged(cobraCmd, "merge-request-events", editFlags.mergeReqEvents),
+		PushEvents:         utils.BoolPtrIfChanged(cobraCmd, "push-events", editFlags.pushEvents),
+		TagPushEvents:      utils.BoolPtrIfChanged(cobraCmd, "tag-push-events", editFlags.tagPushEvents),
+		IssuesEvents:       utils.BoolPtrIfChanged(cobraCmd, "issues-events", editFlags.issuesEvents),
+		NoteEvents:         utils.BoolPtrIfChanged(cobraCmd, "note-events", editFlags.noteEvents),
+		MergeRequestEvents: utils.BoolPtrIfChanged(cobraCmd, "merge-request-events", editFlags.mergeReqEvents),
 	}
 	if editFlags.password != "" {
 		et := editFlags.encryptionType
@@ -97,16 +97,9 @@ func runEdit(cobraCmd *cobra.Command, args []string) error {
 	return handler.WebhookEdit(editFlags.repo, id, req)
 }
 
-// boolPtrIfChanged returns nil if the user did not pass the flag (cobra
-// Changed() = false → "leave unchanged"), otherwise returns a pointer to
-// the new bool value. This is the cobra-idiomatic way to disambiguate
-// "unset" from "set to false" on a BoolVar flag.
-func boolPtrIfChanged(c *cobra.Command, name string, v bool) *bool {
-	if !c.Flags().Changed(name) {
-		return nil
-	}
-	return &v
-}
+// boolPtrIfChanged moved to internal/utils/utils.go (utils.BoolPtrIfChanged)
+// to share with cmd/pr/edit.go. Both call sites use the same cobra-idiomatic
+// Changed() check; see utils for the full doc.
 
 const webhookEditAgentHelp = `# gitee webhook edit — Agent Help
 

@@ -1,5 +1,7 @@
 package types
 
+import "time"
+
 // PullRequest represents a Gitee pull request.
 type PullRequest struct {
 	ID           int64      `json:"id"`
@@ -16,6 +18,8 @@ type PullRequest struct {
 	Milestone    *Milestone `json:"milestone"`
 	Head         *PRBranch  `json:"head"`
 	Base         *PRBranch  `json:"base"`
+	Draft        bool       `json:"draft"`
+	Locked       bool       `json:"locked"`
 	Merged       bool       `json:"merged"`
 	MergedAt     *string    `json:"merged_at,omitempty"`
 	Mergeable    *bool      `json:"mergeable,omitempty"`
@@ -78,4 +82,43 @@ type PRComment struct {
 	Body      string `json:"body"`
 	User      User   `json:"user"`
 	CreatedAt string `json:"created_at"`
+}
+
+// PRCommentRequest is the create-payload for POST /repos/{owner}/{repo}/pulls/{number}/comments.
+// Distinct from PRComment (the response object).
+type PRCommentRequest struct {
+	Body string `json:"body"`
+}
+
+// PREditRequest is the body for PATCH /repos/{owner}/{repo}/pulls/{number}.
+// Pointer fields let the caller choose which to send (nil = omit from PATCH).
+// This matches the Gitee v5 form parameters: title, body, state, draft.
+type PREditRequest struct {
+	Title *string `json:"title,omitempty"`
+	Body  *string `json:"body,omitempty"`
+	State *string `json:"state,omitempty"` // "open" | "closed"
+	Draft *bool   `json:"draft,omitempty"`
+}
+
+// CheckRun is a single check-run on a commit (Gitee v5 surface for the
+// "Checks" group, GitHub-style). Returned by
+// GET /repos/{owner}/{repo}/commits/{ref}/check-runs.
+type CheckRun struct {
+	ID          int64          `json:"id"`
+	HeadSHA     string         `json:"head_sha"`
+	Name        string         `json:"name"`
+	Status      string         `json:"status"`     // expected | queued | in_progress | completed
+	Conclusion  string         `json:"conclusion"` // success | failure | neutral | cancelled | skipped | timed_out | action_required (empty when not completed)
+	HTMLURL     string         `json:"html_url"`
+	DetailsURL  string         `json:"details_url"`
+	StartedAt   time.Time      `json:"started_at"`
+	CompletedAt time.Time      `json:"completed_at"`
+	Output      CheckRunOutput `json:"output"`
+}
+
+// CheckRunOutput is the human-readable summary attached to a CheckRun.
+type CheckRunOutput struct {
+	Title   string `json:"title"`
+	Summary string `json:"summary"`
+	Text    string `json:"text"`
 }

@@ -22,8 +22,9 @@
 **P0** ✅ **全部完成**（v0.5.0）：release / 顶层 label / pr checkout + co / repo archive+sync+rename
 **P1a** ✅ **全部完成**（v0.6.0）：ssh-key / gpg-key / gist clone
 **P1b** ✅ **全部完成**（v0.7.0）：webhook（list / create / view / edit / delete / test）— 6 个子命令 + 5 boolean 事件字段 + 1 shared handler
+**P1c** ✅ **部分完成**（v0.8.0）：issue comments（list）/ pr ready / pr comment / pr edit / pr checks — 5 个 Gitee 实际支持的子命令。**6 个 Gitee v5 不支持的项**（issue delete/pin/transfer/lock、pr lock/update-branch）标记 🚫，不创建空壳 cobra 文件。
 
-**剩余**：P1c（issue + pr 增强 + repo set-default-branch）、P2（status/alias/extension）、P3（Gitee Go pipeline）、help topics（environment/exit-codes/formatting/reference）
+**剩余**：P2（status/alias/extension）、P3（Gitee Go pipeline）、help topics（environment/exit-codes/formatting/reference）
 
 完整 P0 + P1a 实施 + simplify 详见 `~/.claude/plans/p1-simplify-rustling-pike.md`。
 
@@ -126,31 +127,34 @@
 
 ---
 
-### 8. `gitee issue` 增强 — 缺失子命令 ❌  ⏳ P1c 候选
-**Gitee API 状态**：✅ 支持
-**当前状态**：list / view / create / close / reopen / comment / edit / label 已有，缺：
+### 8. `gitee issue` 增强 — ✅ 部分完成（v0.8.0，P1c）+ 6 标 🚫
+**Gitee API 状态**：**6 项 Gitee v5 API 不支持**（已对照 swagger spec 5.4.92 验证）
+**当前状态**：list / view / create / close / reopen / comment（create）/ edit / label 已有，加 P1c 新增的 comments（list）= 9 个；**6 个 common-todos 项 🚫 不支持**
 
-**待实现**：
-- [ ] `gitee issue delete <number>` — 删除 issue（Gitee 支持）
-- [ ] `gitee issue pin / unpin <number>` — 置顶 issue
-- [ ] `gitee issue transfer <number> --to <owner/repo>` — 跨仓库转移
-- [ ] `gitee issue lock / unlock <number>` — 锁定讨论
-- [ ] `gitee issue comments <number>` — 列出 issue 评论（与 PR 对齐，目前只能 create）
+**已实现**：
+- [x] `gitee issue comments <number>` — `GET /repos/{o}/{r}/issues/{n}/comments`（与 PR 对齐）
+
+**🚫 Gitee v5 API 不支持**（按用户决策不创建空壳 cobra 文件，标记完毕）：
+- [ ] 🚫 `gitee issue delete <number>` — spec 无 DELETE 端点，web UI 也无此按钮
+- [ ] 🚫 `gitee issue pin / unpin <number>` — `Issue` 结构无 `pinned` 字段
+- [ ] 🚫 `gitee issue transfer <number> --to <owner/repo>` — 无 transfer 端点
+- [ ] 🚫 `gitee issue lock / unlock <number>` — `Issue` 结构无 `locked` 字段
 
 ---
 
-### 9. `gitee pr` 增强 — 缺失子命令 ❌  ⏳ P1c 候选
-**Gitee API 状态**：✅ 支持
-**当前状态**：list / view / create / close / reopen / merge / review / diff / comments 已有，缺：
+### 9. `gitee pr` 增强 — ✅ 部分完成（v0.8.0，P1c）+ 3 标 🚫
+**Gitee API 状态**：**3 项 Gitee v5 API 不支持**
+**当前状态**：list / view / create / close / reopen / merge / review / diff / comments 已有，加 P1c 新增的 ready / comment（create）/ edit / checks = 13 个；**3 个 common-todos 项 🚫 不支持**
 
-**待实现**：
-- [x] `gitee pr checkout <number>` — ✅ 已完成（v0.5.0，移到 P0-3）
-- [ ] `gitee pr ready <number>` — 将 draft PR 标记为 ready for review
-- [ ] `gitee pr update-branch <number>` — 同步 base branch
-- [ ] `gitee pr checks <number>` — 查看 Gitee Go 状态（FSD.md 提到过）
-- [ ] `gitee pr lock / unlock <number>` — 锁定讨论
-- [ ] `gitee pr comment <number>` — 发表评论（目前只有 list comments）
-- [ ] `gitee pr edit <number>` — 编辑 PR（标题/描述/状态）
+**已实现**：
+- [x] `gitee pr ready <number>` — `PATCH /pulls/{n}` with `{ "draft": false }`
+- [x] `gitee pr comment <number>` — `POST /pulls/{n}/comments`（与已有的 plural `comments` 列表区分）
+- [x] `gitee pr edit <number>` — `PATCH /pulls/{n}`（title/body/state/draft 4 字段 partial PATCH）
+- [x] `gitee pr checks <number>` — 两步：先 `GET /pulls/{n}` 取 head ref，再 `GET /commits/{ref}/check-runs?pull_request_id={n}&filter=latest`
+
+**🚫 Gitee v5 API 不支持**（按用户决策不创建空壳 cobra 文件）：
+- [ ] 🚫 `gitee pr update-branch <number>` — PATCH body 无 `base` 字段（Gitee 平台限制，web UI 也不能改 base branch）
+- [ ] 🚫 `gitee pr lock / unlock <number>` — `PR.locked` 是只读字段，无写端点
 
 ---
 
@@ -234,12 +238,12 @@ gh 提供了多个 help topic：
 | **P0** | release, label, pr checkout, repo archive/sync/rename | 2-3 周 | ✅ **完成** (v0.5.0) |
 | **P1a** | ssh-key, gpg-key, gist clone | 1 周 | ✅ **完成** (v0.6.0) |
 | **P1b** | webhook (list/create/view/edit/delete/test) | 1 周 | ✅ **完成** (v0.7.0) |
-| **P1c** | issue 增强 (delete/pin/transfer/lock/comments) + pr 增强 (ready/update-branch/checks/lock/comment/edit) + repo set-default-branch | 2 周 | ❌ 待办 |
+| **P1c** | issue comments (list) + pr ready/comment/edit/checks（Gitee 实际支持的 5 项；6 项 unsupported 标 🚫） | 2 周 → 1 周 | ✅ **完成** (v0.8.0) |
 | **P2** | status, alias, extension | 1-2 周 | ❌ 待办 |
 | **P3** | pipeline (Gitee Go) | 2-3 周 | ❌ 待办 |
 | **帮助主题** | environment, exit-codes, formatting, reference | 0.5 周 | ❌ 待办 |
 
-**P0 + P1a + P1b 完成后，核心开发体验将与 gh 持平**（~55% 完整对标覆盖率，~63% 核心命令覆盖率）。
+**P0 + P1a + P1b + P1c 完成后，核心开发体验将与 gh 持平**（~60% 完整对标覆盖率，~70% 核心命令覆盖率；剩余 ~30% 是 Gitee 平台独占如 Gitee Go pipeline/GVP）。
 **全部完成后，gitee-cli 将是 Gitee 生态最完整的 CLI 工具**（预计 95%+ 覆盖度）。
 
 ---
@@ -254,12 +258,14 @@ gh 提供了多个 help topic：
 1. ✅ `common-todos.md` P0（命令覆盖）
 2. ✅ `common-todos.md` P1a（用户管理）
 3. ✅ `common-todos.md` P1b（webhook — 企业刚需）
+4. ✅ `common-todos.md` P1c（issue + pr 增强，**按 Gitee API 真相调整**：5 实现 + 6 标 🚫）
 
 **剩余建议优先级**：
-1. ❌ `common-todos.md` P1c（issue + pr 增强 + repo set-default-branch）
-2. ❌ `todo-0602.md` P1（agent 签名 — 给 agent 写入的内容打身份）
-3. ❌ `todo-0602.md` P2（next-steps 提示）
-4. 后续 P2/P3/help topics
+1. ❌ `common-todos.md` P2（status / alias / extension）
+2. ❌ `common-todos.md` P3（pipeline / Gitee Go）
+3. ❌ `common-todos.md` 帮助主题（environment / exit-codes / formatting / reference）
+4. ❌ `todo-0602.md` P1（agent 签名）
+5. ❌ `todo-0602.md` P2（next-steps 提示）
 
 ---
 

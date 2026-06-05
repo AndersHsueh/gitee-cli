@@ -69,3 +69,18 @@ type LabelUpdateRequest struct {
 	Color       string `json:"color,omitempty"`
 	Description string `json:"description,omitempty"`
 }
+
+// IssueComment is a single comment on an issue (the Note object returned by
+// Gitee's GET /repos/{owner}/{repo}/issues/{number}/comments endpoint).
+// Distinct from IssueCommentRequest (the create-payload) below.
+type IssueComment struct {
+	ID            int64     `json:"id"`
+	Body          string    `json:"body"`
+	BodyHTML      string    `json:"body_html,omitempty"`
+	User          User      `json:"user"`
+	Source        string    `json:"source,omitempty"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
+	InReplyToID   int64     `json:"in_reply_to_id"`
+	InReplyToUser *User     `json:"in_reply_to_user"`
+}

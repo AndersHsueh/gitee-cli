@@ -116,3 +116,48 @@ func TestWebhookEndpoints(t *testing.T) {
 		})
 	}
 }
+
+func TestIssueCommentsListEndpoint(t *testing.T) {
+	cases := []struct {
+		name, got, want string
+	}{
+		{"simple", IssueCommentsList("owner", "repo", "42"), "/repos/owner/repo/issues/42/comments"},
+		{"org repo", IssueCommentsList("gitee-cli", "gitee", "IJP83Z"), "/repos/gitee-cli/gitee/issues/IJP83Z/comments"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			assert.Equal(t, c.want, c.got)
+		})
+	}
+}
+
+func TestPRsEditEndpoint(t *testing.T) {
+	cases := []struct {
+		name string
+		got  string
+		want string
+	}{
+		{"standard", PRsEdit("owner", "repo", 1), "/repos/owner/repo/pulls/1"},
+		{"org repo", PRsEdit("gitee-cli", "gitee", 42), "/repos/gitee-cli/gitee/pulls/42"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			assert.Equal(t, c.want, c.got)
+		})
+	}
+}
+
+func TestPRsChecksEndpoint(t *testing.T) {
+	cases := []struct {
+		name, got, want string
+	}{
+		{"simple", PRsChecks("owner", "repo", "main"), "/repos/owner/repo/commits/main/check-runs"},
+		{"with slash", PRsChecks("owner", "repo", "feature/x"), "/repos/owner/repo/commits/feature%2Fx/check-runs"},
+		{"sha", PRsChecks("owner", "repo", "abc123def"), "/repos/owner/repo/commits/abc123def/check-runs"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			assert.Equal(t, c.want, c.got)
+		})
+	}
+}
