@@ -13,6 +13,13 @@ type Gist struct {
 	CreatedAt   string              `json:"created_at"`
 	UpdatedAt   string              `json:"updated_at"`
 	GistURL     string              `json:"gist_url"`
+
+	// Optional git URLs. Present only when the gist is git-backed (similar
+	// to GitHub). When empty, `gitee gist clone` falls back to downloading
+	// each file via RawURL into a local directory.
+	GitPullURL string `json:"git_pull_url"`
+	GitPushURL string `json:"git_push_url"`
+	SSHURL     string `json:"ssh_url"`
 }
 
 // GistFile represents a file within a gist.

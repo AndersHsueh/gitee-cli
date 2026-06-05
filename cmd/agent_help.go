@@ -38,7 +38,7 @@ gitee-cli ships TWO help systems side-by-side:
 ## How to invoke
   gitee <command> [subcommand] --agent-help
 
-## Coverage matrix (v0.4.0)
+## Coverage matrix (v0.7.0)
 
 ### repo — Repository management
   gitee repo list           --agent-help   ❌ not yet
@@ -50,6 +50,9 @@ gitee-cli ships TWO help systems side-by-side:
   gitee repo clone          --agent-help   ❌ not yet
   gitee repo browse         --agent-help   ❌ not yet
   gitee repo branches       --agent-help   ❌ not yet
+  gitee repo archive        --agent-help   ✅ available  🆕 v0.5.0
+  gitee repo sync           --agent-help   ✅ available  🆕 v0.5.0
+  gitee repo rename         --agent-help   ✅ available  🆕 v0.5.0
 
 ### issue — Issue management
   gitee issue list          --agent-help   ❌ not yet
@@ -59,7 +62,7 @@ gitee-cli ships TWO help systems side-by-side:
   gitee issue close         --agent-help   ❌ not yet
   gitee issue reopen        --agent-help   ❌ not yet
   gitee issue comment       --agent-help   ❌ not yet
-  gitee issue label         --agent-help   ❌ not yet
+  gitee issue label         --agent-help   ❌ not yet (legacy path; use 'gitee label')
 
 ### pr — Pull Request management
   gitee pr list             --agent-help   ❌ not yet
@@ -71,12 +74,54 @@ gitee-cli ships TWO help systems side-by-side:
   gitee pr reopen           --agent-help   ❌ not yet
   gitee pr diff             --agent-help   ❌ not yet
   gitee pr comments         --agent-help   ❌ not yet
+  gitee pr checkout         --agent-help   ✅ available  🆕 v0.5.0
 
 ### gist — Code snippets
-  All subcommands           --agent-help   ❌ not yet
+  gitee gist list           --agent-help   ❌ not yet
+  gitee gist view           --agent-help   ❌ not yet
+  gitee gist create         --agent-help   ❌ not yet
+  gitee gist edit           --agent-help   ❌ not yet
+  gitee gist delete         --agent-help   ❌ not yet
+  gitee gist star           --agent-help   ❌ not yet
+  gitee gist unstar         --agent-help   ❌ not yet
+  gitee gist clone          --agent-help   ✅ available  🆕 v0.6.0
+
+### ssh-key — SSH key management  🆕 v0.6.0
+  gitee ssh-key list        --agent-help   ✅ available
+  gitee ssh-key add         --agent-help   ✅ available
+  gitee ssh-key delete      --agent-help   ✅ available
+
+### gpg-key — GPG key management  🆕 v0.6.0
+  gitee gpg-key list        --agent-help   ✅ available
+  gitee gpg-key add         --agent-help   ✅ available
+  gitee gpg-key delete      --agent-help   ✅ available
+
+### webhook — Repository webhooks  🆕 v0.7.0
+  gitee webhook list        --agent-help   ✅ available
+  gitee webhook create      --agent-help   ✅ available
+  gitee webhook view        --agent-help   ✅ available
+  gitee webhook edit        --agent-help   ✅ available
+  gitee webhook delete      --agent-help   ✅ available
+  gitee webhook test        --agent-help   ✅ available
 
 ### org — Organization management
   All subcommands           --agent-help   ❌ not yet
+
+### release — Release management  🆕 v0.5.0
+  gitee release list        --agent-help   ✅ available
+  gitee release view        --agent-help   ✅ available
+  gitee release create      --agent-help   ✅ available
+  gitee release edit        --agent-help   ✅ available
+  gitee release delete      --agent-help   ✅ available
+  gitee release download    --agent-help   ✅ available
+
+### label — Label management  🆕 v0.5.0 (top-level)
+  gitee label list          --agent-help   ✅ available
+  gitee label view          --agent-help   ✅ available
+  gitee label create        --agent-help   ✅ available
+  gitee label edit          --agent-help   ✅ available
+  gitee label delete        --agent-help   ✅ available
+  gitee label clone         --agent-help   ✅ available
 
 ### api — Raw API access
   gitee api                 --agent-help   ❌ not yet (escape hatch — see --help)
@@ -87,10 +132,16 @@ gitee-cli ships TWO help systems side-by-side:
 
 ## Roadmap
   v0.4.0  ✅  Initial release: issue create, pr create
-  v0.4.1       Bug fixes + expand to other "write" commands
-  v0.5.0       Expand agent-help to all commands
+  v0.4.1  ✅  Bug fixes + expand to other "write" commands
+  v0.5.0  ✅  P0 commands: release, label (top-level), pr checkout, repo archive/sync/rename
   v0.5.0       Add stdout "next steps" hints on success (P2)
+  v0.6.0  ✅  P1a: ssh-key, gpg-key, gist clone
   v0.6.0       Add agent identity signature in body (P1)
+  v0.7.0  ✅  P1b: webhook (list/create/view/edit/delete/test)
+  v0.7.0       P1c: issue + pr enhancements (next)
+  v0.7.0       P2: status, alias, extension
+  v0.7.0       P3: pipeline (Gitee Go)
+  v0.7.0       Help topics: environment, exit-codes, formatting, reference
 
 ## Design philosophy
 gitee-cli is built on the principle that CLIs increasingly have TWO users:

@@ -2,6 +2,8 @@ package utils
 
 import (
 	"fmt"
+	"os"
+	"strconv"
 	"strings"
 )
 
@@ -31,11 +33,10 @@ func ParseOwnerRepo(input string) (owner, repo string) {
 	if input == "" {
 		return "", ""
 	}
-	idx := strings.Index(input, "/")
-	if idx == -1 {
-		return "", input
+	if o, r, ok := strings.Cut(input, "/"); ok {
+		return o, r
 	}
-	return input[:idx], input[idx+1:]
+	return "", input
 }
 
 // ResolveRepo 从 --owner/--repo flag 和全局 --repo flag 中解析 owner 和 repo。
@@ -62,4 +63,86 @@ func ResolveRepo(owner, repo string, args []string) (string, string, error) {
 		return "", "", fmt.Errorf("invalid --repo format %q, expected owner/repo", combined)
 	}
 	return o, r, nil
+}
+
+// ResolveRepoFromFlag resolves a single "owner/repo" string flag (with
+// fallback to the global --repo) into (owner, name, error). Mirrors the
+// common pattern in per-resource handlers (label, release, webhook) of
+// substituting the global --repo when the local flag is empty. The caller
+// passes `globalRepo` explicitly so this package doesn't need to import
+// the cmd package (avoiding an import cycle through cmd → handlers → utils).
+func ResolveRepoFromFlag(repo, globalRepo string) (string, string, error) {
+	if repo == "" {
+		repo = globalRepo
+	}
+	return ResolveRepo("", repo, nil)
+}
+
+// ParseInt64Arg returns the value of `flagVal` if non-zero, otherwise parses
+// `args[0]` as an int64. Returns (0, nil) when neither is set so the caller
+// can decide whether to error ("id is required") or default. The `name`
+// argument is used in error messages ("invalid <name> id %q: ...").
+func ParseInt64Arg(flagVal int64, args []string, name string) (int64, error) {
+	if flagVal != 0 {
+		return flagVal, nil
+	}
+	if len(args) < 1 {
+		return 0, nil
+	}
+	parsed, err := strconv.ParseInt(args[0], 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("invalid %s id %q: must be an integer", name, args[0])
+	}
+	return parsed, nil
+}
+
+// BoolPtr returns a pointer to b. Useful for optional bool fields in
+// PATCH payloads where the API distinguishes "true" / "false" / "unset".
+func BoolPtr(b bool) *bool { return &b }
+
+// ResolveKeyInput accepts either a path to a public key file or the raw
+// public key text itself. If raw refers to an existing, readable regular
+// file, the file's contents are returned. Otherwise raw is returned
+// verbatim. Trailing whitespace and newlines are stripped.
+func ResolveKeyInput(raw string) (string, error) {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return "", fmt.Errorf("key is empty")
+	}
+	if fi, err := os.Stat(trimmed); err == nil && !fi.IsDir() {
+		b, err := os.ReadFile(trimmed)
+		if err != nil {
+			return "", fmt.Errorf("reading key file %q: %w", trimmed, err)
+		}
+		return strings.TrimSpace(string(b)), nil
+	}
+	return trimmed, nil
+}
+
+// ConfirmYN prompts the user with a y/N question and returns true if they
+// answered affirmatively. If `defaultYes` is true, an empty input is treated
+// as yes. If stdin is not a terminal (piped, redirected, or closed), the
+// function returns false and a nil error — this prevents scripts/CI from
+// hanging on the prompt. Use --force at the call site for non-interactive
+// scripts that want to bypass the prompt entirely.
+func ConfirmYN(prompt string, defaultYes bool) (bool, error) {
+	// Non-TTY detection: stat os.Stdin and look for "character device" mode.
+	// Pipes / redirected files report ModeNamedPipe, regular files, etc. and
+	// are not character devices. Avoids a hard dependency on x/term.
+	if fi, err := os.Stdin.Stat(); err == nil {
+		if (fi.Mode() & os.ModeCharDevice) == 0 {
+			return false, nil
+		}
+	}
+	fmt.Printf("%s [y/N] ", prompt)
+	var input string
+	if _, err := fmt.Scanln(&input); err != nil {
+		// EOF on stdin → treat as "no"
+		return false, nil
+	}
+	input = strings.ToLower(strings.TrimSpace(input))
+	if input == "" {
+		return defaultYes, nil
+	}
+	return input == "y" || input == "yes", nil
 }

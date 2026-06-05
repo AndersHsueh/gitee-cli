@@ -20,4 +20,7 @@ func init() {
 	RepoCmd.AddCommand(cloneCmd)
 	RepoCmd.AddCommand(browseCmd)
 	RepoCmd.AddCommand(branchesCmd)
+	RepoCmd.AddCommand(archiveCmd)
+	RepoCmd.AddCommand(syncCmd)
+	RepoCmd.AddCommand(renameCmd)
 }

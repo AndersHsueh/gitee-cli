@@ -1,6 +1,9 @@
 package api
 
-import "fmt"
+import (
+	"fmt"
+	"net/url"
+)
 
 // Endpoint builders for Gitee API v5.
 
@@ -145,10 +148,91 @@ func LabelCreate(owner, repo string) string {
 	return fmt.Sprintf("/repos/%s/%s/labels", owner, repo)
 }
 
+// LabelGet / LabelDelete accept a RAW label name; URL-escaping happens here
+// so callers don't have to remember to escape.
 func LabelGet(owner, repo string, name string) string {
-	return fmt.Sprintf("/repos/%s/%s/labels/%s", owner, repo, name)
+	return fmt.Sprintf("/repos/%s/%s/labels/%s", owner, repo, url.QueryEscape(name))
 }
 
 func LabelDelete(owner, repo string, name string) string {
-	return fmt.Sprintf("/repos/%s/%s/labels/%s", owner, repo, name)
+	return fmt.Sprintf("/repos/%s/%s/labels/%s", owner, repo, url.QueryEscape(name))
+}
+
+// Release endpoints
+func ReleasesList(owner, repo string) string {
+	return fmt.Sprintf("/repos/%s/%s/releases", owner, repo)
+}
+
+// ReleasesGet / ReleaseEdit / ReleaseDelete accept a RAW tag name; URL-escaping
+// happens here so callers don't have to remember to escape.
+func ReleasesGet(owner, repo, tagName string) string {
+	return fmt.Sprintf("/repos/%s/%s/releases/tags/%s", owner, repo, url.QueryEscape(tagName))
+}
+
+func ReleaseCreate(owner, repo string) string {
+	return fmt.Sprintf("/repos/%s/%s/releases", owner, repo)
+}
+
+func ReleaseEdit(owner, repo, tagName string) string {
+	return fmt.Sprintf("/repos/%s/%s/releases/tags/%s", owner, repo, url.QueryEscape(tagName))
+}
+
+func ReleaseDelete(owner, repo, tagName string) string {
+	return fmt.Sprintf("/repos/%s/%s/releases/tags/%s", owner, repo, url.QueryEscape(tagName))
+}
+
+// Repo lifecycle endpoints (P0)
+// Gitee v5 archives and renames a repo via PATCH on the repo resource.
+// Sync fork is implemented as a special POST to refresh the fork from upstream.
+func ReposArchive(owner, repo string) string {
+	return fmt.Sprintf("/repos/%s/%s", owner, repo)
+}
+
+func ReposRename(owner, repo string) string {
+	return fmt.Sprintf("/repos/%s/%s", owner, repo)
+}
+
+func ReposSync(owner, repo string) string {
+	// Gitee v5: POST /repos/{owner}/{repo}/pull  (refresh fork from upstream)
+	return fmt.Sprintf("/repos/%s/%s/pull", owner, repo)
+}
+
+// SSH key endpoints (P1a)
+// Gitee v5 does NOT expose a single-key GET; list + delete by id only
+// (same as GitHub).
+func SSHKeysList() string          { return "/user/keys" }
+func SSHKeyCreate() string         { return "/user/keys" }
+func SSHKeyDelete(id int64) string { return fmt.Sprintf("/user/keys/%d", id) }
+
+// GPG key endpoints (P1a)
+func GPGKeysList() string          { return "/user/gpg_keys" }
+func GPGKeyCreate() string         { return "/user/gpg_keys" }
+func GPGKeyDelete(id int64) string { return fmt.Sprintf("/user/gpg_keys/%d", id) }
+
+// Webhook endpoints (P1b)
+// Gitee v5 webhook paths under /repos/{owner}/{repo}/hooks. The id is an
+// integer so no URL escaping is required. "Test" is Gitee's equivalent of
+// GitHub's "ping" — POST with no body, returns 204 on success.
+func WebhooksList(owner, repo string) string {
+	return fmt.Sprintf("/repos/%s/%s/hooks", owner, repo)
+}
+
+func WebhookGet(owner, repo string, id int64) string {
+	return fmt.Sprintf("/repos/%s/%s/hooks/%d", owner, repo, id)
+}
+
+func WebhookCreate(owner, repo string) string {
+	return fmt.Sprintf("/repos/%s/%s/hooks", owner, repo)
+}
+
+func WebhookEdit(owner, repo string, id int64) string {
+	return fmt.Sprintf("/repos/%s/%s/hooks/%d", owner, repo, id)
+}
+
+func WebhookDelete(owner, repo string, id int64) string {
+	return fmt.Sprintf("/repos/%s/%s/hooks/%d", owner, repo, id)
+}
+
+func WebhookTest(owner, repo string, id int64) string {
+	return fmt.Sprintf("/repos/%s/%s/hooks/%d/tests", owner, repo, id)
 }
