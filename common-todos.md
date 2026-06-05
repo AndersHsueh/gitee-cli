@@ -98,10 +98,12 @@
 - [x] `gitee ssh-key add` — `--key` 接受字符串或文件路径；smoke test 6 种前缀
 - [x] `gitee ssh-key delete <id>` — 含 `--force`
 
-### 6. `gitee gpg-key` — ✅ 完成（v0.6.0，P1a）
-- [x] `gitee gpg-key list` — 列出，含 primary email
-- [x] `gitee gpg-key add` — 私钥安全校验（拒绝含 PRIVATE marker 的输入）
-- [x] `gitee gpg-key delete <id>`
+### 6. `gitee gpg-key` — ❌ 移除（2026-06）
+**Gitee API 状态**：🚫 Gitee v5 swagger spec 不提供 GPG key 端点（验证 2026-06 尝试了 `/user/gpg_keys` / `/user/keys` / `/gpg_keys` / `/user/public_keys` 等所有候选路径 — 全部 404，或返回 SSH key 数据）
+**决定**：删除整个 `cmd/gpg-key/` 目录（6 文件 + 3 test）。与 P1c 处理 6 个 Gitee 不支持 issue/pr verb 同一方式（"不创建空壳 cobra 文件"，已创建的也回滚）。
+**替代方案**：用户在 web UI 管理 GPG key → https://gitee.com/profile/gpg_settings
+**为什么这次会写入 v0.6.0 记录**：原 v0.6.0 实现是凭"gh 有 gpg-key 端点所以 gitee 也有"的猜测写出来的，端点路径完全靠猜，没验证 Gitee v5 spec。
+**Phase 2a 状态行修正**：从 `✅ 完成` 改为 `❌ 移除`（已从总览覆盖率表删除 1 个一级命令 + 3 个 verb）
 
 ### 7. `gitee webhook` — ✅ 完成（v0.7.0，P1b）
 **Gitee API 状态**：✅ 支持（6 个端点，per CLAUDE.md）
@@ -176,6 +178,8 @@
 - JSON / table 两种输出
 - 非 git 目录 / origin 非 Gitee → exit 0 + 清晰提示（不 fallback，避免误报）
 - 🆕 v0.9.0 配套新增 `internal/utils/git.go`（`IsInsideWorkTree`, `GitRemoteURL`, `ParseGiteeRemoteURL`, `CurrentBranch`），17 个表驱动单测
+- 🆕 v0.9.0-a 配套 commit `63eb1b3` 已推 origin + tag `temp-p2a-ready`
+- 🆕 已通过 `test/comparison-test.sh` 端到端验证（Phase 4 真实 API 抽查 ✅）
 
 ---
 
@@ -198,6 +202,24 @@
 - [ ] `gitee extension remove <name>`
 - [ ] `gitee extension upgrade <name>`
 - [ ] `gitee extension create <name>` — 创建新扩展脚手架
+
+---
+
+## P0 紧急 — 行为对比测试发现 2 个真实 Bug 🐛
+
+**来源**：`test/comparison-test.sh` Phase 4 真实 API 抽查（2026-06-05 晚 session）
+
+| # | Bug | 状态 | 修复方式 | 修复 commit |
+|---|---|---|---|---|
+| 🐛 **#1** | `gitee gpg-key list` → `HTTP 404` | ✅ **解决 (2026-06-06)** | 排查发现 Gitee v5 根本无 GPG key 端点（试了 `/user/gpg_keys` / `/user/keys` / `/gpg_keys` 等全部 404 或返回 SSH 数据）。按 P1c precedent 删 `cmd/gpg-key/` 整目录（6 文件） | (本 session) |
+| 🐛 **#2** | `gitee api user` → `panic: index out of range [1]` | ✅ **解决 (2026-06-06)** | `cmd/api/raw.go` 加 `Args: cobra.ExactArgs(2)` 到 `apiCmd`（与已有 `rawCmd` 一致） | (本 session) |
+
+**修复后回归测试**：`./test/comparison-test.sh` 跑出 **151 pass / 0 fail / 1 skip / 7 info**（报告 `test/behavior-comparison-gh-vs-gitee.md` 已刷新）。
+
+**预期失败分类**（脚本现在能区分）：
+- 修后 `gitee api user` 返回 `Error: accepts 2 arg(s), received 1` (exit 1) — 友好错误
+- 修后 `gitee gpg-key list` 直接不存在（命令从 `gitee --help` 里消失）
+- 测试脚本 `is_expected_failure()` 模式自动识别"友好错误"和"真 bug"为不同 outcome（🟡 pass + 🚫 expected vs ❌ fail）
 
 ---
 
@@ -332,3 +354,99 @@ gh 提供了多个 help topic：
 **下次接手读这两个文件**：
 - `common-todos.md`（本文件）— 看 P2 / P3 / help topics 还有哪些没做
 - 上一轮 plan 文件 — P1a + P1b + P1c 的实施模式可作为后续命令组的复用模板
+
+---
+
+## 2026-06-05 晚 session — 行为对比测试 + 2 个新 bug 记录
+
+**今日完成**：
+- 编写 `test/comparison-test.sh`（7 阶段黑盒测试）+ 跑通生成 `test/behavior-comparison-gh-vs-gitee.md` 报告
+- 同步刷新 `test/feature-comparison-gh-vs-gitee.md` 静态对比表（v0.9.0-a 状态）
+
+**测试覆盖**：17 个 gitee 一级命令 + 90+ verb，**155 pass / 2 fail / 1 skip / 8 info**
+- Phase 1：一级命令覆盖（gitee 17 vs gh 29）
+- Phase 2：90+ verb `--help` 抽取 ✅
+- Phase 3：37 个 `--agent-help` 核心章节验证（2 个 webhook verb 缺 `## Example`，非阻塞）
+- Phase 4：13 个真实 API 抽查（11 ✅ + 2 ❌ = 上文 🐛 #1 / #2）
+- Phase 5：gh json-keys 对比（4 组，3 字段差异已记录 — snake_case vs camelCase + 字段丰富度差异）
+- Phase 6：行为差异标注（`--agent-help` 独占 / `webhook` 顶级化 / `issue comments` 需 positional）
+- Phase 7：报告生成
+
+**新发现 2 个真实 Bug**（详见上文 🐛 段）：
+- 🐛 #1 `gitee gpg-key list` → HTTP 404（端点错或缺失）
+- 🐛 #2 `gitee api user` → panic index out of range（`args[1]` 未做边界检查）
+
+**Commit 状态**：
+- `63eb1b3` `refactor: simplify gitee status (post /simplify)` ✅ 已推
+- `7efab5d` `feat: P2a — gitee status (v0.9.0-a)` ✅ 已推 + tag `temp-p2a-ready`
+- 测试文件 staged 但 git commit 被 auto-mode 拦截（classifier 误判为 token 操作）— **需用户手动 commit**：
+  ```bash
+  git commit -m "test: add gh vs gitee-cli behavior comparison test"
+  ```
+
+**uncommitted changes**：
+- `test/comparison-test.sh`（staged）
+- `test/behavior-comparison-gh-vs-gitee.md`（staged）
+- `test/.gitignore`（staged）
+- `common-todos.md`（本文件，含本次 session 总结 — **未 commit**）
+
+**下次接手读这 3 个文件**：
+- `common-todos.md`（本文件）— 看新发现的 🐛 #1 / #2 怎么修
+- `test/comparison-test.sh` — 复跑测试验证 bug 修复
+- `test/behavior-comparison-gh-vs-gitee.md` — 当前行为的快照基线
+
+**明天计划**（用户决策）：
+1. 修 🐛 #2（`cmd/api/runAPI` 边界检查）— ~30 min
+2. 排查 🐛 #1（`cmd/gpg-key/list` 端点验证）— ~1-2h（要看 Gitee v5 spec）
+3. 修完重跑 `test/comparison-test.sh`，期望 157 pass / 0 fail
+4. 把本 common-todos.md 改动 + 测试文件一起 commit
+
+---
+
+## 2026-06-06 session — 修 🐛 #1 / #2 + /simplify 清理
+
+**今日完成**：
+- 🐛 #2 修：`cmd/api/raw.go` 加 `Args: cobra.ExactArgs(2)`（与 `rawCmd` 一致），消除 `args[1]` 越界 panic
+- 🐛 #1 排查 + 修：curl 测试 `/user/gpg_keys` / `/user/keys` / `/gpg_keys` / `/user/public_keys` 全部 404 或返回 SSH 数据 — Gitee v5 **没有** GPG key API。按 P1c precedent（"不创建空壳 cobra 文件"）删 `cmd/gpg-key/` 整目录（6 文件）+ `cmd/agent_help.go` 移除 coverage + `cmd/gitee/main.go` 注销注册
+- `test/comparison-test.sh` 加 `is_expected_failure()` 模式 — 区分"友好错误"（✅ pass）和"真 bug"（❌ fail）
+- 回归测试：`./test/comparison-test.sh` **151 pass / 0 fail / 1 skip / 7 info**
+
+**/simplify 4 agent 并行 review**（应用了哪些）：
+- **A** Altitude：删 `cmd/gpg-key/` 整目录（避免 P1c 警告的"stub 陷阱"）— 应用 ✅
+- **F** Simplify+Altitude：删 `save_help` + `behavior-comparison-data/` + `test/.gitignore`（91 个文件写完没人读）— 应用 ✅
+- **E** Simplify：删 `has_agent_help` 未调用函数 — 应用 ✅
+- **I** Reuse+Simplify：合并 `extract_top_level` + `extract_verbs` 为单一 `extract_commands` — 应用 ✅
+- **G** Efficiency：Phase 3 `check_agent_help` 接受预捕获输出，避免重复 `--agent-help` spawn — 应用 ✅
+- **H** Efficiency：Phase 5 复用 Phase 4 真实 API 输出（写 `.out` 缓存），避免 4 次重复 Gitee API — 应用 ✅
+- **J** Efficiency：`smoke_key` 用参数展开替代 `tr`；`cat $file` → `$(<file)` — 应用 ✅
+- **K** Simplify：mapfile 在 macOS bash 3.2 不可用 — 拒绝 ❌（验证后确实不可用）
+- **N** Simplify：报告 case 中 `extension` 分支永不匹配 — 拒绝 ❌（defensive code 留着无害）
+- **M** Simplify：gpg-key Long docstring 矛盾 — 拒绝 ❌（整个目录已删，无意义）
+
+**测试状态**：
+- `go build ./cmd/gitee` 干净
+- `go test ./... -count=1` 全部通过（含之前 14 个有 test 的包）
+- `./test/comparison-test.sh` 全部通过
+
+**未 commit**（待用户手动 git commit，因 auto-mode 之前误拦截）：
+```
+modified:   cmd/agent_help.go
+modified:   cmd/api/raw.go
+modified:   cmd/gitee/main.go
+deleted:    cmd/gpg-key/add.go
+deleted:    cmd/gpg-key/add_test.go
+deleted:    cmd/gpg-key/delete.go
+deleted:    cmd/gpg-key/delete_test.go
+deleted:    cmd/gpg-key/gpg-key.go
+deleted:    cmd/gpg-key/list.go
+deleted:    cmd/gpg-key/list_test.go
+modified:   common-todos.md
+staged:     test/behavior-comparison-gh-vs-gitee.md
+staged:     test/comparison-test.sh
+```
+
+**建议 commit 拆 3 个**（保持 commit 原子性）：
+1. `fix(api): add Args: cobra.ExactArgs(2) to apiCmd to prevent args[1] panic` （仅 `cmd/api/raw.go` + 1 行）
+2. `feat(gpg-key): remove entire cmd/gpg-key/ group - Gitee v5 has no GPG key API` （删除 6 文件 + main.go 注销 + agent_help 文档）
+3. `test: add gh vs gitee-cli behavior comparison test + 151 pass report` （test/ 2 个新文件 + common-todos.md 记录）
+4. `chore(common-todos): record gpg-key removal and bug resolution` （可选，合并到 #2 也行）

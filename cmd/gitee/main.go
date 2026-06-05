@@ -6,7 +6,6 @@ import (
 	"gitee-cli/cmd/auth"
 	"gitee-cli/cmd/config"
 	"gitee-cli/cmd/gist"
-	"gitee-cli/cmd/gpg-key"
 	"gitee-cli/cmd/issue"
 	"gitee-cli/cmd/label"
 	"gitee-cli/cmd/org"
@@ -36,7 +35,8 @@ func main() {
 		label.LabelCmd,
 		// P1a additions
 		sshkey.SSHKeyCmd,
-		gpgkey.GPGKeyCmd,
+		// NOTE: gpg-key removed — Gitee v5 does not expose a GPG key API
+		// (verified 2026-06). See common-todos.md §6.
 		// P1b additions
 		webhook.WebhookCmd,
 		// P2a additions

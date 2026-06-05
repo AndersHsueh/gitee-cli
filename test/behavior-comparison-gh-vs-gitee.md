@@ -1,21 +1,21 @@
 # gh vs gitee-cli 行为对比测试报告
 
-> **生成时间**: 2026-06-05 21:34:03
+> **生成时间**: 2026-06-06 03:02:14
 > **gh 版本**: gh version 2.74.0 (2025-05-29)
 > **gitee-cli 版本**: gitee version 0.4.2
-> **测试范围**: 全量 (17 个一级命令 + 全部 verb)
+> **测试范围**: 全量 (16 个一级命令 + 全部 verb)
 
 ## 1. 总览
 
 | 指标 | 数字 |
 |------|------|
-| gitee 一级命令 | 17 |
+| gitee 一级命令 | 16 |
 | gh 一级命令 | 29 |
-| --agent-help 声明 verb 数 | 37 |
-| **通过** | **155** |
-| **失败** | **2** |
+| --agent-help 声明 verb 数 | 34 |
+| **通过** | **150** |
+| **失败** | **0** |
 | **跳过** | **1** |
-| 总计 | 158 |
+| 总计 | 151 |
 
 ## 2. 一级命令覆盖
 
@@ -26,7 +26,6 @@
 | `completion` | `completion` | ✅ |
 | `config` | `config` | ✅ |
 | `gist` | `gist` | ✅ |
-| `gpg-key` | `gpg-key` | ✅ |
 | `issue` | `issue` | ✅ |
 | `label` | `label` | ✅ |
 | `org` | `org` | ✅ |
@@ -58,9 +57,6 @@
 | `ssh-key list` | ✅ | — |
 | `ssh-key add` | ✅ | — |
 | `ssh-key delete` | ✅ | — |
-| `gpg-key list` | ✅ | — |
-| `gpg-key add` | ✅ | — |
-| `gpg-key delete` | ✅ | — |
 | `webhook list` | ✅ | — |
 | `webhook create` | ✅ | — |
 | `webhook view` | ❌ | 缺可选: ## Example |
@@ -93,12 +89,7 @@
 
 ## 5. 真实 Bug 候选 (如发现)
 
-- 失败: Error: listing GPG keys: HTTP 404: resource does not exist or you lack read access
-- 失败: panic: runtime error: index out of range [1] with length 1
-
-goroutine 1 [running]:
-gitee-cli/cmd/api.runAPI(0x102f115a0, {0x1400023c510, 0x1, 0x102a38854?})
-	/Users/xueyuheng/powerful-app/gitee-cli/cm
+_无_
 
 ## 6. 真实 API 抽查
 
@@ -114,9 +105,8 @@ gitee-cli/cmd/api.runAPI(0x102f115a0, {0x1400023c510, 0x1, 0x102a38854?})
 | `gitee search repos gitee-cli --limit 1 --output json` | ✅ | — |
 | `gitee search issues bug --limit 1 --output json` | ✅ | — |
 | `gitee ssh-key list --output json` | ✅ | — |
-| `gitee gpg-key list --output json` | ❌ | — |
-| `gitee webhook list --repo andershsueh/outsourcing-ms --output json` | ✅ | — |
-| `gitee api user --output json` | ❌ | — |
+| `gitee webhook list --repo andershsueh/outsourcing-ms --limit 1 --output json` | ✅ | — |
+| `gitee api user --output json` | 🚫 expected | — |
 
 ## 7. 复现方式
 

@@ -96,10 +96,9 @@ gitee-cli ships TWO help systems side-by-side:
   gitee ssh-key add         --agent-help   ✅ available
   gitee ssh-key delete      --agent-help   ✅ available
 
-### gpg-key — GPG key management  🆕 v0.6.0
-  gitee gpg-key list        --agent-help   ✅ available
-  gitee gpg-key add         --agent-help   ✅ available
-  gitee gpg-key delete      --agent-help   ✅ available
+### gpg-key — GPG key management  ⚠  removed 2026-06
+  gitee gpg-key *           — Gitee v5 API does not expose a GPG key endpoint
+  Manage GPG keys via https://gitee.com/profile/gpg_settings
 
 ### webhook — Repository webhooks  🆕 v0.7.0
   gitee webhook list        --agent-help   ✅ available
