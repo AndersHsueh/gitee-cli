@@ -37,6 +37,7 @@ caveats listed in "Known limitations" below.
   --paginate      Fetch all pages (vs default single page)
   --limit N       Cap total items when --paginate is set
   --per-page N    Page size (max 100, default 30)
+  --page N        Page number for single-page mode (default 1)
 
 ## Idempotency
 YES. Read-only — no API state is mutated.
@@ -85,8 +86,9 @@ None. Pure GETs.
   }
 
   Note: issue numbers are STRINGS in the Gitee v5 issue API but INTS
-  in the PR API. The JSON preserves the source types — do not assume
-  uniform number typing when parsing.
+  in the PR API. The JSON preserves the source types (item.number is
+  'any' in the Go type) — do not assume uniform number typing when
+  parsing.
 
 ## Common errors
 - 401 Unauthorized:  token missing or expired. Run 'gitee auth login'.
@@ -160,11 +162,3 @@ Gitee API v5: 1000 req/hour. Each ` + "`" + `gitee status` + "`" + ` call = 3 re
 - ` + "`" + `gitee auth status` + "`" + `                       — confirm the username used here
 - ` + "`" + `common-todos.md` + "`" + `                          — P2 roadmap (status, alias, extension)
 `
-
-// printStatusAgentHelpImpl writes the const to stdout. Called from
-// PreRunE in status.go. The indirection through a function (rather than
-// inlining `fmt.Print(statusAgentHelp)` in status.go) keeps the agent
-// help text in its own file, paralleling the P1b/P1c convention.
-func printStatusAgentHelpImpl() {
-	fmtPrint(statusAgentHelp)
-}

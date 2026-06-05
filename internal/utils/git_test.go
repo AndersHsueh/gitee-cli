@@ -2,6 +2,7 @@ package utils
 
 import (
 	"os/exec"
+	"strings"
 	"testing"
 )
 
@@ -131,7 +132,7 @@ func TestParseGiteeRemoteURL(t *testing.T) {
 				t.Fatalf("ParseGiteeRemoteURL(%q) error = %v, wantErr = %v", tt.input, err, tt.wantErr)
 			}
 			if tt.wantErr {
-				if tt.errContains != "" && !contains(err.Error(), tt.errContains) {
+				if tt.errContains != "" && !strings.Contains(err.Error(), tt.errContains) {
 					t.Errorf("error %q does not contain %q", err.Error(), tt.errContains)
 				}
 				return
@@ -170,14 +171,9 @@ func TestIsInsideWorkTree(t *testing.T) {
 // contains is a small helper to keep test file stdlib-free of strings.Contains
 // in the failure path (and to give better error messages than assert.Contains).
 func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || indexOf(s, substr) >= 0)
+	return strings.Contains(s, substr)
 }
 
 func indexOf(s, substr string) int {
-	for i := 0; i+len(substr) <= len(s); i++ {
-		if s[i:i+len(substr)] == substr {
-			return i
-		}
-	}
-	return -1
+	return strings.Index(s, substr)
 }

@@ -56,13 +56,18 @@ func GitRemoteURL(remoteName string) (string, error) {
 // We deliberately do NOT chdir or set GIT_DIR — the caller's working
 // directory is what we want to inspect (so `cd /tmp && gitee status`
 // sees /tmp, not the gitee-cli source repo).
+//
+// The error is returned as a plain string (not wrapped with %w) because
+// every caller re-wraps with a higher-level message — a wrapped-wrapped
+// error chain would have to be unwrapped twice by the user. Keeping
+// this error a flat string makes the final user-facing message clearer.
 func runGitCapture(args ...string) (string, error) {
 	cmd := exec.Command("git", args...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("%w: %s", err, strings.TrimSpace(stderr.String()))
+		return "", fmt.Errorf("git %s: %s: %s", strings.Join(args, " "), err, strings.TrimSpace(stderr.String()))
 	}
 	return stdout.String(), nil
 }

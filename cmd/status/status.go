@@ -16,6 +16,9 @@
 package status
 
 import (
+	"fmt"
+	"os"
+
 	"gitee-cli/cmd"
 	"github.com/spf13/cobra"
 )
@@ -41,22 +44,10 @@ specify a repository explicitly.`,
   gitee status --repo owner/repo --output json`,
 	PreRunE: func(c *cobra.Command, args []string) error {
 		if cmd.GlobalAgentHelp {
-			// Agent help is a focused 14-section doc; print and exit before
-			// cobra's required-flag validation runs (there are no required
-			// flags, but the convention is to short-circuit here).
-			printStatusAgentHelp()
-			return nil
+			fmt.Print(statusAgentHelp)
+			os.Exit(0) // short-circuit before cobra's flag validation
 		}
 		return nil
 	},
 	RunE: runStatus,
-}
-
-// printStatusAgentHelp is a thin wrapper to keep the PreRunE readable
-// and to allow the long const to be defined in status_agenthelp.go
-// (separate file to keep status.go focused on command definition).
-func printStatusAgentHelp() {
-	// Implemented in status_agenthelp.go. See that file for the
-	// 14-section structure (Purpose, Pre-conditions, Idempotency, etc.).
-	printStatusAgentHelpImpl()
 }

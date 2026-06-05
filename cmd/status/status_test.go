@@ -13,16 +13,23 @@ import (
 func TestStatusAgentHelpContent(t *testing.T) {
 	required := []string{
 		"# gitee status",
-		"Purpose",
-		"Pre-conditions",
-		"Idempotency",
-		"Atomicity",
-		"Side effects",
-		"Post-conditions",
-		"Common errors",
-		"OAuth scope required",
-		"Rate limit",
-		"See also",
+		"## Purpose",
+		"## Pre-conditions",
+		"## Required arguments",
+		"## Optional flags",
+		"## Idempotency",
+		"## Atomicity",
+		"## Side effects",
+		"## Post-conditions",
+		"## Output (stdout, table mode)",
+		"## Output (stdout, json mode)",
+		"## Common errors",
+		"## Known limitations",
+		"## Next steps",
+		"## OAuth scope required",
+		"## Rate limit",
+		"## Example",
+		"## See also",
 	}
 	for _, want := range required {
 		if !strings.Contains(statusAgentHelp, want) {
