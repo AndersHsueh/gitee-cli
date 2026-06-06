@@ -151,6 +151,14 @@ gitee-cli ships TWO help systems side-by-side:
   ` + "`" + `gitee pr checkout 123` + "`" + ` before cobra parses argv. Built-in commands
   always win over aliases of the same name.
 
+### help topics — Cross-cutting documentation  🆕 v0.9.0
+  gitee help environment    --agent-help   n/a  (use 'gitee help environment')
+  gitee help exit-codes     --agent-help   n/a  (use 'gitee help exit-codes')
+  gitee help formatting     --agent-help   n/a  (use 'gitee help formatting')
+  gitee help reference      --agent-help   n/a  (auto-generated command index)
+  These replace gh-style 'man pages' for things that don't fit under a single
+  command. The reference page is generated from the live cobra tree at run time.
+
 ### auth, config, search, completion, version
   These are operational / config commands. --agent-help is not needed for
   them; consult --help.
@@ -167,6 +175,7 @@ gitee-cli ships TWO help systems side-by-side:
   v0.9.0  ✅  P2a: status (issues assigned / PRs awaiting review)
   v0.9.0  ✅  P2b: extension (5 verb + dynamic load + --no-extensions flag)
   v0.9.0  ✅  P2c: alias (set/list/delete + dynamic expansion)
+  v0.9.0  ✅  Help topics: environment / exit-codes / formatting / reference
   v0.9.0       P3: pipeline (Gitee Go)
   v0.9.0       Help topics: environment, exit-codes, formatting, reference
 

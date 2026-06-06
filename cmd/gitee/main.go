@@ -8,6 +8,7 @@ import (
 	"gitee-cli/cmd/config"
 	cmdext "gitee-cli/cmd/extension"
 	"gitee-cli/cmd/gist"
+	"gitee-cli/cmd/help_topics"
 	"gitee-cli/cmd/issue"
 	"gitee-cli/cmd/label"
 	"gitee-cli/cmd/org"
@@ -52,5 +53,9 @@ func main() {
 	// Dynamic loaders: register extension commands from
 	// ~/.gitee-cli/extensions/. Skipped when --no-extensions is set.
 	cmd.RegisterDynamicCommands(gitext.LoadCommands)
+	// Cross-cutting help topics (environment, exit-codes, formatting,
+	// reference). Must be registered after all built-in commands so
+	// 'gitee help reference' walks the full tree.
+	help_topics.RegisterHelpTopics(cmd.RootCommand())
 	cmd.Execute()
 }

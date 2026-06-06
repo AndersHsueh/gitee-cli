@@ -555,3 +555,31 @@ staged:     test/comparison-test.sh
 - P3: `gitee pipeline` (Gitee Go CI/CD) — 5 verb: list/view/run/cancel/logs
 - 或 Help topics: environment / exit-codes / formatting / reference
 - 或 v0.9.0-c: extension `--go` 脚手架 + Windows 包装（user-可选）
+
+---
+
+## 2026-06-07 session (下午) — Help topics 实施 (v0.9.0-d)
+
+**今日完成**：help topics 4 个 (environment / exit-codes / formatting / reference)
+- 新建 6 个文件（4 个 topic + 1 个 RegisterHelpTopics 注册器 + 1 个 content_test + 1 个 testutil_test）= 7 个文件
+- 改 2 个文件：`cmd/gitee/main.go`（注册 help_topics）+ `cmd/agent_help.go`（coverage matrix 升级 + roadmap 标 done）
+- 5 个新单测：4 topic content + 1 wiring + 1 idempotent + 1 reference walker
+- 全量回归：`go test ./... -count=1` 全部 17 个有 test 的包通过
+
+**关键设计决策**：
+- **不是 cobra 子命令**：用 `SetHelpCommand` 替换默认 help 命令，把 4 topic 挂为 help 的子命令。这样 `gitee help environment` 自然 work，tab completion 也自动支持。
+- **dispatch 逻辑自实现**：自定义 helpCmd.RunE 复制 cobra 默认行为（`Find` + `Help`），加 "no args → root help" 分支。
+- **reference 自动生成**：用 `walkCommands(root, "")` 深度优先遍历 cobra tree。父级先打印，子级后打印。跳过 `version` / `help` 自身 / `Hidden`（如 `pr.CoCmd`）。
+- **测试隔离**：cobra v1.10 不导出 `HelpCommand()` getter + 不导出 `SetRoot()` setter。改用包级 `currentHelpCmd` 变量 + `HelpCommandForTest()` 暴露给 test。
+- **没造 JSON template 轮子**：4 个 topic 都是简单 table + 文字段。`gitee help formatting` 加了 4 个 jq recipe 作为实用示例。
+
+**端到端验证**：
+- `gitee help` (no args) → 显示 root help (不再误打 "unknown topic")
+- `gitee help environment` → 17 个 env vars 表 (GITEE_TOKEN / GITEE_HOSTNAME / GITEE_OUTPUT / GITEE_EXT_DIR / GITEE_ALIASES_FILE 等)
+- `gitee help exit-codes` → 8 个 code (0/1/2/3/4/5/64/130) + 优先级说明
+- `gitee help formatting` → 3 格式表 + 4 个 jq recipe
+- `gitee help reference` → 自动生成 60+ 命令索引，父→子顺序
+
+**Commit 状态**：进行中（task #14）
+
+**下次接手**：P3 pipeline 或 v0.9.0-c extension `--go` 脚手架。
