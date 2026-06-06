@@ -183,13 +183,19 @@
 
 ---
 
-### 12. `gitee alias` — 缺失 ❌
+### 12. `gitee alias` — ✅ 完成（v0.9.0-c，P2c）
 **gh 对应**：`gh alias set / list / delete`
+**Gitee API 状态**：🚫 平台独占（不依赖 Gitee API — 跟 gh 一样纯本地，aliases.json 存 `~/.gitee-cli/aliases.json`）
 **为什么是 P2**：是增强功能，不阻塞日常工作流。
-**待实现**：
-- [ ] `gitee alias set <name> <command>`
-- [ ] `gitee alias list`
-- [ ] `gitee alias delete <name>`
+**已实现**：
+- [x] `gitee alias set <name> <expansion>` — 创建或覆盖；expansion 接受多个位置参数（自动空格连接 + 折叠）
+- [x] `gitee alias list` — NAME / EXPANSION 表 + `--output json` 输出原始 map
+- [x] `gitee alias delete <name>`（alias `rm`）— `alias.Get` 预检查后 `ConfirmYN`，`--force` 跳过
+- [x] 动态展开钩子（`cmd.Execute()` 调 `alias.ResolveArgs`）：`gitee <alias> ...` → 替换为 `gitee <expansion> ...`，builtin 优先
+- [x] 内置命令（如 `gitee co` 已注册为 `pr.CoCmd`）始终优先于同名 alias
+- [x] 损坏的 aliases.json 不 panic — `ResolveArgs` 静默 fallback
+- [x] 3 verb 全部带 14-章节 `const ...AgentHelp` + `content_test.go` 表驱动 assertion
+- [x] 27 个新单测（14 store + 5 resolve + 1 builtin precedence + 1 corrupt-file + 1 describe + 5 content/wiring），全部通过
 
 ---
 
@@ -508,3 +514,44 @@ staged:     test/comparison-test.sh
 **下次接手**：
 - P2C: `gitee alias`（3 verb: set / list / delete，JSON 存储 ~`~/.gitee-cli/aliases.json`）
 - 或 v0.9.0-c: extension `--go` 脚手架 + Windows 包装
+
+---
+
+## 2026-06-07 session — P2C alias 实施
+
+**今日完成**：P2C（alias）实施
+- 新建 5 个文件（`internal/alias/store.go` + `internal/alias/resolve.go` + `internal/alias/resolve_test.go` + `internal/alias/testutil_test.go` + `internal/alias/store_test.go`）— 共 6 个文件，含 27 个新单测
+- 新建 4 个 cobra 命令文件（`cmd/alias/{alias,set,list,delete}.go`）+ 1 个 content_test.go
+- 改 2 个文件：`cmd/root.go`（加 `RootCommand()` 访问器 + `Execute()` 调 `alias.ResolveArgs`）+ `cmd/gitee/main.go`（注册 `alias.AliasCmd`）
+- `cmd/agent_help.go` coverage matrix v0.9.0 → v0.9.0-c，roadmap 标记 P2c 完成
+- `cmd/version.go` 0.4.2 → 0.9.0-c（默认 fallback；实际版本 ldflags 注入）
+- `common-todos.md` 状态行 P2c ❌ → ✅
+
+**关键设计决策**：
+- **存储位置** `~/.gitee-cli/aliases.json`（chmod 0600）— 与 `~/.gitee-cli/settings.json` / `~/.gitee-cli/extensions/` 风格一致，不引入 XDG
+- **存储格式** 扁平 JSON map `{"co": "pr checkout", ...}`（不是数组）— 与 gh 一致
+- **展开时机** `cmd.Execute()` 在 `rootCmd.Execute()` 之前调 `alias.ResolveArgs` — 每次启动重新读盘，新加 alias 不需重启
+- **builtin 优先** 展开前查 `rootCmd.Commands()` name 集合，命中即跳过 — 避免 `alias set co ...` 顶掉 `pr.CoCmd`
+- **set 接受多 token** `gitee alias set co pr checkout` 不需引号；strings.Fields 折叠多余空白
+- **name 验证** 与 extension 同规则：`[a-z0-9_-]`、1-40 字符、不以 `.` / `-` 开头 — 复用 `validateName` 风格（独立函数，未抽到 utils）
+- **损坏文件容错** `ResolveArgs` 遇 `Load` 错误时静默 fallback 到原 args — 用户看到的是 "unknown command"，可调试；但 `Set/Delete` 路径上仍严格（避免静默丢数据）
+- **预检删除** `alias delete` 先 `Get` 再 `ConfirmYN`，避免用户答 y 后才报错 "not defined"
+
+**端到端验证**（用 `GITEE_ALIASES_FILE=/tmp/...` 隔离用户配置）：
+- `gitee alias set myissues 'issue list --limit 5'` → ✓ created
+- `gitee myissues 5` → 展开为 `gitee issue list --limit 5 5` → issue list handler 报 `--repo is required`（预期）
+- `gitee nosuch` → `Error: unknown command "nosuch" for "gitee"`（未触展开，原样错误）
+- `gitee alias delete myissues --force` → ✓ removed
+- `gitee myissues 5` → `Error: unknown command "myissues" for "gitee"`（删除后失效）
+- 验证 builtin 优先：删 `co` alias 后 `gitee co 123` 仍走 `pr.CoCmd` → `pr checkout`（不变）
+
+**测试状态**：
+- `go build ./cmd/gitee` 干净
+- `go test ./... -count=1` 全部通过（**16 个有 test 的包**，含新的 `cmd/alias` + `internal/alias`）
+
+**Commit 状态**：进行中（task #8）
+
+**下次接手**：
+- P3: `gitee pipeline` (Gitee Go CI/CD) — 5 verb: list/view/run/cancel/logs
+- 或 Help topics: environment / exit-codes / formatting / reference
+- 或 v0.9.0-c: extension `--go` 脚手架 + Windows 包装（user-可选）

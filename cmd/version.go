@@ -10,12 +10,12 @@ import (
 //
 // Declared as `var` (not `const`) so it can be overridden at build time via:
 //
-//	go build -ldflags "-X gitee-cli/cmd.Version=v0.4.1" ./cmd/gitee
+//	go build -ldflags "-X gitee-cli/cmd.Version=v0.9.0-c" ./cmd/gitee
 //
 // This is how scripts/release.sh stamps the right version into release
 // binaries without editing source code. The default value below is the
 // fallback for `go build` without ldflags (e.g. local dev).
-var Version = "0.4.2"
+var Version = "0.9.0-c"
 
 var versionCmd = &cobra.Command{
 	Use:   "version",

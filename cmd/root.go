@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"gitee-cli/internal/alias"
 	"gitee-cli/internal/api"
 	"gitee-cli/internal/config"
 	"github.com/fatih/color"
@@ -118,10 +119,33 @@ func reservedNames() map[string]bool {
 }
 
 func Execute() {
+	// Resolve user-defined aliases BEFORE cobra parses argv. This
+	// is the runtime hook that makes `gitee co 123` (where `co` is
+	// `gitee alias set co 'pr checkout'`) behave like
+	// `gitee pr checkout 123`. Built-in commands always win, and
+	// the alias store is read on every invocation so newly-added
+	// aliases are picked up without restart.
+	os.Args = alias.ResolveArgs(os.Args, builtInCommandNames())
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, color.RedString("Error:"), err)
 		os.Exit(1)
 	}
+}
+
+// RootCommand returns the package-level rootCmd so external callers
+// (main.go, integration tests) can inspect or attach commands to it
+// without depending on a private symbol.
+func RootCommand() *cobra.Command { return rootCmd }
+
+// builtInCommandNames returns the set of names that are already
+// registered on rootCmd at Execute() time. Used by the alias
+// resolver to make built-ins win over user-defined aliases.
+func builtInCommandNames() map[string]bool {
+	out := make(map[string]bool, len(rootCmd.Commands()))
+	for _, c := range rootCmd.Commands() {
+		out[c.Name()] = true
+	}
+	return out
 }
 
 func init() {

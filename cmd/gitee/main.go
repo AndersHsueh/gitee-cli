@@ -2,6 +2,7 @@ package main
 
 import (
 	"gitee-cli/cmd"
+	"gitee-cli/cmd/alias"
 	"gitee-cli/cmd/api"
 	"gitee-cli/cmd/auth"
 	"gitee-cli/cmd/config"
@@ -45,6 +46,8 @@ func main() {
 		status.StatusCmd,
 		// P2b additions
 		cmdext.ExtensionCmd,
+		// P2c additions
+		alias.AliasCmd,
 	)
 	// Dynamic loaders: register extension commands from
 	// ~/.gitee-cli/extensions/. Skipped when --no-extensions is set.

@@ -142,6 +142,15 @@ gitee-cli ships TWO help systems side-by-side:
   External extensions (from ~/.gitee-cli/extensions/) are loaded at startup
   via ` + "`" + `gitee <name>` + "`" + `; --no-extensions disables that loader.
 
+### alias — User-defined command shortcuts  🆕 v0.9.0
+  gitee alias set           --agent-help   ✅ available  🆕 v0.9.0
+  gitee alias list          --agent-help   ✅ available  🆕 v0.9.0
+  gitee alias delete        --agent-help   ✅ available  🆕 v0.9.0
+  Aliases (from ~/.gitee-cli/aliases.json) are expanded at startup: typing
+  ` + "`" + `gitee co 123` + "`" + ` after ` + "`" + `gitee alias set co 'pr checkout'` + "`" + ` is rewritten to
+  ` + "`" + `gitee pr checkout 123` + "`" + ` before cobra parses argv. Built-in commands
+  always win over aliases of the same name.
+
 ### auth, config, search, completion, version
   These are operational / config commands. --agent-help is not needed for
   them; consult --help.
@@ -157,7 +166,7 @@ gitee-cli ships TWO help systems side-by-side:
   v0.8.0  ✅  P1c: issue comments list, pr ready/comment/edit/checks
   v0.9.0  ✅  P2a: status (issues assigned / PRs awaiting review)
   v0.9.0  ✅  P2b: extension (5 verb + dynamic load + --no-extensions flag)
-  v0.9.0       P2c: alias
+  v0.9.0  ✅  P2c: alias (set/list/delete + dynamic expansion)
   v0.9.0       P3: pipeline (Gitee Go)
   v0.9.0       Help topics: environment, exit-codes, formatting, reference
 
