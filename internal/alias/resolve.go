@@ -76,26 +76,3 @@ func BuiltinNames(names []string) map[string]bool {
 	}
 	return out
 }
-
-// DescribeExpansion is a small convenience used by tests and the
-// "agent help" doc strings. It returns a human-readable summary of
-// what the resolver would do for a given (alias, builtins) input.
-// Exposed because it makes the rule explicit and unit-testable.
-func DescribeExpansion(target string, builtins map[string]bool) (expansion string, source string) {
-	if builtins[target] {
-		return "", "builtin"
-	}
-	m, err := Load()
-	if err != nil {
-		return "", "no-aliases-file"
-	}
-	if v, ok := m[target]; ok {
-		return v, "alias"
-	}
-	return "", "unknown"
-}
-
-// String helper to make errors from the resolver more readable in
-// the rare case we want to surface them. Currently unused by the
-// runtime path; kept for parity with other "explain what happened"
-// helpers in the package.

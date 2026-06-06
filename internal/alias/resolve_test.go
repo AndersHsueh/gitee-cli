@@ -1,6 +1,7 @@
 package alias
 
 import (
+	"os"
 	"reflect"
 	"testing"
 )
@@ -8,10 +9,10 @@ import (
 func TestResolveArgs(t *testing.T) {
 	// Build a tiny alias file on disk so the resolver can read it.
 	withTempFile(t)
-	if err := Set("co", "pr checkout"); err != nil {
+	if _, _, err := Set("co", "pr checkout"); err != nil {
 		t.Fatalf("seed Set: %v", err)
 	}
-	if err := Set("issues", "issue list --limit 50"); err != nil {
+	if _, _, err := Set("issues", "issue list --limit 50"); err != nil {
 		t.Fatalf("seed Set: %v", err)
 	}
 
@@ -79,7 +80,7 @@ func TestResolveArgsBuiltinPrecedence(t *testing.T) {
 	withTempFile(t)
 	// Even if a user manages to define an alias named "issue", the
 	// built-in `gitee issue` must win.
-	if err := Set("issue", "somethingelse"); err != nil {
+	if _, _, err := Set("issue", "somethingelse"); err != nil {
 		t.Fatalf("seed Set: %v", err)
 	}
 	builtins := BuiltinNames([]string{"issue", "pr"})
@@ -96,7 +97,7 @@ func TestResolveArgsCorruptFileGraceful(t *testing.T) {
 	// "unknown command".
 	path := withTempFile(t)
 	// Write invalid JSON to the file.
-	if err := writeFileAtomic(path, []byte("{not json")); err != nil {
+	if err := os.WriteFile(path, []byte("{not json"), 0600); err != nil {
 		t.Fatalf("seed: %v", err)
 	}
 	builtins := BuiltinNames([]string{"pr"})
@@ -104,30 +105,5 @@ func TestResolveArgsCorruptFileGraceful(t *testing.T) {
 	want := []string{"gitee", "co", "1"}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("on corrupt file, ResolveArgs should be no-op; got %v, want %v", got, want)
-	}
-}
-
-func TestDescribeExpansion(t *testing.T) {
-	withTempFile(t)
-	if err := Set("co", "pr checkout"); err != nil {
-		t.Fatalf("seed: %v", err)
-	}
-	builtins := BuiltinNames([]string{"pr"})
-
-	cases := []struct {
-		target   string
-		wantExp  string
-		wantSrc  string
-	}{
-		{"pr", "", "builtin"},
-		{"co", "pr checkout", "alias"},
-		{"nope", "", "unknown"},
-	}
-	for _, tc := range cases {
-		exp, src := DescribeExpansion(tc.target, builtins)
-		if exp != tc.wantExp || src != tc.wantSrc {
-			t.Errorf("DescribeExpansion(%q) = (%q, %q), want (%q, %q)",
-				tc.target, exp, src, tc.wantExp, tc.wantSrc)
-		}
 	}
 }

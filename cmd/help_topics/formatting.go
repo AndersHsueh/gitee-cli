@@ -3,8 +3,8 @@ package help_topics
 import (
 	"fmt"
 	"os"
-	"text/tabwriter"
 
+	"gitee-cli/internal/output"
 	"github.com/spf13/cobra"
 )
 
@@ -27,7 +27,7 @@ Three formats are supported today:
 Format is selected by the --output / -o flag or GITEE_OUTPUT.
 Precedence (highest first): --output > GITEE_OUTPUT > default ("table").`,
 	RunE: func(c *cobra.Command, args []string) error {
-		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+		w := output.NewTableWriter()
 		fmt.Fprintln(w, "FORMAT\tUSE WHEN\tNOTES")
 		rows := []struct{ a, b, c string }{
 			{"table", "Reading in a terminal", "Default. Auto-falls-back to plain (no color, no borders) when piped."},

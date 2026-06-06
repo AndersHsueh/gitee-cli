@@ -13,9 +13,8 @@ package help_topics
 
 import (
 	"fmt"
-	"os"
-	"text/tabwriter"
 
+	"gitee-cli/internal/output"
 	"github.com/spf13/cobra"
 )
 
@@ -148,7 +147,7 @@ Priority (highest to lowest):
 				Description: "Browser binary for 'gitee <cmd> --web' style flows. Falls back to BROWSER.",
 			},
 		}
-		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+		w := output.NewTableWriter()
 		fmt.Fprintln(w, "VARIABLE\tDEFAULT\tDESCRIPTION")
 		for _, v := range vars {
 			fmt.Fprintf(w, "%s\t%s\t%s\n", v.Name, v.Default, v.Description)

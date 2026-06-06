@@ -2,10 +2,8 @@ package alias
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
-	"gitee-cli/cmd"
 	"gitee-cli/internal/alias"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
@@ -23,13 +21,7 @@ var setCmd = &cobra.Command{
 	Example: `  gitee alias set co 'pr checkout'
   gitee alias set issues 'issue list --limit 50'
   gitee alias set mine 'issue list --assignee @me'`,
-	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
-			fmt.Print(aliasSetAgentHelp)
-			os.Exit(0)
-		}
-		return nil
-	},
+	PreRunE: preRunAgentHelp(aliasSetAgentHelp),
 	RunE: func(c *cobra.Command, args []string) error {
 		name := args[0]
 		// Join remaining args with single spaces, then collapse runs
@@ -39,18 +31,16 @@ var setCmd = &cobra.Command{
 		// and
 		//   gitee alias set co "pr checkout"
 		// produce expansion="pr checkout".
-		expansion := strings.Join(args[1:], " ")
-		expansion = strings.Join(strings.Fields(expansion), " ")
+		expansion := strings.Join(strings.Fields(strings.Join(args[1:], " ")), " ")
 
-		existed, _ := alias.Get(name)
-
-		if err := alias.Set(name, expansion); err != nil {
+		prev, hadPrev, err := alias.Set(name, expansion)
+		if err != nil {
 			return fmt.Errorf("setting alias: %w", err)
 		}
 		green := color.New(color.FgGreen).SprintFunc()
 		yellow := color.New(color.FgYellow).SprintFunc()
-		if existed != "" {
-			fmt.Printf("%s alias %q updated: %s\n", yellow("~"), name, expansion)
+		if hadPrev {
+			fmt.Printf("%s alias %q updated: %s (was %q)\n", yellow("~"), name, expansion, prev)
 		} else {
 			fmt.Printf("%s alias %q created: %s\n", green("✓"), name, expansion)
 		}

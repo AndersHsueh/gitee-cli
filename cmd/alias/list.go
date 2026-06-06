@@ -2,12 +2,11 @@ package alias
 
 import (
 	"fmt"
-	"os"
-	"text/tabwriter"
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/alias"
 	"gitee-cli/internal/handler"
+	"gitee-cli/internal/output"
 	"github.com/spf13/cobra"
 )
 
@@ -16,13 +15,7 @@ var listCmd = &cobra.Command{
 	Short: "List all defined aliases",
 	Example: `  gitee alias list
   gitee alias list --output json`,
-	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
-			fmt.Print(aliasListAgentHelp)
-			os.Exit(0)
-		}
-		return nil
-	},
+	PreRunE: preRunAgentHelp(aliasListAgentHelp),
 	RunE: func(c *cobra.Command, args []string) error {
 		keys, m, err := alias.Sorted()
 		if err != nil {
@@ -37,7 +30,7 @@ var listCmd = &cobra.Command{
 			// JSON output is the canonical storage shape.
 			return handler.PrintJSON(m)
 		}
-		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+		w := output.NewTableWriter()
 		fmt.Fprintln(w, "NAME\tEXPANSION")
 		for _, k := range keys {
 			fmt.Fprintf(w, "%s\t%s\n", k, m[k])

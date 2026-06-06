@@ -3,7 +3,6 @@ package alias
 import (
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"testing"
 )
@@ -15,8 +14,7 @@ func withTempFile(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
 	path := filepath.Join(dir, "aliases.json")
-	FileOverride = path
-	t.Cleanup(func() { FileOverride = "" })
+	t.Setenv("GITEE_ALIASES_FILE", path)
 	return path
 }
 
@@ -58,7 +56,7 @@ func TestLoadInvalid(t *testing.T) {
 
 func TestSetAndGet(t *testing.T) {
 	withTempFile(t)
-	if err := Set("co", "pr checkout"); err != nil {
+	if _, _, err := Set("co", "pr checkout"); err != nil {
 		t.Fatalf("Set: %v", err)
 	}
 	got, ok := Get("co")
@@ -72,10 +70,10 @@ func TestSetAndGet(t *testing.T) {
 
 func TestSetOverwrites(t *testing.T) {
 	withTempFile(t)
-	if err := Set("co", "pr checkout"); err != nil {
+	if _, _, err := Set("co", "pr checkout"); err != nil {
 		t.Fatalf("Set #1: %v", err)
 	}
-	if err := Set("co", "pr co"); err != nil {
+	if _, _, err := Set("co", "pr co"); err != nil {
 		t.Fatalf("Set #2: %v", err)
 	}
 	got, ok := Get("co")
@@ -104,7 +102,7 @@ func TestSetRejectsBadName(t *testing.T) {
 		{"a-1_b", false},
 	}
 	for _, tc := range cases {
-		err := Set(tc.name, "x")
+		_, _, err := Set(tc.name, "x")
 		gotErr := err != nil
 		if gotErr != tc.err {
 			t.Errorf("Set(%q) err=%v, wantErr=%v", tc.name, err, tc.err)
@@ -114,7 +112,7 @@ func TestSetRejectsBadName(t *testing.T) {
 
 func TestSetRejectsEmptyExpansion(t *testing.T) {
 	withTempFile(t)
-	if err := Set("co", "   "); err == nil {
+	if _, _, err := Set("co", "   "); err == nil {
 		t.Error("Set with whitespace expansion should error")
 	}
 }
@@ -125,14 +123,14 @@ func TestSetRejectsTooLongName(t *testing.T) {
 	for i := range long {
 		long[i] = 'a'
 	}
-	if err := Set(string(long), "x"); err == nil {
+	if _, _, err := Set(string(long), "x"); err == nil {
 		t.Error("Set with 41-char name should error")
 	}
 }
 
 func TestDelete(t *testing.T) {
 	withTempFile(t)
-	if err := Set("co", "pr checkout"); err != nil {
+	if _, _, err := Set("co", "pr checkout"); err != nil {
 		t.Fatalf("Set: %v", err)
 	}
 	if err := Delete("co"); err != nil {
@@ -153,9 +151,9 @@ func TestDeleteMissing(t *testing.T) {
 
 func TestSorted(t *testing.T) {
 	withTempFile(t)
-	_ = Set("zeta", "z")
-	_ = Set("alpha", "a")
-	_ = Set("mu", "m")
+	_, _, _ = Set("zeta", "z")
+	_, _, _ = Set("alpha", "a")
+	_, _, _ = Set("mu", "m")
 	keys, m, err := Sorted()
 	if err != nil {
 		t.Fatalf("Sorted: %v", err)
@@ -197,7 +195,7 @@ func TestSaveAtomic(t *testing.T) {
 	dir := filepath.Dir(path)
 	entries, _ := os.ReadDir(dir)
 	for _, e := range entries {
-		if strings.HasPrefix(e.Name(), ".aliases-") {
+		if strings.HasPrefix(e.Name(), "aliases.json.") && strings.HasSuffix(e.Name(), ".tmp") {
 			t.Errorf("leftover temp file: %s", e.Name())
 		}
 	}
@@ -238,13 +236,13 @@ func TestEndToEnd(t *testing.T) {
 	// Realistic flow: set, then set another, then delete one, then
 	// list. Verifies the file evolves correctly across operations.
 	withTempFile(t)
-	if err := Set("co", "pr checkout"); err != nil {
+	if _, _, err := Set("co", "pr checkout"); err != nil {
 		t.Fatalf("Set co: %v", err)
 	}
-	if err := Set("issues", "issue list"); err != nil {
+	if _, _, err := Set("issues", "issue list"); err != nil {
 		t.Fatalf("Set issues: %v", err)
 	}
-	if err := Set("co", "pr co"); err != nil {
+	if _, _, err := Set("co", "pr co"); err != nil {
 		t.Fatalf("Set co (overwrite): %v", err)
 	}
 	if err := Delete("issues"); err != nil {
@@ -273,6 +271,3 @@ func equalStrings(a, b []string) bool {
 	}
 	return true
 }
-
-// silence unused import warning on some build tags
-var _ = sort.Strings

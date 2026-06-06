@@ -3,8 +3,8 @@ package help_topics
 import (
 	"fmt"
 	"os"
-	"text/tabwriter"
 
+	"gitee-cli/internal/output"
 	"github.com/spf13/cobra"
 )
 
@@ -19,13 +19,15 @@ type exitCode struct {
 // exitCodesTopic is the implementation of `gitee help exit-codes`.
 //
 // Most of gitee-cli's exit codes follow the convention:
-//   0  — success
-//   1  — generic / unspecified failure
-//   2  — authentication required (mirrors gh's 4 by intent; see note)
-//   3  — resource not found
-//   4  — rate limited
-//   5  — network / transport error
-//  64  — usage / argument error (EX_USAGE)
+//
+//	 0  — success
+//	 1  — generic / unspecified failure
+//	 2  — authentication required (mirrors gh's 4 by intent; see note)
+//	 3  — resource not found
+//	 4  — rate limited
+//	 5  — network / transport error
+//	64  — usage / argument error (EX_USAGE)
+//
 // 130  — SIGINT (Ctrl-C)
 //
 // Some subcommands may emit additional codes for domain-specific
@@ -91,7 +93,7 @@ checks unless a specific code is documented here.`,
 				Remediation: "n/a — the partial operation may have left state; check with the relevant 'list' verb.",
 			},
 		}
-		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+		w := output.NewTableWriter()
 		fmt.Fprintln(w, "CODE\tMEANING\tORIGIN\tREMEDIATION")
 		for _, c := range codes {
 			fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", c.Code, c.Meaning, c.Origin, c.Remediation)

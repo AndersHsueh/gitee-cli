@@ -6,28 +6,23 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// currentHelpCmd is set by RegisterHelpTopics so tests can
-// inspect the help command (cobra v1.10 does not export a
-// HelpCommand() getter — helpCommand is unexported).
-var currentHelpCmd *cobra.Command
-
 // RegisterHelpTopics attaches every topic in this package as a
-// subcommand of a help command on root. The implementation
-// replaces cobra's default help command with one that has the
-// same "show help for a named command" behavior PLUS our four
-// topics as explicit subcommands (so `gitee help environment`
-// works and tab-completion shows the topics).
+// subcommand of a help command on root and returns that help
+// command. The implementation replaces cobra's default help command
+// with one that has the same "show help for a named command"
+// behavior PLUS our four topics as explicit subcommands (so
+// `gitee help environment` works and tab-completion shows the
+// topics).
 //
-// Idempotent: calling it twice will be a no-op the second time
-// because cobra refuses to add a command with a duplicate Use.
+// Why we replace rather than graft: cobra v1.10 does not expose
+// helpCommand (it's unexported), so we cannot attach topics to
+// the auto-created help command. Replacing it wholesale with a
+// custom command that mimics cobra's default dispatch is the
+// simplest way to add topics.
 //
 // Safe to call before or after the user types a command — topics
 // are only invoked explicitly via 'gitee help <topic>'.
-func RegisterHelpTopics(root *cobra.Command) {
-	// Build a fresh help command that mimics cobra's default but
-	// also has our 4 topics. We can't easily graft onto the
-	// auto-created one (helpCommand is unexported in cobra v1.10),
-	// so we replace it.
+func RegisterHelpTopics(root *cobra.Command) *cobra.Command {
 	helpCmd := &cobra.Command{
 		Use:   "help [command]",
 		Short: "Help about any command",
@@ -53,8 +48,6 @@ Simply type 'gitee help [path to command]' for full details, or
 			if err == nil && cmd != nil && cmd != c.Root() {
 				return cmd.Help()
 			}
-			// No match — fall through to root help with a hint
-			// that topics are available.
 			root := c.Root()
 			_, _ = fmt.Fprintf(root.OutOrStderr(),
 				"unknown help topic %q; showing root help\n", args)
@@ -70,23 +63,5 @@ Simply type 'gitee help [path to command]' for full details, or
 		helpCmd.AddCommand(topic)
 	}
 	root.SetHelpCommand(helpCmd)
-	currentHelpCmd = helpCmd
-}
-
-// HelpCommandForTest returns the help command created by the most
-// recent RegisterHelpTopics call. Used by tests; cobra v1.10 has
-// no public getter for the help command. Returns nil if
-// RegisterHelpTopics has not been called yet.
-func HelpCommandForTest() *cobra.Command { return currentHelpCmd }
-
-// AllTopicNames returns the list of topic names in the order they
-// are registered. Used by the content_test to assert wiring
-// independent of cobra internals.
-func AllTopicNames() []string {
-	return []string{
-		environmentTopic.Name(),
-		exitCodesTopic.Name(),
-		formattingTopic.Name(),
-		referenceTopic.Name(),
-	}
+	return helpCmd
 }

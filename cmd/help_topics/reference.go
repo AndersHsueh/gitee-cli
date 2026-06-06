@@ -2,10 +2,10 @@ package help_topics
 
 import (
 	"fmt"
-	"os"
 	"strings"
 	"text/tabwriter"
 
+	"gitee-cli/internal/output"
 	"github.com/spf13/cobra"
 )
 
@@ -35,14 +35,9 @@ For full docs on a specific command, run 'gitee help <command>'
 or 'gitee <command> --agent-help' (when available).`,
 	RunE: func(c *cobra.Command, args []string) error {
 		root := c.Root()
-		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+		w := output.NewTableWriter()
 		fmt.Fprintln(w, "COMMAND\tSHORT")
-		// Track which full-paths we've printed so the help
-		// subcommand (which we recurse into) doesn't show up
-		// twice — once as "gitee help" and again when its
-		// topics are listed as "gitee help <topic>".
-		printed := map[string]bool{}
-		walkCommands(w, root, "", printed)
+		walkCommands(w, root, "")
 		return w.Flush()
 	},
 }
@@ -55,26 +50,23 @@ or 'gitee <command> --agent-help' (when available).`,
 //
 // We print the parent BEFORE the children so the output reads
 // top-down (matches `gitee --help` and `gitee help <cmd>`).
-func walkCommands(w *tabwriter.Writer, cmd *cobra.Command, prefix string, printed map[string]bool) {
+// Cobra forbids same-name siblings, so the same full-path can
+// never appear twice — no dedup map needed.
+func walkCommands(w *tabwriter.Writer, cmd *cobra.Command, prefix string) {
 	for _, sub := range cmd.Commands() {
 		if sub.Name() == "version" {
 			continue
 		}
 		full := strings.TrimSpace(prefix + " " + sub.Name())
-		// Print the parent first (unless it's the help
-		// dispatcher, which we'll skip — but its children
-		// are still walked below).
-		if sub.Name() != "help" && !sub.Hidden && !printed[full] {
+		if sub.Name() != "help" && !sub.Hidden {
 			short := sub.Short
 			if short == "" {
 				short = "(no short description)"
 			}
 			fmt.Fprintf(w, "gitee %s\t%s\n", full, short)
-			printed[full] = true
 		}
-		// Then recurse into children with the path as prefix.
 		if len(sub.Commands()) > 0 {
-			walkCommands(w, sub, full, printed)
+			walkCommands(w, sub, full)
 		}
 	}
 }

@@ -1,14 +1,15 @@
 // Package alias implements the `gitee alias` command group: set / list
-// / delete. It also exposes a runtime resolver (cmd/alias.Resolve) that
-// is wired into cmd.Execute() in main.go so that `gitee co 123` is
-// transparently rewritten to `gitee pr checkout 123` when `co` is a
-// user-defined alias.
-//
-// Aliases are stored as a flat JSON map at ~/.gitee-cli/aliases.json.
-// See internal/alias for the storage layer.
+// / delete. The runtime resolver that splices user-defined aliases
+// into os.Args lives in internal/alias.
 package alias
 
-import "github.com/spf13/cobra"
+import (
+	"fmt"
+	"os"
+
+	"gitee-cli/cmd"
+	"github.com/spf13/cobra"
+)
 
 // AliasCmd is the top-level command for the gitee alias subcommand group.
 var AliasCmd = &cobra.Command{
@@ -29,4 +30,17 @@ func init() {
 	AliasCmd.AddCommand(setCmd)
 	AliasCmd.AddCommand(listCmd)
 	AliasCmd.AddCommand(deleteCmd)
+}
+
+// preRunAgentHelp returns a PreRunE that prints helpText and exits
+// 0 when --agent-help is set, otherwise returns nil. Each verb in
+// this package supplies its own agent-help const.
+func preRunAgentHelp(helpText string) func(*cobra.Command, []string) error {
+	return func(c *cobra.Command, _ []string) error {
+		if cmd.GlobalAgentHelp {
+			fmt.Print(helpText)
+			os.Exit(0)
+		}
+		return nil
+	}
 }
