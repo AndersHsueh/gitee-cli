@@ -1,21 +1,21 @@
 # gh vs gitee-cli 行为对比测试报告
 
-> **生成时间**: 2026-06-06 03:02:14
+> **生成时间**: 2026-06-06 04:40:33
 > **gh 版本**: gh version 2.74.0 (2025-05-29)
 > **gitee-cli 版本**: gitee version 0.4.2
-> **测试范围**: 全量 (16 个一级命令 + 全部 verb)
+> **测试范围**: 全量 (17 个一级命令 + 全部 verb)
 
 ## 1. 总览
 
 | 指标 | 数字 |
 |------|------|
-| gitee 一级命令 | 16 |
+| gitee 一级命令 | 17 |
 | gh 一级命令 | 29 |
-| --agent-help 声明 verb 数 | 34 |
-| **通过** | **150** |
+| --agent-help 声明 verb 数 | 39 |
+| **通过** | **160** |
 | **失败** | **0** |
 | **跳过** | **1** |
-| 总计 | 151 |
+| 总计 | 161 |
 
 ## 2. 一级命令覆盖
 
@@ -25,6 +25,7 @@
 | `auth` | `auth` | ✅ |
 | `completion` | `completion` | ✅ |
 | `config` | `config` | ✅ |
+| `extension` | `extension` | ✅ |
 | `gist` | `gist` | ✅ |
 | `issue` | `issue` | ✅ |
 | `label` | `label` | ✅ |
@@ -76,10 +77,18 @@
 | `label delete` | ✅ | — |
 | `label clone` | ✅ | — |
 | `status` | ✅ | — |
+| `extension list` | ❌ | 缺可选: ## Example ## OAuth scope required ## Rate limit |
+| `extension install` | ✅ | — |
+| `extension remove` | ✅ | — |
+| `extension upgrade` | ❌ | 缺可选: ## OAuth scope required ## Rate limit |
+| `extension create` | ✅ | — |
 
 ## 4. 行为差异 (非 bug)
 
 - issue comments --agent-help 需要 positional (1), 用占位符验证
+- extension install --agent-help 需要 positional (1), 用占位符验证
+- extension remove --agent-help 需要 positional (1), 用占位符验证
+- extension create --agent-help 需要 positional (1), 用占位符验证
 - repo list json keys 差异: gitee=[created_at default_branch description fork forks_count full_name homepage html_url id language name open_issues_count owner private pushed_at stars_count updated_at watchers_count] vs gh=[createdAt description isPrivate name]
 - issue list json keys 差异: gitee=[assignee body comments created_at finished_at html_url id labels milestone number state title updated_at user] vs gh=[author createdAt number state title]
 - pr list json keys 差异: gitee=[additions assignees base body changed_files comments commits created_at deletions diff_url draft head html_url id labels locked mergeable merged milestone number patch_url state title updated_at user] vs gh=[author createdAt number state title]

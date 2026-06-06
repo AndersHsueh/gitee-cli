@@ -193,15 +193,28 @@
 
 ---
 
-### 13. `gitee extension` — 缺失 ❌
-**gh 对应**：`gh extension install / list / remove / upgrade / create`
-**Gitee API 状态**：🚫 平台独占（gh 的 extension 机制基于 git repo + 可执行文件，不依赖平台 API）
-**待实现**：
-- [ ] `gitee extension list` — 列出已安装扩展
-- [ ] `gitee extension install <repo>` — 从 Gitee repo 安装扩展
-- [ ] `gitee extension remove <name>`
-- [ ] `gitee extension upgrade <name>`
-- [ ] `gitee extension create <name>` — 创建新扩展脚手架
+### 13. `gitee extension` — ✅ 完成（v0.9.0-b, P2b, commit `a9af5c0`）
+**gh 对标**：`gh extension install / list / remove / upgrade / create`
+**Gitee API 状态**：🚫 平台独占（不依赖 Gitee API — gh 的 extension 机制是 git repo + 可执行文件，跟 gh 一样纯本地）
+**实现要点**：
+- 5 verb 全部完成：
+  - [x] `gitee extension list` — 列出已安装扩展（NAME / SOURCE / INSTALLED / JSON）
+  - [x] `gitee extension install <owner/repo | /path>` — Gitee 仓 `git clone` 或本地路径 `symlink`，自动 derive name，支持 `--force` 覆盖和 `--name` 覆盖
+  - [x] `gitee extension remove <name>`（alias `rm`）— `os.RemoveAll(ExtPath)`，默认 y/N 确认，`--force` 跳过
+  - [x] `gitee extension upgrade [<name> | --all]` — `git -C ext pull`，支持 `--force --dry-run`，local-symlink install 自动 skip
+  - [x] `gitee extension create <name>` — 脚手架生成 `gitee-<name>/<name>` shell script + README
+- 动态加载机制（`cmd.RegisterDynamicCommands`）：`~/.gitee-cli/extensions/<name>/<name>` 自动合成 cobra 命令，`gitee <name> ...` 转发到可执行；冲突 built-in 自动 warning skip
+- 全局 `--no-extensions` flag：CI / debug 用，跳过 loader（不影响 built-in `gitee extension` verb）
+- 安装路径 `~/.gitee-cli/extensions/<name>/`（与 `~/.gitee-cli/settings.json` 风格一致，不引入 XDG）
+- Manifest 用 atomic write (temp + rename + chmod 0600)，含 source / installed_at / pinned_ref (HEAD commit)
+- 名字规则：strip `gitee-` / `gh-` 前缀（容错）；只允许 `[a-z0-9_-]`，拒绝 `.` 开头
+- 23 个新测试 (13 store + 4 loader + 5 content + 1 wiring)，全部通过
+- regression: `comparison-test.sh` **161 pass / 0 fail / 1 skip / 10 info**（up from 151）
+
+**不在本 P2B 范围**（留 v0.9.0-c）：
+- `extension create --go` 脚手架（现在只生成 shell 脚本）
+- 24h 自动升级检查（gh 有，gitee 暂不实现）
+- Windows 兼容性（无 `.bat` 包装；用户报告再加）
 
 ---
 
@@ -450,3 +463,48 @@ staged:     test/comparison-test.sh
 2. `feat(gpg-key): remove entire cmd/gpg-key/ group - Gitee v5 has no GPG key API` （删除 6 文件 + main.go 注销 + agent_help 文档）
 3. `test: add gh vs gitee-cli behavior comparison test + 151 pass report` （test/ 2 个新文件 + common-todos.md 记录）
 4. `chore(common-todos): record gpg-key removal and bug resolution` （可选，合并到 #2 也行）
+
+---
+
+## 2026-06-06 凌晨 session — P2B extension 实施
+
+**今日完成**：
+- P2B 全 5 verb 实施 + 动态加载机制 + `--no-extensions` flag
+- 14 个新文件 (2 个 internal 包 + 7 个 cmd/extension + 5 个 test)
+- 23 个新测试 (13 store + 4 loader + 5 content + 1 wiring)
+- 全量回归: `go test ./...` 全过；`comparison-test.sh` **161 pass / 0 fail / 1 skip / 10 info**（up from 151）
+- 端到端验证通过：scaffold → install . → invoke → list → remove → invoke (失败)
+
+**关键设计决策**（来自 plan mode 3 个问题）：
+- 仓源：Gitee 仓 **+** 本地路径（gh-style，dev 友好）
+- 范围：加动态加载（跟 gh 完全对齐）
+- 安装路径：`~/.gitee-cli/extensions/<name>/`（项目内一致风格，不引 XDG）
+
+**实施中发现并修的 3 个 bug**：
+1. `create.go` 用 `os.MkdirAll(filepath.Join(dir, canonical), 0755)` 创了多余子目录，WriteFile 失败。修：只 MkdirAll `dir`（parent），让 WriteFile 创 `<name>` 文件
+2. `install.go` `baseNameOfSource(".")` 返 `.`，被 `validateName` 拒绝。修：local-path 时 inspect 目录内 `gitee-*` 子目录，自动 derive name
+3. `ListInstalled` 用 `e.IsDir()` 跳过了 symlink 到 dir。修：改用 `os.Stat`（follow symlinks）
+
+**新建的内部包 `internal/extension`**：
+- `store.go` — ExtDir / ExtPath / Install (含 Manifest 原子写入) / Remove / ListInstalled / ResolveName
+- `loader.go` — `LoadCommands()` 扫 ExtDir 合成 cobra.Command；RunE 转发到 `<ext>/<name>`，保留 exit code
+
+**P2B 范围内的工程化要点**：
+- Manifest 写入用 atomic rename (temp + chmod 0600 + rename)，与 `internal/config/config.go` 一致
+- `extension.ResolveName` 容错：strip `gitee-` / `gh-` 前缀（user copy-paste gh 文档也 work）
+- Loader 冲突检查：与 `rootCmd.Commands()` 重名时 warning + skip（保护 built-in）
+- 每个 verb 的 agent-help const 用 14 标准 section + content_test.go 表驱动 assertion（防 refactor 静默丢失）
+
+**未实施**（用户原话 + 留 v0.9.0-c）：
+- `extension create --go` 脚手架
+- 24h 自动升级检查
+- Windows 兼容性
+- Gitee 扩展 registry（`gitee.com/topics/extension` 不存在）
+
+**Commit 状态**：
+- ✅ 已 commit `a9af5c0` (feat(extension): gitee extension 5-verb + dynamic load (P2b, v0.9.0))
+- ✅ 已打 tag `temp-p2b-ready` 并推 origin（master `945574a..a9af5c0`）
+
+**下次接手**：
+- P2C: `gitee alias`（3 verb: set / list / delete，JSON 存储 ~`~/.gitee-cli/aliases.json`）
+- 或 v0.9.0-c: extension `--go` 脚手架 + Windows 包装
