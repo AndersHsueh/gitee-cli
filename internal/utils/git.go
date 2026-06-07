@@ -83,6 +83,31 @@ var giteeRemoteHTTPS = regexp.MustCompile(`^https?://([^/]+)/([^/]+)/([^/]+?)(?:
 // host part is again any "gitee*" hostname.
 var giteeRemoteSSH = regexp.MustCompile(`^git@([^:]+):([^/]+)/([^/]+?)(?:\.git)?/?$`)
 
+// GitConfigGet reads a git config value (--local first, then --global).
+// Returns ("", nil) if the key is not set — git exit code 1 is treated as
+// "not found" rather than an error. Any other non-zero exit is an error.
+//
+// This is used by `gitee repo set-default` and by ResolveRepo to read the
+// per-directory default repo. (v0.10.0)
+func GitConfigGet(key string) (string, error) {
+	out, err := runGitCapture("config", "--local", key)
+	if err != nil {
+		// Key not set locally — try global.
+		out, err = runGitCapture("config", "--global", key)
+		if err != nil {
+			return "", nil // key not set anywhere
+		}
+	}
+	return strings.TrimSpace(out), nil
+}
+
+// GitConfigSet sets a local git config key to the given value. Returns an
+// error if not inside a git repository (exit code != 0). (v0.10.0)
+func GitConfigSet(key, value string) error {
+	_, err := runGitCapture("config", "--local", key, value)
+	return err
+}
+
 // ParseGiteeRemoteURL extracts (owner, repo) from a git remote URL of
 // the forms:
 //

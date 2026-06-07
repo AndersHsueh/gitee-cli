@@ -27,12 +27,13 @@ type HostConfig struct {
 }
 
 type Preferences struct {
-	Output   string `json:"output"`
-	Editor   string `json:"editor"`
-	Browser  string `json:"browser"`
-	Prompt   string `json:"prompt"`
-	Pager    string `json:"pager"`
-	Protocol string `json:"protocol"`
+	Output     string `json:"output"`
+	Editor     string `json:"editor"`
+	Browser    string `json:"browser"`
+	Prompt     string `json:"prompt"`
+	Pager      string `json:"pager"`
+	Protocol   string `json:"protocol"`
+	ActiveHost string `json:"active_host"` // default host when --hostname not explicitly set (v0.10.0)
 }
 
 func SettingsPath() string {
@@ -157,4 +158,27 @@ func GetAllHosts() []string {
 		hosts = append(hosts, h)
 	}
 	return hosts
+}
+
+// GetActiveHost returns the default hostname from preferences, defaulting
+// to "gitee.com" if not configured. Used when --hostname is not explicitly
+// provided (v0.10.0).
+func GetActiveHost() string {
+	s, err := Load()
+	if err != nil || s.Preferences.ActiveHost == "" {
+		return "gitee.com"
+	}
+	return s.Preferences.ActiveHost
+}
+
+// SetActiveHost updates the active host in preferences and saves settings
+// atomically. The hostname must exist in the Hosts map (validated by the
+// caller). (v0.10.0)
+func SetActiveHost(hostname string) error {
+	s, err := Load()
+	if err != nil {
+		return err
+	}
+	s.Preferences.ActiveHost = hostname
+	return Save(s)
 }

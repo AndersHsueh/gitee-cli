@@ -1,12 +1,14 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 
 	"gitee-cli/internal/alias"
 	"gitee-cli/internal/api"
 	"gitee-cli/internal/config"
+	"gitee-cli/pkg/types"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )
@@ -166,11 +168,27 @@ func init() {
 	pf.BoolVar(&GlobalNoExtensions, "no-extensions", false, "Skip loading external extensions (the built-in 'gitee extension' verb is unaffected)")
 }
 
+// ResolveHostname returns the effective Gitee hostname.
+// Priority: --hostname flag (if explicitly set) > config active_host > "gitee.com".
+// This is what makes `gitee auth switch` actually take effect — without it the
+// field was write-only. (v0.10.0)
+func ResolveHostname() string {
+	if GlobalHostname != "gitee.com" {
+		return GlobalHostname // user explicitly set --hostname to something else
+	}
+	if active := config.GetActiveHost(); active != "" {
+		return active
+	}
+	return "gitee.com"
+}
+
 // NewAPIClient builds an authenticated API client using the resolved token.
 func NewAPIClient() (*api.Client, error) {
+	hostname := ResolveHostname()
+
 	token := GlobalToken
 	if token == "" {
-		token = config.GetToken(GlobalHostname)
+		token = config.GetToken(hostname)
 	}
 	if token == "" {
 		return nil, fmt.Errorf("not authenticated. Set GITEE_TOKEN or run 'gitee auth login'")
@@ -178,8 +196,22 @@ func NewAPIClient() (*api.Client, error) {
 
 	baseURL := GlobalAPIURL
 	if baseURL == "" {
-		baseURL = fmt.Sprintf("https://%s/api/v5", GlobalHostname)
+		baseURL = fmt.Sprintf("https://%s/api/v5", hostname)
 	}
 
 	return api.NewClient(token, baseURL, GlobalVerbose, GlobalTimeout), nil
+}
+
+// ResolveCurrentUsername returns the authenticated username, trying config
+// cache first then falling back to a /user API call. This is the canonical
+// implementation shared by status, pr status, and issue status. (v0.10.0)
+func ResolveCurrentUsername(ctx context.Context, client *api.Client) (string, error) {
+	if u := config.GetUsername(GlobalHostname); u != "" {
+		return u, nil
+	}
+	var u types.User
+	if err := client.Get(ctx, "/user", &u); err != nil {
+		return "", fmt.Errorf("resolving current user: %w", err)
+	}
+	return u.Login, nil
 }

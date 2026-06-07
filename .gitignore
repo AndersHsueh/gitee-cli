@@ -50,3 +50,17 @@ AGENTS.md
 issue-fix-guide*.md
 release-guide*.md
 如何编写一份给minimax的可靠开发引导.md
+
+# Claude Code project files
+.claude/
+
+# Temp files
+*.tmp
+
+# Code signing (local only)
+*.pem
+*.key
+*.crt
+
+# Release binaries (prevent stray commits)
+gitee-*

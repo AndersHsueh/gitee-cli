@@ -259,3 +259,15 @@ func PRsEdit(owner, repo string, number int) string {
 func PRsChecks(owner, repo, ref string) string {
 	return fmt.Sprintf("/repos/%s/%s/commits/%s/check-runs", owner, repo, url.QueryEscape(ref))
 }
+
+// Release asset endpoints (v0.10.0)
+// Gitee v5 asset operations use the numeric release ID (not tag name).
+// The caller should first call ReleasesGet to resolve tag → ID, then
+// use these builders with the release's numeric ID.
+func ReleaseAssetUpload(owner, repo string, releaseID int64) string {
+	return fmt.Sprintf("/repos/%s/%s/releases/%d/assets", owner, repo, releaseID)
+}
+
+func ReleaseDeleteAsset(owner, repo string, releaseID int64, assetID int64) string {
+	return fmt.Sprintf("/repos/%s/%s/releases/%d/assets/%d", owner, repo, releaseID, assetID)
+}

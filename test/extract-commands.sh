@@ -45,8 +45,8 @@ GH_TOP_LEVEL=(
 
 # gitee-cli 一级命令(从 ./gitee --help 抓)
 GITEE_TOP_LEVEL=(
-    api auth completion config gist gpg-key issue label org
-    pr release repo search ssh-key webhook
+    alias api auth completion config extension gist gpg-key issue label org
+    pr release repo search ssh-key status version webhook
 )
 
 extract_subcommands() {

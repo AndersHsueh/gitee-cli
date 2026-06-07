@@ -2,7 +2,7 @@
 
 > **生成时间**: 2026-06-06 04:40:33
 > **gh 版本**: gh version 2.74.0 (2025-05-29)
-> **gitee-cli 版本**: gitee version 0.4.2
+> **gitee-cli 版本**: gitee version 0.10.0
 > **测试范围**: 全量 (17 个一级命令 + 全部 verb)
 
 ## 1. 总览

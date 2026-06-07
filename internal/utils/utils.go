@@ -55,7 +55,13 @@ func ResolveRepo(owner, repo string, args []string) (string, string, error) {
 	}
 	combined := repo
 	if combined == "" {
-		combined = ""
+		// Fallback: check git local config for gitee.default_repo (v0.10.0)
+		if defaultRepo, cfgErr := GitConfigGet("gitee.default_repo"); cfgErr == nil && defaultRepo != "" {
+			o, r := ParseOwnerRepo(defaultRepo)
+			if o != "" && r != "" {
+				return o, r, nil
+			}
+		}
 	}
 	if combined == "" {
 		return "", "", fmt.Errorf("--repo is required (e.g. --repo owner/repo)")

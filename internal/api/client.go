@@ -135,6 +135,33 @@ func (c *Client) Put(ctx context.Context, path string, body, result interface{})
 	return checkStatus(resp)
 }
 
+// UploadFile performs a multipart/form-data POST with a file attachment.
+// fileField is the form field name for the file (e.g. "file").
+// filePath is the absolute or relative path to the local file.
+// extraParams are optional additional form fields (e.g. "label").
+// If result is non-nil, the JSON response body is decoded into it.
+//
+// This method uses resty's SetFile which handles Content-Type detection
+// and multipart encoding automatically. It was added in v0.10.0 to
+// support `gitee release upload`.
+func (c *Client) UploadFile(ctx context.Context, path, fileField, filePath string, extraParams map[string]string, result interface{}) error {
+	req := c.r.R().SetContext(ctx)
+	if filePath != "" {
+		req = req.SetFile(fileField, filePath)
+	}
+	for k, v := range extraParams {
+		req = req.SetFormData(map[string]string{k: v})
+	}
+	if result != nil {
+		req = req.SetResult(result)
+	}
+	resp, err := req.Post(path)
+	if err != nil {
+		return err
+	}
+	return checkStatus(resp)
+}
+
 // GetRaw returns the raw response body for a GET request.
 func (c *Client) GetRaw(ctx context.Context, path string) ([]byte, *http.Header, error) {
 	resp, err := c.r.R().SetContext(ctx).Get(path)

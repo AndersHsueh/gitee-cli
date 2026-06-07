@@ -38,7 +38,7 @@ gitee-cli ships TWO help systems side-by-side:
 ## How to invoke
   gitee <command> [subcommand] --agent-help
 
-## Coverage matrix (v0.9.0)
+## Coverage matrix (v0.10.0)
 
 ### repo — Repository management
   gitee repo list           --agent-help   ❌ not yet
@@ -53,6 +53,7 @@ gitee-cli ships TWO help systems side-by-side:
   gitee repo archive        --agent-help   ✅ available  🆕 v0.5.0
   gitee repo sync           --agent-help   ✅ available  🆕 v0.5.0
   gitee repo rename         --agent-help   ✅ available  🆕 v0.5.0
+  gitee repo set-default    --agent-help   n/a  (operational/config — use --help)
 
 ### issue — Issue management
   gitee issue list          --agent-help   ❌ not yet
@@ -63,6 +64,7 @@ gitee-cli ships TWO help systems side-by-side:
   gitee issue reopen        --agent-help   ❌ not yet
   gitee issue comment       --agent-help   ❌ not yet
   gitee issue comments      --agent-help   ✅ available  🆕 v0.8.0
+  gitee issue status        --agent-help   ✅ available  🆕 v0.10.0
   gitee issue label         --agent-help   ❌ not yet (legacy path; use 'gitee label')
 
 ### pr — Pull Request management
@@ -80,6 +82,7 @@ gitee-cli ships TWO help systems side-by-side:
   gitee pr ready            --agent-help   ✅ available  🆕 v0.8.0
   gitee pr edit             --agent-help   ✅ available  🆕 v0.8.0
   gitee pr checks           --agent-help   ✅ available  🆕 v0.8.0
+  gitee pr status           --agent-help   ✅ available  🆕 v0.10.0
 
 ### gist — Code snippets
   gitee gist list           --agent-help   ❌ not yet
@@ -118,6 +121,8 @@ gitee-cli ships TWO help systems side-by-side:
   gitee release edit        --agent-help   ✅ available
   gitee release delete      --agent-help   ✅ available
   gitee release download    --agent-help   ✅ available
+  gitee release upload      --agent-help   ✅ available  🆕 v0.10.0
+  gitee release delete-asset --agent-help  ✅ available  🆕 v0.10.0
 
 ### label — Label management  🆕 v0.5.0 (top-level)
   gitee label list          --agent-help   ✅ available
@@ -159,9 +164,17 @@ gitee-cli ships TWO help systems side-by-side:
   These replace gh-style 'man pages' for things that don't fit under a single
   command. The reference page is generated from the live cobra tree at run time.
 
-### auth, config, search, completion, version
+### search — Search (code + commits are 🆕 v0.10.0)
+  gitee search repos        --agent-help   ❌ not yet
+  gitee search issues       --agent-help   ❌ not yet
+  gitee search users        --agent-help   ❌ not yet
+  gitee search code         --agent-help   ✅ available  🆕 v0.10.0
+  gitee search commits      --agent-help   ✅ available  🆕 v0.10.0
+
+### auth, config, completion, version
   These are operational / config commands. --agent-help is not needed for
   them; consult --help.
+  gitee auth switch         --agent-help   n/a  (operational/config — use --help)
 
 ## Roadmap
   v0.4.0  ✅  Initial release: issue create, pr create
@@ -176,8 +189,9 @@ gitee-cli ships TWO help systems side-by-side:
   v0.9.0  ✅  P2b: extension (5 verb + dynamic load + --no-extensions flag)
   v0.9.0  ✅  P2c: alias (set/list/delete + dynamic expansion)
   v0.9.0  ✅  Help topics: environment / exit-codes / formatting / reference
+  v0.10.0 ✅  8 small features: pr/issue status, release upload/delete-asset,
+                search code/commits, auth switch, repo set-default
   v0.9.0       P3: pipeline (Gitee Go)
-  v0.9.0       Help topics: environment, exit-codes, formatting, reference
 
 ## Design philosophy
 gitee-cli is built on the principle that CLIs increasingly have TWO users:

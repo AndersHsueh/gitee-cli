@@ -30,8 +30,8 @@
 
 | 指标 | gh | gitee-cli | 覆盖率 |
 |------|------|-----------|--------|
-| 一级命令数 | 24(含 7 help topics) | 18 + `help` | — |
-| 叶子子命令数(估) | ~190 | ~94 | ~49% |
+| 一级命令数 | 24(含 7 help topics) | 17 + `help` | — |
+| 叶子子命令数(估) | ~190 | ~105 | ~55% |
 | 平台独有(❌) | 9 | 1(`browse` 在 `repo` 下) | — |
 
 **一级命令对比**：
@@ -51,12 +51,12 @@
 | `cache` | — | ❌ Gitee 无 Actions cache |
 | `run` | — | ❌ Gitee Go pipeline 不在 v0.9 |
 | `workflow` | — | ❌ Gitee Go workflow 不在 v0.9 |
-| `alias` | — | ⬜ P2 计划 |
+| `alias` | `alias` | ✅ v0.9.0-c (3 verb: set/list/delete) |
 | `api` | `api` | ✅ |
 | `attestation` | — | ❌ Gitee 无 attestation |
 | `completion` | `completion` | ✅ |
 | `config` | `config` | ✅ |
-| `extension` | — | ⬜ P2 计划 |
+| `extension` | `extension` | ✅ v0.9.0-b (5 verb: list/install/remove/upgrade/create) |
 | `gpg-key` | `gpg-key` | ✅ |
 | `label` | `label` | ✅(v0.7) |
 | `preview` | — | ❌ gh 内部命令 |
@@ -69,7 +69,7 @@
 | — | `webhook` | gitee 独有(gh 把它藏在 `api`) |
 | — | `version` | gitee 独有 |
 
-**总结**：gitee-cli 一级命令覆盖 **15/24 = 62%**(去除 ❌ 后实际可达 **15/15 = 100%** — alias/extension 是 P2 待补,不算"平台缺失")。
+**总结**：gitee-cli 一级命令覆盖 **17/24 = 71%**(去除 ❌ 后实际可达 **17/17 = 100%** — 核心对标已全部完成)。
 
 ---
 
@@ -82,7 +82,7 @@
 | `refresh` | `refresh` | ✅ | |
 | `setup-git` | — | 🟡 | gitee 不需要(走 git 自身的 credential.helper) |
 | `status` | `status` | ✅ | |
-| `switch` | — | ⬜ | 多账号切换(暂未做) |
+| `switch` | `switch` | ✅ v0.10.0 | 多账号主机切换 |
 | `token` | `token` | ✅ | |
 
 ---
@@ -109,7 +109,7 @@
 |---|---|---|---|
 | `create` | `create` | ✅ | |
 | `list` | `list` | ✅ | |
-| `status` | — | ⬜ | P2 候选 |
+| `status` | `status` | ✅ v0.10.0 | 跨仓 issue 状态(使用 search API) |
 | `close` | `close` | ✅ | |
 | `comment` | `comment` | ✅ | |
 | `comments` | `comments` | ✅ | v0.8 新增 |
@@ -148,7 +148,7 @@ gitee-cli 把它们做成独立 verb,易用性更好。
 |---|---|---|---|
 | `create` | `create` | ✅ | |
 | `list` | `list` | ✅ | |
-| `status` | — | ⬜ | P2 候选 |
+| `status` | `status` | ✅ v0.10.0 | 跨仓 PR 状态(遍历 repos 并发) |
 | `checkout` | `checkout` | ✅ | |
 | `checks` | `checks` | ✅ | v0.8 新增 |
 | `close` | `close` | ✅ | |
@@ -176,13 +176,13 @@ gitee-cli 把它们做成独立 verb,易用性更好。
 | `create` | `create` | ✅ | |
 | `list` | `list` | ✅ | |
 | `delete` | `delete` | ✅ | |
-| `delete-asset` | — | ⬜ | Gitee v5 端点结构不同,需评估 |
+| `delete-asset` | `delete-asset` | ✅ v0.10.0 | |
 | `download` | `download` | ✅ | |
 | `edit` | `edit` | ✅ | |
-| `upload` | — | ⬜ | |
+| `upload` | `upload` | ✅ v0.10.0 | |
 | `view` | `view` | ✅ | |
 
-**覆盖**：6/8 = 75%
+**覆盖**：8/8 = 100%
 
 ---
 
@@ -202,14 +202,29 @@ gitee-cli 把它们做成独立 verb,易用性更好。
 | `gitignore` | — | ⬜ | 模板 |
 | `license` | — | ⬜ | 模板 |
 | `rename` | `rename` | ✅ | |
-| `set-default` | — | ⬜ | 目录默认仓库 |
+| `set-default` | `set-default` | ✅ v0.10.0 | 目录默认仓库(使用 git config) |
 | `sync` | `sync` | ✅ | fork 同步 |
 | `unarchive` | — | 🟡 | gitee 用 `archive --unarchive` 合并 |
 | `view` | `view` | ✅ | |
 | — | `branches` | gitee 独有 | |
 | — | `browse` | gitee 独有 | 浏览器打开 |
 
-**覆盖**：10/15 = 67%
+**覆盖**：11/15 = 73%
+
+---
+
+## search 覆盖 (v0.10.0)
+
+| gh verb | gitee verb | 状态 | 备注 |
+|---|---|---|---|
+| `repos` | `repos` | ✅ | |
+| `issues` | `issues` | ✅ | |
+| `code` | `code` | ✅ v0.10.0 | |
+| `commits` | `commits` | ✅ v0.10.0 | |
+| `users` | `users` | ✅ | |
+| `labels` | — | 🚫 | Gitee v5 search API 暂不支持 labels |
+
+**覆盖**：5/6 = 83%
 
 ---
 
@@ -217,12 +232,12 @@ gitee-cli 把它们做成独立 verb,易用性更好。
 
 | gh 一级 | gitee 一级 | 状态 | 备注 |
 |---|---|---|---|
-| `alias` | — | ⬜ P2 | 命令别名 |
+| `alias` | `alias` | ✅ v0.9.0-c | 3 verb: set/list/delete |
 | `api` | `api` | ✅ | |
 | `completion` | `completion` | ✅ | bash/zsh/fish/powershell |
 | `config` | `config` | 🟡 | gitee 多了 `unset`,少 `clear-cache` |
-| `extension` | — | ⬜ P2 | 扩展 |
-| `status` | `status` | **✅ 🆕 v0.9.0-a** | gitee 实现 2 节(assigned + awaiting review) |
+| `extension` | `extension` | ✅ v0.9.0-b | 5 verb: list/install/remove/upgrade/create |
+| `status` | `status` | **✅ v0.9.0-a** | gitee 实现 2 节(assigned + awaiting review) |
 | `webhook`(gh 无) | `webhook` | ✅ | gitee 把它做成一级命令(6 verb) |
 
 ---
@@ -251,20 +266,20 @@ gitee-cli 把它们做成独立 verb,易用性更好。
 | 缺口 | 难度 | 工作量 | 备注 |
 |---|---|---|---|
 | ~~⬜ `status` (跨仓)~~ | ~~中~~ | ~~~5h~~ | **✅ v0.9.0-a 完成** — commit `63eb1b3` |
-| ⬜ `alias *` | 低 | ~3h | P2 下一个待启动 |
-| ⬜ `extension *` | 中 | ~8h | P2 已规划,需考虑 gitee 的 plugin 机制 |
-| ⬜ `repo set-default` | 低 | ~2h | 类似 gh 目录级默认仓库 |
+| ~~⬜ `alias *`~~ | ~~低~~ | ~~~3h~~ | **✅ v0.9.0-c 完成** — commit `70d5a31` |
+| ~~⬜ `extension *`~~ | ~~中~~ | ~~~8h~~ | **✅ v0.9.0-b 完成** — commit `a9af5c0` |
+| ~~⬜ `repo set-default`~~ | ~~低~~ | ~~~2h~~ | **✅ v0.10.0 完成** — git config local |
 
 ### 🟡 中优先级(差异化体验)
 
 | 缺口 | 难度 | 工作量 | 备注 |
 |---|---|---|---|
-| ⬜ `issue status` | 低 | ~2h | 与 pr status 对称 |
-| ⬜ `pr status` | 低 | ~2h | |
-| ⬜ `release upload` | 中 | ~4h | Gitee v5 有此端点,需加 multipart upload |
-| ⬜ `release delete-asset` | 中 | ~3h | |
+| ~~⬜ `issue status`~~ | ~~低~~ | ~~~2h~~ | **✅ v0.10.0 完成** — search API |
+| ~~⬜ `pr status`~~ | ~~低~~ | ~~~2h~~ | **✅ v0.10.0 完成** — 并发遍历 repos |
+| ~~⬜ `release upload`~~ | ~~中~~ | ~~~4h~~ | **✅ v0.10.0 完成** — multipart upload |
+| ~~⬜ `release delete-asset`~~ | ~~中~~ | ~~~3h~~ | **✅ v0.10.0 完成** |
+| ~~⬜ `auth switch`~~ | ~~中~~ | ~~~3h~~ | **✅ v0.10.0 完成** — 交互式选择 |
 | ⬜ `gist rename` | 中 | ~3h | Gitee v5 spec 暂未确认端点 |
-| ⬜ `auth switch` | 中 | ~3h | 多账号切换 |
 
 ### 🟢 低优先级(可选项)
 
@@ -309,9 +324,10 @@ gitee-cli 把它们做成独立 verb,易用性更好。
    - `webhook` 一级命令(gh 把它藏在 `api`)
    - `org members/repos/issues` 独立 verb
    - `--agent-help` 全局 flag
-4. **P2/P3 主战场**：
-   - P2a = status ✅(commit `63eb1b3`)
-   - P2b = extension
-   - P2c = alias
-   - P3 = Gitee Go pipeline(runs/workflows/cache)
+4. **P2 全部完成,P3 远期规划**：
+   - P2a = status ✅ (commit `63eb1b3`)
+   - P2b = extension ✅ (commit `a9af5c0`)
+   - P2c = alias ✅ (commit `70d5a31`)
+   - P3 = Gitee Go pipeline(runs/workflows/cache) — 远期
+   - v0.10.0 补全 8 个小功能: auth switch, pr/issue status, repo set-default, search code/commits, release upload/delete-asset 全部 ✅
 5. **🚫 不是技术债,是 API 真相**：P1c 已明确,6 个 issue/pr 增强 Gitee v5 不支持

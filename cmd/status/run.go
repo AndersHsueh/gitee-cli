@@ -11,7 +11,6 @@ import (
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
-	"gitee-cli/internal/config"
 	"gitee-cli/internal/utils"
 	"gitee-cli/pkg/types"
 	"github.com/fatih/color"
@@ -41,7 +40,8 @@ var errNotInWorkTree = fmt.Errorf("not inside a git working tree. Use --repo own
 //
 // Resolution order:
 //  1. --repo flag (global) — user explicit
-//  2. `git remote get-url origin` parsed for owner/repo
+//  2. `git config --local gitee.default_repo` (v0.10.0)
+//  3. `git remote get-url origin` parsed for owner/repo
 func resolveCurrentRepo() (owner, repo string, err error) {
 	if cmd.GlobalRepo != "" {
 		o, r := utils.ParseOwnerRepo(cmd.GlobalRepo)
@@ -49,6 +49,13 @@ func resolveCurrentRepo() (owner, repo string, err error) {
 			return o, r, nil
 		}
 		return "", "", fmt.Errorf("--repo=%q is not in owner/repo format", cmd.GlobalRepo)
+	}
+	// Check git local config before falling back to git remote (v0.10.0)
+	if defaultRepo, cfgErr := utils.GitConfigGet("gitee.default_repo"); cfgErr == nil && defaultRepo != "" {
+		o, r := utils.ParseOwnerRepo(defaultRepo)
+		if o != "" && r != "" {
+			return o, r, nil
+		}
 	}
 	if !utils.IsInsideWorkTree() {
 		return "", "", errNotInWorkTree
@@ -62,21 +69,6 @@ func resolveCurrentRepo() (owner, repo string, err error) {
 		return "", "", fmt.Errorf("origin %q is not a Gitee repository: %v", remote, perr)
 	}
 	return o, r, nil
-}
-
-// currentUsername returns the username of the authenticated user. Tries
-// the cached value in ~/.gitee-cli/settings.json first; if that returns
-// empty (e.g. login info wasn't captured), it falls back to a /user API
-// call (which always works for any authenticated user).
-func currentUsername(ctx context.Context, client *api.Client) (string, error) {
-	if u := config.GetUsername(cmd.GlobalHostname); u != "" {
-		return u, nil
-	}
-	var u types.User
-	if err := client.Get(ctx, "/user", &u); err != nil {
-		return "", fmt.Errorf("resolving current user (no cached username, /user failed): %w", err)
-	}
-	return u.Login, nil
 }
 
 // section is the result of one logical section in the status output.
@@ -115,7 +107,7 @@ func runStatus(cobraCmd *cobra.Command, args []string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
 	defer cancel()
 
-	username, err := currentUsername(ctx, client)
+	username, err := cmd.ResolveCurrentUsername(ctx, client)
 	if err != nil {
 		return err
 	}
