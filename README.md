@@ -30,6 +30,8 @@ gitee api        # 直接调用 Gitee API v5（GET / POST / PUT / PATCH / DELETE
 
 ## 🆕 `--agent-help`: 给 AI Agent 看的帮助系统 (v0.4.0 新增 · **行业首创**)
 
+> 📖 完整的设计哲学：[Agent-First CLI 宣言](docs/philosophy.md)
+
 > gitee-cli 是**第一个**把 CLI 帮助系统拆成"人类版 + Agent 版"的开源项目。
 
 **为什么需要这个？**
