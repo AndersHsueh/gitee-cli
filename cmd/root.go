@@ -244,9 +244,20 @@ func PrintAgentHelp(md string) {
 	os.Exit(0)
 }
 
+// sectionKeyReplacer normalizes markdown section titles to snake_case JSON
+// keys in a single pass. Created once at init rather than per call.
+var sectionKeyReplacer = strings.NewReplacer(
+	" ", "_",
+	"-", "_",
+	"/", "_",
+)
+
 // printAgentHelpJSON parses the --agent-help markdown into structured JSON
-// and prints it to stdout. The parser is intentionally simple and works on
-// the established ## Section / - list-item structure.
+// and prints it to stdout. The parser handles the established ## Section /
+// - list-item structure. Limitations (by design):
+//   - ### sub-sections are treated as paragraph content, not nested objects
+//   - Mixed list/paragraph bodies default to paragraph
+//   - Code fences are not special-cased
 func printAgentHelpJSON(md string) {
 	// Split by ## headings. The part before the first ## is the title block.
 	parts := strings.Split(md, "\n## ")
@@ -254,104 +265,97 @@ func printAgentHelpJSON(md string) {
 
 	// Extract command name from the # heading.
 	command := strings.TrimPrefix(titleBlock, "# ")
-	if idx := strings.Index(command, "\n"); idx > 0 {
-		command = strings.TrimSpace(command[:idx])
+	if line, _, ok := strings.Cut(command, "\n"); ok {
+		command = strings.TrimSpace(line)
 	}
-	command = strings.TrimSuffix(command, " — Agent Help")
+	// Strip " — Agent Help" or " -- Agent Help" suffix (both em-dash and en-dash).
+	if idx := strings.Index(command, "Agent Help"); idx > 0 {
+		command = strings.TrimSpace(command[:idx])
+		command = strings.TrimRight(command, " —–-")
+	}
 
-	out := map[string]interface{}{
+	out := map[string]any{
 		"command": command,
 	}
 
-	sections := make(map[string]interface{})
+	sections := make(map[string]any)
 	for _, part := range parts[1:] {
-		if strings.TrimSpace(part) == "" {
+		title, body, ok := strings.Cut(part, "\n")
+		if !ok {
+			// No body — the entire part is the title (e.g. empty section).
+			title = strings.TrimSpace(part)
+		}
+		title = strings.TrimSpace(title)
+		if title == "" {
 			continue
 		}
 
-		// Split section title from body.
-		idx := strings.Index(part, "\n")
-		title := strings.TrimSpace(part)
-		body := ""
-		if idx > 0 {
-			title = strings.TrimSpace(part[:idx])
-			body = strings.TrimSpace(part[idx+1:])
-		}
-
-		// Normalize title to a machine-friendly key.
 		key := normalizeSectionKey(title)
 
-		// Determine if body is a list (lines starting with "- " or "  - ")
-		// or a paragraph. Mixed content defaults to paragraph.
-		lines := strings.Split(body, "\n")
-		isList := false
-		listItems := []string{}
-		paraLines := []string{}
+		// Extract body content: if body is a homogeneous markdown list
+		// (every non-empty line starts with "- "), treat it as a JSON
+		// array. Otherwise treat it as a single paragraph string.
+		body = strings.TrimSpace(body)
+		listItems := parseListItems(body)
 
-		for _, line := range lines {
-			trimmed := strings.TrimSpace(line)
-			if trimmed == "" {
-				continue
-			}
-			if strings.HasPrefix(trimmed, "- ") {
-				isList = true
-				item := strings.TrimPrefix(trimmed, "- ")
-				// Strip backtick formatting from the item for cleaner JSON.
-				item = strings.ReplaceAll(item, "`", "")
-				listItems = append(listItems, item)
-			} else if strings.HasPrefix(trimmed, "  - ") {
-				isList = true
-				item := strings.TrimPrefix(trimmed, "  - ")
-				item = strings.ReplaceAll(item, "`", "")
-				listItems = append(listItems, item)
-			} else {
-				// For "See also" section, parse `gitee ...` references.
-				if key == "see_also" && strings.Contains(trimmed, "`") {
-					item := strings.TrimSpace(trimmed)
-					// Remove leading "- " if present.
-					item = strings.TrimPrefix(item, "- ")
-					item = strings.ReplaceAll(item, "`", "")
-					listItems = append(listItems, item)
-					isList = true
-				} else {
-					paraLines = append(paraLines, trimmed)
-				}
-			}
-		}
-
-		if isList && len(listItems) > 0 {
+		if len(listItems) > 0 {
 			sections[key] = listItems
-		} else if len(paraLines) > 0 {
-			sections[key] = strings.Join(paraLines, "\n")
-		} else {
+		} else if body != "" {
 			sections[key] = body
+		} else {
+			sections[key] = ""
 		}
 	}
 
 	out["sections"] = sections
 
-	b, _ := json.MarshalIndent(out, "", "  ")
-	fmt.Println(string(b))
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(out); err != nil {
+		fmt.Fprintf(os.Stderr, "error marshaling agent help JSON: %v\n", err)
+	}
+}
+
+// parseListItems extracts backtick-stripped items from a markdown list body.
+// Returns nil if the body is not a homogeneous list (e.g. a paragraph with
+// no list markers). Indented continuation lines (without "- ") are treated
+// as part of the previous list item and appended with a space separator.
+func parseListItems(body string) []string {
+	lines := strings.Split(body, "\n")
+	var items []string
+	for _, line := range lines {
+		t := strings.TrimSpace(line)
+		if t == "" {
+			continue
+		}
+		item, ok := strings.CutPrefix(t, "- ")
+		if ok {
+			// New list item.
+			items = append(items, strings.ReplaceAll(item, "`", ""))
+		} else if len(items) > 0 {
+			// Continuation line: append to the previous item.
+			items[len(items)-1] += " " + strings.ReplaceAll(t, "`", "")
+		} else {
+			// Non-list content before any list item — treat as paragraph.
+			return nil
+		}
+	}
+	return items
 }
 
 // normalizeSectionKey converts a human-readable section title to a
 // machine-friendly JSON key (snake_case, lowercase).
 func normalizeSectionKey(title string) string {
-	// Remove trailing "(on success)" or similar qualifiers.
+	// Remove trailing "(on success)" qualifier.
 	title = strings.TrimSuffix(title, " (on success)")
 
-	// Lowercase first.
 	title = strings.ToLower(title)
+	title = sectionKeyReplacer.Replace(title)
 
-	// Replace spaces and common punctuation with underscores.
-	title = strings.ReplaceAll(title, " ", "_")
-	title = strings.ReplaceAll(title, "-", "_")
-	title = strings.ReplaceAll(title, "/", "_")
-
-	// Collapse multiple underscores.
-	for strings.Contains(title, "__") {
-		title = strings.ReplaceAll(title, "__", "_")
-	}
+	// Collapse runs of underscores. Two passes of ReplaceAll cover any run
+	// length (e.g. ___ → __ → _).
+	title = strings.ReplaceAll(title, "__", "_")
+	title = strings.ReplaceAll(title, "__", "_")
 
 	return strings.Trim(title, "_")
 }
