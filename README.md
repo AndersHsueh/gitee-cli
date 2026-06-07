@@ -5,7 +5,7 @@
 [![Go Version](https://img.shields.io/badge/go-1.25+-blue.svg)](https://golang.org)
 [![License](https://img.shields.io/badge/license-MulanPSL--2.0-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey.svg)]()
-[![Version](https://img.shields.io/badge/version-v0.10.0-orange.svg)](https://gitee.com/andershsueh/gitee-cli/releases/latest)
+[![Version](https://img.shields.io/badge/version-v0.10.1-orange.svg)](https://gitee.com/andershsueh/gitee-cli/releases/latest)
 [![Downloads](https://img.shields.io/badge/downloads-releases-blue.svg)](https://gitee.com/andershsueh/gitee-cli/releases/latest)
 
 ---
@@ -13,74 +13,75 @@
 ## 功能概览
 
 ```
-gitee auth       # 认证管理（login / logout / status / token）            ✅ 已实现
-gitee issue      # Issue 管理（list / create / view / edit / close / reopen / comment） ✅ 已实现
-gitee config     # 配置管理（set / get / list / unset）                  ✅ 已实现
-gitee search     # 搜索仓库 / Issue / 用户                             ✅ 已实现
-gitee completion # Shell 自动补全（bash / zsh / fish / powershell）  ✅ 已实现
-gitee version    # 版本信息                                            ✅ 已实现
-gitee repo       # 仓库管理（list / create / view / fork / edit / delete / clone / browse / branches） ✅ 已实现
-gitee pr         # Pull Request（list / create / view / merge / review / comments / diff） ✅ 已实现
-gitee gist       # 代码片段（list / create / view / edit / delete / star / unstar） ✅ 已实现
+gitee auth       # 认证管理（login / logout / status / token / switch）  ✅ 已实现
+gitee issue      # Issue 管理（list / create / view / edit / close / reopen / comment / status） ✅ 已实现
+gitee pr         # Pull Request（list / create / view / merge / review / status / diff ...） ✅ 已实现
+gitee repo       # 仓库管理（list / create / view / fork / edit / delete / clone / set-default ...） ✅ 已实现
+gitee release    # 发布管理（list / create / view / edit / delete / download / upload） ✅ 已实现
+gitee gist       # 代码片段（list / create / view / edit / delete / star / unstar / clone） ✅ 已实现
+gitee search     # 搜索（repos / issues / users / code / commits）       ✅ 已实现
 gitee org        # 组织管理（list / view / members / repos / issues）    ✅ 已实现
-gitee api        # 直接调用 Gitee API v5（GET / POST / PUT / PATCH / DELETE） ✅ 已实现
+gitee webhook    # Webhook 管理（list / create / view / edit / delete / test） ✅ 已实现
+gitee label      # 标签管理（list / create / view / edit / delete / clone） ✅ 已实现
+gitee ssh-key    # SSH 公钥管理（list / add / delete）                   ✅ 已实现
+gitee status     # 跨仓活动摘要（分配给您的 Issue + 待审查的 PR）       ✅ 已实现
+gitee alias      # 命令别名（set / list / delete）                       ✅ 已实现
+gitee extension  # 扩展管理（install / list / remove / upgrade / create） ✅ 已实现
+gitee agent      # AI Agent 脚手架（onboard — 一键生成 agent.md）        ✅ 已实现
+gitee config     # 配置管理（set / get / list / unset）                  ✅ 已实现
+gitee completion # Shell 自动补全（bash / zsh / fish / powershell）     ✅ 已实现
+gitee version    # 版本信息                                             ✅ 已实现
+gitee api        # 直接调用 Gitee API v5                                 ✅ 已实现
 ```
 
 ---
 
-## 🆕 `--agent-help`: 给 AI Agent 看的帮助系统 (v0.4.0 新增 · **行业首创**)
+## 🆕 Dual-surface CLI Design: 同一份 CLI，长两张脸 (v0.4.0 首创 · v0.10.0 完善)
 
-> 📖 完整的设计哲学：[Agent-First CLI 宣言](docs/philosophy.md)
+> 📖 完整设计哲学：[Dual-surface CLI Design](docs/philosophy.md)
 
-> gitee-cli 是**第一个**把 CLI 帮助系统拆成"人类版 + Agent 版"的开源项目。
+> gitee-cli 是**全球第一个**实现双面 CLI 架构的开源项目——把帮助系统拆成
+> Human Surface 和 Agent Surface，两边各服务各的消费者。
 
 **为什么需要这个？**
 
-CLI 工具的真实用户越来越多是 **AI Agent**，不是人。但传统的 `--help` 想同时讨好两类用户，结果两边都不爽：
-- 人类嫌啰嗦、抓不到重点
-- Agent 嫌不够、缺机器需要的关键信息（idempotency / side effects / orchestration hints）
+CLI 工具的真实用户越来越多是 **AI Agent**（Claude Code、Cursor、Cline...），不是人。
+但传统的 `--help` 想同时讨好两类用户，结果两边都不爽：人类嫌啰嗦，Agent 嫌不够。
 
-**所以我们做了两套帮助系统并排运行**：
+**所以我们做了两套并行的 Surface**：
 
-| Flag | 给谁看 | 风格 |
-|------|-------|------|
-| `--help` | 人类 | 短、干净、符合传统 CLI 习惯 |
-| `--agent-help` | AI Agent | 长、结构化、包含编排提示和 pre/post-conditions |
+| Surface | Flag | 给谁 | 设计目标 |
+|---------|------|------|---------|
+| Human | `--help` | 人 | 信息密度低，3 秒能扫到要点 |
+| Agent | `--agent-help` | AI Agent | 信息密度高，结构稳定，机器可解析（`-o json`） |
 
-### 用法
+### 快速上手
 
 ```bash
-# 看某个命令的 agent 帮助（不执行命令，required flag 缺失也能跑）
-gitee issue create --agent-help
+# Agent 查命令手册（不执行命令，required flag 缺失也能跑）
 gitee pr create --agent-help
 
-# 看所有命令的 agent 帮助覆盖情况
+# Agent 查机器可读版（直接 parse JSON）
+gitee pr create --agent-help -o json
+
+# 看所有命令的 agent-help 覆盖矩阵
 gitee --agent-help
+
+# 一键为你的仓库生成 Agent 编排模板
+gitee agent onboard
 ```
 
-### `--agent-help` 比 `--help` 多了什么
+### Agent Surface 包含 11 个维度
 
-- **Pre-conditions** — 执行前需要满足什么
-- **Post-conditions** — 执行后系统处于什么状态
-- **Idempotency** — 能重跑吗？重复会怎样？
-- **Atomicity** — 有没有半成功状态？
-- **Side effects** — 会触发哪些 webhook / 邮件 / 通知
-- **Common errors** — 常见错误码 + 怎么恢复
-- **OAuth scope required**
-- **Rate limit**
-- **Race conditions** — 已知的数据竞争陷阱和规避方法
-- **Next steps (orchestration hints)** — 下一步该跑什么命令（**这是 Agent 最需要的**）
-- **Parsing hints** — stdout 怎么解析出 issue/PR 号
+Pre-conditions → Post-conditions → Idempotency → Atomicity → Side effects →
+Common errors + recovery → OAuth scope → Rate limit → Race conditions →
+**Orchestration hints**（下一步该跑什么）→ **Parsing hints**（stdout 怎么 parse）
 
-### 真实场景：Agent 修完 bug 后忘了 close the loop
+### 真实场景：闭环遗漏症
 
-最常见的 Agent 流水线事故：**coder-agent 提了 PR 就不管了，issue 永远 open 着**。
+最常见的 Agent 事故：**coder-agent 提了 PR 就不管了，issue 永远 open 着。**
 
-`gitee pr create --agent-help` 里专门标了 ⚠️ 警告：
-
-> ⚠️ **CRITICAL**: After a successful PR create, an agent MUST close the loop with the originating issue...
-
-并给出可复制的 shell 片段：
+`gitee pr create --agent-help` 直接标出 ⚠️ 警告并给出可复制的 shell 片段：
 
 ```bash
 PR_OUT=$(gitee pr create --repo owner/repo --title "fix: ..." \
@@ -89,18 +90,9 @@ PR_NUM=$(echo "$PR_OUT" | grep -oE '#[0-9]+' | head -1 | tr -d '#')
 gitee issue comment 42 --body "Fixed in PR #${PR_NUM}"  # 闭环！
 ```
 
-### 当前覆盖（v0.4.0）
+### 当前覆盖（v0.10.1）
 
-| 命令 | 状态 |
-|------|------|
-| `gitee --agent-help` | ✅ 可用（命令覆盖总览） |
-| `gitee issue create --agent-help` | ✅ 可用 |
-| `gitee pr create --agent-help` | ✅ 可用 |
-| 其它命令 | 🛣️ 后续版本扩展 |
-
-### 致其他 CLI 维护者
-
-如果你的工具被 AI Agent 调用（Claude Code / Cursor / Cline / ...），考虑加一个 `--agent-help`。这是一次几个小时的工作 + 几百行结构化文本，能让你的工具被 Agent 使用的可靠性提升一个量级。
+共 **42 个 verb** 已获得完整 `--agent-help`，覆盖 repo/issue/pr/gist/release/label/webhook/ssh-key/status/extension/alias/search 共 12 个命令组。
 
 ---
 
@@ -402,6 +394,23 @@ golangci-lint run ./...
 ---
 
 ## 更新日志
+
+### v0.10.1 (2026-06-08)
+
+- **🆕 新增**: `gitee agent onboard` — 一键生成 `.gitee/agent.md`，预置 4 个 Agent 工作流模板
+- **🆕 新增**: `--agent-help --output json` — Agent Surface 的机器可读 JSON 输出
+- **📖 文档**: `docs/philosophy.md` — Dual-surface CLI Design 设计宣言
+- **🔧 优化**: `PrintAgentHelp()` 统一分派函数（40+ PreRunE 钩子统一调用）
+- **🐛 修复**: README License badge Apache 2.0 → MulanPSL-2.0（与仓库元数据一致）
+
+### v0.10.0 (2026-06-08)
+
+- **🆕 新增 8 个命令**: `auth switch`, `pr status`, `issue status`, `repo set-default`,
+  `search code`, `search commits`, `release upload`, `release delete-asset`
+- **🤖 Agent Help 覆盖**: 6 个新命令获得完整 `--agent-help`（11 维度 × 结构化文档）
+- **🔧 基础设施**: `UploadFile` multipart 上传, `ReleaseAssetUpload/DeleteAsset` 端点,
+  `ActiveHost` config, `GitConfigGet/Set`, `ResolveHostname`, `ResolveCurrentUsername`
+- **📊 覆盖率**: ~105 子命令, 可比覆盖率 ~80%, release 命令组 100%
 
 ### v0.4.2 (2026-06-02)
 
