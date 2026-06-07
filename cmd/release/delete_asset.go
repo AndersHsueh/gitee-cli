@@ -3,13 +3,13 @@ package release
 import (
 	"context"
 	"fmt"
-	"os"
 	"time"
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
 	"gitee-cli/internal/utils"
 	"gitee-cli/pkg/types"
+
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )
@@ -34,8 +34,7 @@ the confirmation prompt.`,
   gitee release delete-asset v1.0.0 -R owner/repo --asset-id 12345 --force`,
 	PreRunE: func(c *cobra.Command, args []string) error {
 		if cmd.GlobalAgentHelp {
-			fmt.Print(releaseDeleteAssetAgentHelp)
-			os.Exit(0)
+			cmd.PrintAgentHelp(releaseDeleteAssetAgentHelp)
 		}
 		return nil
 	},

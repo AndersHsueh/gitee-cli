@@ -1,12 +1,10 @@
 package webhook
 
 import (
-	"fmt"
-	"os"
-
 	"gitee-cli/cmd"
 	"gitee-cli/internal/handler"
 	"gitee-cli/internal/utils"
+
 	"github.com/spf13/cobra"
 )
 
@@ -22,8 +20,7 @@ var testCmd = &cobra.Command{
   gitee webhook test -R owner/repo 1234`,
 	PreRunE: func(c *cobra.Command, args []string) error {
 		if cmd.GlobalAgentHelp {
-			fmt.Print(webhookTestAgentHelp)
-			os.Exit(0)
+			cmd.PrintAgentHelp(webhookTestAgentHelp)
 		}
 		return nil
 	},

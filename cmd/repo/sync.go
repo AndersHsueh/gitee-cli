@@ -3,13 +3,13 @@ package repo
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
 	"gitee-cli/internal/utils"
+
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )
@@ -33,8 +33,7 @@ Use this after the upstream has new commits you want to integrate.`,
   gitee repo sync my-fork --branch develop`,
 	PreRunE: func(c *cobra.Command, args []string) error {
 		if cmd.GlobalAgentHelp {
-			fmt.Print(repoSyncAgentHelp)
-			os.Exit(0)
+			cmd.PrintAgentHelp(repoSyncAgentHelp)
 		}
 		return nil
 	},

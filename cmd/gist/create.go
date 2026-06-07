@@ -12,6 +12,7 @@ import (
 	"gitee-cli/internal/api"
 	"gitee-cli/internal/terminal"
 	"gitee-cli/pkg/types"
+
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )

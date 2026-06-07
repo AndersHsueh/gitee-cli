@@ -3,12 +3,12 @@ package release
 import (
 	"context"
 	"fmt"
-	"os"
 	"time"
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
 	"gitee-cli/internal/utils"
+
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )
@@ -26,8 +26,7 @@ var deleteCmd = &cobra.Command{
   gitee release delete v0.1.0 -R owner/repo --force`,
 	PreRunE: func(c *cobra.Command, args []string) error {
 		if cmd.GlobalAgentHelp {
-			fmt.Print(releaseDeleteAgentHelp)
-			os.Exit(0)
+			cmd.PrintAgentHelp(releaseDeleteAgentHelp)
 		}
 		return nil
 	},

@@ -1,11 +1,9 @@
 package label
 
 import (
-	"fmt"
-	"os"
-
 	"gitee-cli/cmd"
 	"gitee-cli/internal/handler"
+
 	"github.com/spf13/cobra"
 )
 
@@ -21,8 +19,7 @@ var viewCmd = &cobra.Command{
   gitee label view -R owner/repo -n enhancement`,
 	PreRunE: func(c *cobra.Command, args []string) error {
 		if cmd.GlobalAgentHelp {
-			fmt.Print(labelViewAgentHelp)
-			os.Exit(0)
+			cmd.PrintAgentHelp(labelViewAgentHelp)
 		}
 		return nil
 	},

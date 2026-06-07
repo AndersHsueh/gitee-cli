@@ -9,6 +9,7 @@ import (
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
 	"gitee-cli/pkg/types"
+
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )
@@ -32,8 +33,7 @@ can be set for the asset's display name.`,
   gitee release upload v1.0.0 -R owner/repo --file ./dist/app.tar.gz --label "Linux binary"`,
 	PreRunE: func(c *cobra.Command, args []string) error {
 		if cmd.GlobalAgentHelp {
-			fmt.Print(releaseUploadAgentHelp)
-			os.Exit(0)
+			cmd.PrintAgentHelp(releaseUploadAgentHelp)
 		}
 		return nil
 	},

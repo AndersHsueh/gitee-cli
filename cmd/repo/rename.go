@@ -3,21 +3,21 @@ package repo
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
 	"gitee-cli/pkg/types"
+
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )
 
 var renameFlags struct {
-	repo      string
-	newName   string
-	oldName   string // for resolveRepoArgs positional fallback (1st arg = old, 2nd = new)
+	repo    string
+	newName string
+	oldName string // for resolveRepoArgs positional fallback (1st arg = old, 2nd = new)
 }
 
 var renameCmd = &cobra.Command{
@@ -30,8 +30,7 @@ existing clones — you must update your local remotes after a rename.`,
   gitee repo rename --repo owner/old-name --new-name new-name`,
 	PreRunE: func(c *cobra.Command, args []string) error {
 		if cmd.GlobalAgentHelp {
-			fmt.Print(repoRenameAgentHelp)
-			os.Exit(0)
+			cmd.PrintAgentHelp(repoRenameAgentHelp)
 		}
 		return nil
 	},

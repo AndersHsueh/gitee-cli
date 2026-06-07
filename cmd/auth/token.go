@@ -6,6 +6,7 @@ import (
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/config"
+
 	"github.com/spf13/cobra"
 )
 

@@ -14,6 +14,7 @@ import (
 	"gitee-cli/internal/api"
 	"gitee-cli/internal/utils"
 	"gitee-cli/pkg/types"
+
 	"github.com/spf13/cobra"
 )
 

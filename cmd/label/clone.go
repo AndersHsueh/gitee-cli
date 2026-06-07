@@ -1,11 +1,9 @@
 package label
 
 import (
-	"fmt"
-	"os"
-
 	"gitee-cli/cmd"
 	"gitee-cli/internal/handler"
+
 	"github.com/spf13/cobra"
 )
 
@@ -21,8 +19,7 @@ var cloneCmd = &cobra.Command{
   gitee label clone --source myorg/template --target myorg/new-app`,
 	PreRunE: func(c *cobra.Command, args []string) error {
 		if cmd.GlobalAgentHelp {
-			fmt.Print(labelCloneAgentHelp)
-			os.Exit(0)
+			cmd.PrintAgentHelp(labelCloneAgentHelp)
 		}
 		return nil
 	},

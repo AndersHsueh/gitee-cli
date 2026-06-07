@@ -12,15 +12,16 @@ import (
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
 	"gitee-cli/pkg/types"
+
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )
 
 var downloadFlags struct {
-	repo    string
-	tag     string
-	asset   string
-	dest    string
+	repo     string
+	tag      string
+	asset    string
+	dest     string
 	listOnly bool
 }
 
@@ -32,8 +33,7 @@ var downloadCmd = &cobra.Command{
   gitee release download v1.0.0 -R owner/repo --asset foo.tar.gz --dest ./build/`,
 	PreRunE: func(c *cobra.Command, args []string) error {
 		if cmd.GlobalAgentHelp {
-			fmt.Print(releaseDownloadAgentHelp)
-			os.Exit(0)
+			cmd.PrintAgentHelp(releaseDownloadAgentHelp)
 		}
 		return nil
 	},

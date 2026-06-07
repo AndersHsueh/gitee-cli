@@ -7,6 +7,7 @@ import (
 	"gitee-cli/cmd"
 	"gitee-cli/internal/config"
 	"gitee-cli/internal/terminal"
+
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )

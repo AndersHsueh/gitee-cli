@@ -12,6 +12,7 @@ import (
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
 	"gitee-cli/pkg/types"
+
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )
@@ -44,8 +45,7 @@ API response.`,
 	// PreRunE fires BEFORE ValidateRequiredFlags so --agent-help works.
 	PreRunE: func(c *cobra.Command, args []string) error {
 		if cmd.GlobalAgentHelp {
-			fmt.Print(prCheckoutAgentHelp)
-			os.Exit(0)
+			cmd.PrintAgentHelp(prCheckoutAgentHelp)
 		}
 		return nil
 	},

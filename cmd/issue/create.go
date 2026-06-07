@@ -3,12 +3,12 @@ package issue
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
 	"gitee-cli/cmd"
 	"gitee-cli/pkg/types"
+
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )
@@ -35,8 +35,7 @@ var createCmd = &cobra.Command{
 	// --agent-help even when required flags (e.g. --title) are missing.
 	PreRunE: func(c *cobra.Command, args []string) error {
 		if cmd.GlobalAgentHelp {
-			fmt.Print(issueCreateAgentHelp)
-			os.Exit(0)
+			cmd.PrintAgentHelp(issueCreateAgentHelp)
 		}
 		return nil
 	},
@@ -233,4 +232,3 @@ Each call to this command counts as 1 request.
 - ` + "`" + `gitee pr create` + "`" + `           — create a PR (link via "Closes #N" in body)
 - ` + "`" + `gitee --agent-help` + "`" + `        — overview of all commands with agent help
 `
-

@@ -1,11 +1,9 @@
 package label
 
 import (
-	"fmt"
-	"os"
-
 	"gitee-cli/cmd"
 	"gitee-cli/internal/handler"
+
 	"github.com/spf13/cobra"
 )
 
@@ -22,8 +20,7 @@ var createCmd = &cobra.Command{
   gitee label create -R owner/repo -n enhancement -c 00ff00`,
 	PreRunE: func(c *cobra.Command, args []string) error {
 		if cmd.GlobalAgentHelp {
-			fmt.Print(labelCreateAgentHelp)
-			os.Exit(0)
+			cmd.PrintAgentHelp(labelCreateAgentHelp)
 		}
 		return nil
 	},

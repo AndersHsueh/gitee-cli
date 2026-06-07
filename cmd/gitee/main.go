@@ -16,7 +16,7 @@ import (
 	"gitee-cli/cmd/release"
 	"gitee-cli/cmd/repo"
 	"gitee-cli/cmd/search"
-	"gitee-cli/cmd/ssh-key"
+	sshkey "gitee-cli/cmd/ssh-key"
 	"gitee-cli/cmd/status"
 	"gitee-cli/cmd/webhook"
 	gitext "gitee-cli/internal/extension"

@@ -13,6 +13,7 @@ import (
 	"gitee-cli/internal/api"
 	"gitee-cli/internal/utils"
 	"gitee-cli/pkg/types"
+
 	"github.com/spf13/cobra"
 )
 
@@ -31,8 +32,7 @@ var commentsCmd = &cobra.Command{
 	Args: cobra.ExactArgs(1),
 	PreRunE: func(c *cobra.Command, args []string) error {
 		if cmd.GlobalAgentHelp {
-			fmt.Print(issueCommentsAgentHelp)
-			os.Exit(0)
+			cmd.PrintAgentHelp(issueCommentsAgentHelp)
 		}
 		return nil
 	},

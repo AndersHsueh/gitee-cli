@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"gitee-cli/internal/output"
+
 	"github.com/spf13/cobra"
 )
 

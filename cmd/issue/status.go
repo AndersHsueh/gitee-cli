@@ -12,6 +12,7 @@ import (
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
 	"gitee-cli/internal/utils"
+
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )
@@ -23,9 +24,9 @@ var (
 )
 
 type issueStatusSection struct {
-	Title string             `json:"title"`
-	Count int                `json:"count"`
-	Items []issueStatusItem  `json:"items"`
+	Title string            `json:"title"`
+	Count int               `json:"count"`
+	Items []issueStatusItem `json:"items"`
 }
 
 type issueStatusItem struct {
@@ -53,8 +54,7 @@ rather than iterating each repo individually.`,
   gitee issue status --limit 200`,
 	PreRunE: func(c *cobra.Command, args []string) error {
 		if cmd.GlobalAgentHelp {
-			fmt.Print(issueStatusAgentHelp)
-			os.Exit(0)
+			cmd.PrintAgentHelp(issueStatusAgentHelp)
 		}
 		return nil
 	},

@@ -13,6 +13,7 @@ import (
 	"gitee-cli/internal/handler"
 	"gitee-cli/internal/utils"
 	"gitee-cli/pkg/types"
+
 	"github.com/spf13/cobra"
 )
 
@@ -29,8 +30,7 @@ var listCmd = &cobra.Command{
   gitee release list --repo owner/repo --limit 50`,
 	PreRunE: func(c *cobra.Command, args []string) error {
 		if cmd.GlobalAgentHelp {
-			fmt.Print(releaseListAgentHelp)
-			os.Exit(0)
+			cmd.PrintAgentHelp(releaseListAgentHelp)
 		}
 		return nil
 	},

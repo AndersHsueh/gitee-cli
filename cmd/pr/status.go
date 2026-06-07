@@ -14,6 +14,7 @@ import (
 	"gitee-cli/internal/api"
 	"gitee-cli/internal/utils"
 	"gitee-cli/pkg/types"
+
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )
@@ -26,9 +27,9 @@ var (
 
 // prStatusSection mirrors the section struct from cmd/status for JSON output.
 type prStatusSection struct {
-	Title string            `json:"title"`
-	Count int               `json:"count"`
-	Items []prStatusItem    `json:"items"`
+	Title string         `json:"title"`
+	Count int            `json:"count"`
+	Items []prStatusItem `json:"items"`
 }
 
 type prStatusItem struct {
@@ -54,8 +55,7 @@ repos to inspect.`,
   gitee pr status --output json`,
 	PreRunE: func(c *cobra.Command, args []string) error {
 		if cmd.GlobalAgentHelp {
-			fmt.Print(prStatusAgentHelp)
-			os.Exit(0)
+			cmd.PrintAgentHelp(prStatusAgentHelp)
 		}
 		return nil
 	},

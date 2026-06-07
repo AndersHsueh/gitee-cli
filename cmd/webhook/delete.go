@@ -2,11 +2,11 @@ package webhook
 
 import (
 	"fmt"
-	"os"
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/handler"
 	"gitee-cli/internal/utils"
+
 	"github.com/spf13/cobra"
 )
 
@@ -23,8 +23,7 @@ var deleteCmd = &cobra.Command{
   gitee webhook delete -R owner/repo 1234 --force`,
 	PreRunE: func(c *cobra.Command, args []string) error {
 		if cmd.GlobalAgentHelp {
-			fmt.Print(webhookDeleteAgentHelp)
-			os.Exit(0)
+			cmd.PrintAgentHelp(webhookDeleteAgentHelp)
 		}
 		return nil
 	},

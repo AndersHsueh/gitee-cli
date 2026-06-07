@@ -10,6 +10,7 @@ import (
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/extension"
+
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )
@@ -31,8 +32,7 @@ var installCmd = &cobra.Command{
   gitee extension install owner/repo --force             # overwrite existing`,
 	PreRunE: func(c *cobra.Command, args []string) error {
 		if cmd.GlobalAgentHelp {
-			fmt.Print(extensionInstallAgentHelp)
-			os.Exit(0)
+			cmd.PrintAgentHelp(extensionInstallAgentHelp)
 		}
 		return nil
 	},

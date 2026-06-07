@@ -8,6 +8,7 @@ import (
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/extension"
+
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )
@@ -27,8 +28,7 @@ var upgradeCmd = &cobra.Command{
   gitee extension upgrade --all --dry-run`,
 	PreRunE: func(c *cobra.Command, args []string) error {
 		if cmd.GlobalAgentHelp {
-			fmt.Print(extensionUpgradeAgentHelp)
-			os.Exit(0)
+			cmd.PrintAgentHelp(extensionUpgradeAgentHelp)
 		}
 		return nil
 	},

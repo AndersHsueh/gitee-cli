@@ -2,12 +2,12 @@ package webhook
 
 import (
 	"fmt"
-	"os"
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/handler"
 	"gitee-cli/internal/utils"
 	"gitee-cli/pkg/types"
+
 	"github.com/spf13/cobra"
 )
 
@@ -41,8 +41,7 @@ var editCmd = &cobra.Command{
   gitee webhook edit 1234 -R owner/repo --merge-request-events`,
 	PreRunE: func(c *cobra.Command, args []string) error {
 		if cmd.GlobalAgentHelp {
-			fmt.Print(webhookEditAgentHelp)
-			os.Exit(0)
+			cmd.PrintAgentHelp(webhookEditAgentHelp)
 		}
 		return nil
 	},

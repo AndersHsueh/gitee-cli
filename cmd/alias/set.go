@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"gitee-cli/internal/alias"
+
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )

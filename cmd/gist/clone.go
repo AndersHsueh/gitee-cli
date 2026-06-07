@@ -12,6 +12,7 @@ import (
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
 	"gitee-cli/pkg/types"
+
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )
@@ -35,8 +36,7 @@ The default target directory is the gist id itself.`,
   gitee gist clone abc123def --dir ./my-snippet`,
 	PreRunE: func(c *cobra.Command, args []string) error {
 		if cmd.GlobalAgentHelp {
-			fmt.Print(gistCloneAgentHelp)
-			os.Exit(0)
+			cmd.PrintAgentHelp(gistCloneAgentHelp)
 		}
 		return nil
 	},

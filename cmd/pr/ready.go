@@ -3,13 +3,13 @@ package pr
 import (
 	"context"
 	"fmt"
-	"os"
 	"time"
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
 	"gitee-cli/internal/utils"
 	"gitee-cli/pkg/types"
+
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )
@@ -27,8 +27,7 @@ var readyCmd = &cobra.Command{
   gitee pr ready 42 -R owner/repo`,
 	PreRunE: func(c *cobra.Command, args []string) error {
 		if cmd.GlobalAgentHelp {
-			fmt.Print(prReadyAgentHelp)
-			os.Exit(0)
+			cmd.PrintAgentHelp(prReadyAgentHelp)
 		}
 		return nil
 	},

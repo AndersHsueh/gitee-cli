@@ -15,6 +15,7 @@ import (
 	"fmt"
 
 	"gitee-cli/internal/output"
+
 	"github.com/spf13/cobra"
 )
 

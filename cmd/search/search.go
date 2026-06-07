@@ -14,6 +14,7 @@ import (
 	"gitee-cli/internal/api"
 	"gitee-cli/internal/config"
 	"gitee-cli/internal/utils"
+
 	"github.com/spf13/cobra"
 )
 
@@ -234,8 +235,7 @@ Note: Code search availability depends on your Gitee instance.
 If the API returns a 404, code search is not enabled for that instance.`,
 	PreRunE: func(c *cobra.Command, args []string) error {
 		if cmd.GlobalAgentHelp {
-			fmt.Print(searchCodeAgentHelp)
-			os.Exit(0)
+			cmd.PrintAgentHelp(searchCodeAgentHelp)
 		}
 		return nil
 	},
@@ -306,8 +306,7 @@ Note: Commit search availability depends on your Gitee instance.
 If the API returns a 404, commit search is not enabled for that instance.`,
 	PreRunE: func(c *cobra.Command, args []string) error {
 		if cmd.GlobalAgentHelp {
-			fmt.Print(searchCommitsAgentHelp)
-			os.Exit(0)
+			cmd.PrintAgentHelp(searchCommitsAgentHelp)
 		}
 		return nil
 	},

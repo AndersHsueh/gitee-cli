@@ -11,6 +11,7 @@ import (
 	"gitee-cli/internal/api"
 	"gitee-cli/internal/handler"
 	"gitee-cli/pkg/types"
+
 	"github.com/spf13/cobra"
 )
 
@@ -27,8 +28,7 @@ var listCmd = &cobra.Command{
   gitee ssh-key list --output json`,
 	PreRunE: func(c *cobra.Command, args []string) error {
 		if cmd.GlobalAgentHelp {
-			fmt.Print(sshKeyListAgentHelp)
-			os.Exit(0)
+			cmd.PrintAgentHelp(sshKeyListAgentHelp)
 		}
 		return nil
 	},

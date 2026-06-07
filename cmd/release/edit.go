@@ -3,12 +3,12 @@ package release
 import (
 	"context"
 	"fmt"
-	"os"
 	"time"
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
 	"gitee-cli/pkg/types"
+
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )
@@ -29,8 +29,7 @@ var editCmd = &cobra.Command{
   gitee release edit v1.0.0 -R owner/repo --body "Updated release notes"`,
 	PreRunE: func(c *cobra.Command, args []string) error {
 		if cmd.GlobalAgentHelp {
-			fmt.Print(releaseEditAgentHelp)
-			os.Exit(0)
+			cmd.PrintAgentHelp(releaseEditAgentHelp)
 		}
 		return nil
 	},

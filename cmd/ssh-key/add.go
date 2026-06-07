@@ -3,7 +3,6 @@ package sshkey
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -11,6 +10,7 @@ import (
 	"gitee-cli/internal/api"
 	"gitee-cli/internal/utils"
 	"gitee-cli/pkg/types"
+
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )
@@ -29,8 +29,7 @@ var addCmd = &cobra.Command{
 	// even when --title or --key is missing.
 	PreRunE: func(c *cobra.Command, args []string) error {
 		if cmd.GlobalAgentHelp {
-			fmt.Print(sshKeyAddAgentHelp)
-			os.Exit(0)
+			cmd.PrintAgentHelp(sshKeyAddAgentHelp)
 		}
 		return nil
 	},

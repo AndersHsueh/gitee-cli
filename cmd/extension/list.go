@@ -8,6 +8,7 @@ import (
 	"gitee-cli/cmd"
 	"gitee-cli/internal/extension"
 	"gitee-cli/internal/handler"
+
 	"github.com/spf13/cobra"
 )
 
@@ -18,8 +19,7 @@ var listCmd = &cobra.Command{
   gitee extension list --output json`,
 	PreRunE: func(c *cobra.Command, args []string) error {
 		if cmd.GlobalAgentHelp {
-			fmt.Print(extensionListAgentHelp)
-			os.Exit(0)
+			cmd.PrintAgentHelp(extensionListAgentHelp)
 		}
 		return nil
 	},

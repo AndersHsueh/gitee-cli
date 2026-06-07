@@ -16,10 +16,8 @@
 package status
 
 import (
-	"fmt"
-	"os"
-
 	"gitee-cli/cmd"
+
 	"github.com/spf13/cobra"
 )
 
@@ -44,8 +42,7 @@ specify a repository explicitly.`,
   gitee status --repo owner/repo --output json`,
 	PreRunE: func(c *cobra.Command, args []string) error {
 		if cmd.GlobalAgentHelp {
-			fmt.Print(statusAgentHelp)
-			os.Exit(0) // short-circuit before cobra's flag validation
+			cmd.PrintAgentHelp(statusAgentHelp)
 		}
 		return nil
 	},

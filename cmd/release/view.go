@@ -3,13 +3,13 @@ package release
 import (
 	"context"
 	"fmt"
-	"os"
 	"time"
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
 	"gitee-cli/internal/handler"
 	"gitee-cli/pkg/types"
+
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )
@@ -26,8 +26,7 @@ var viewCmd = &cobra.Command{
   gitee release view v1.0.0 -R owner/repo --output json`,
 	PreRunE: func(c *cobra.Command, args []string) error {
 		if cmd.GlobalAgentHelp {
-			fmt.Print(releaseViewAgentHelp)
-			os.Exit(0)
+			cmd.PrintAgentHelp(releaseViewAgentHelp)
 		}
 		return nil
 	},

@@ -7,6 +7,7 @@ import (
 	"gitee-cli/internal/alias"
 	"gitee-cli/internal/handler"
 	"gitee-cli/internal/output"
+
 	"github.com/spf13/cobra"
 )
 

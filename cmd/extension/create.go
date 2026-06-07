@@ -7,6 +7,7 @@ import (
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/extension"
+
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )
@@ -23,8 +24,7 @@ var createCmd = &cobra.Command{
   gitee extension install .              # install it for the current user`,
 	PreRunE: func(c *cobra.Command, args []string) error {
 		if cmd.GlobalAgentHelp {
-			fmt.Print(extensionCreateAgentHelp)
-			os.Exit(0)
+			cmd.PrintAgentHelp(extensionCreateAgentHelp)
 		}
 		return nil
 	},

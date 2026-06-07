@@ -2,27 +2,30 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 
 	"gitee-cli/internal/alias"
 	"gitee-cli/internal/api"
 	"gitee-cli/internal/config"
 	"gitee-cli/pkg/types"
+
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )
 
 // Global flag values populated by PersistentPreRunE.
 var (
-	GlobalToken    string
-	GlobalHostname string
-	GlobalOutput   string
-	GlobalVerbose  bool
-	GlobalAPIURL   string
-	GlobalTimeout  int
-	GlobalRepo     string
-	NoColor        bool
+	GlobalToken     string
+	GlobalHostname  string
+	GlobalOutput    string
+	GlobalVerbose   bool
+	GlobalAPIURL    string
+	GlobalTimeout   int
+	GlobalRepo      string
+	NoColor         bool
 	GlobalAgentHelp bool // --agent-help: show agent-targeted help (more verbose, machine-friendly)
 
 	// Pagination controls (root persistent flags). Bound in init() so any
@@ -62,7 +65,7 @@ overview of which commands currently have agent help.`,
 		// Default behavior when no subcommand is given: show help.
 		// --agent-help on the root command shows an overview of agent help coverage.
 		if GlobalAgentHelp {
-			fmt.Print(rootAgentHelp)
+			PrintAgentHelp(rootAgentHelp)
 			return nil
 		}
 		return c.Help()
@@ -160,7 +163,7 @@ func init() {
 	pf.IntVar(&GlobalTimeout, "timeout", 30, "HTTP timeout in seconds")
 	pf.StringVar(&GlobalRepo, "repo", "", "Target repository in owner/repo format")
 	pf.BoolVar(&NoColor, "no-color", false, "Disable color output")
-	pf.BoolVar(&GlobalAgentHelp, "agent-help", false, "Show agent-targeted help (long, structured, includes orchestration hints and pre/post-conditions). Available on selected commands.")
+	pf.BoolVar(&GlobalAgentHelp, "agent-help", false, "Show agent-targeted help (long, structured, includes orchestration hints and pre/post-conditions). Available on selected commands. Add -o json for machine-readable output.")
 	pf.BoolVarP(&GlobalPaginate, "paginate", "P", false, "Paginate through all results (combines with --limit for total cap)")
 	pf.IntVar(&GlobalPage, "page", 1, "Page number to fetch when --paginate is not set")
 	pf.IntVar(&GlobalPerPage, "per-page", 30, "Results per page (max 100)")
@@ -214,4 +217,141 @@ func ResolveCurrentUsername(ctx context.Context, client *api.Client) (string, er
 		return "", fmt.Errorf("resolving current user: %w", err)
 	}
 	return u.Login, nil
+}
+
+// PrintAgentHelp outputs the agent-help documentation for a command.
+// In text mode (default) it prints the raw markdown string. In JSON
+// mode (--output json + --agent-help) it parses the markdown sections
+// into a structured JSON object that agents can consume programmatically.
+//
+// The markdown format is expected to follow the standard --agent-help
+// template: a top-level # heading, then ## sections (Purpose,
+// Pre-conditions, Required flags, Optional flags, Idempotency, Atomicity,
+// Side effects, Post-conditions, Common errors, OAuth scope required,
+// Rate limit, Race conditions, Example, See also).
+//
+// Usage in PreRunE hooks:
+//
+//	if cmd.GlobalAgentHelp {
+//	    cmd.PrintAgentHelp(myCommandAgentHelp)
+//	}
+func PrintAgentHelp(md string) {
+	if GlobalOutput == "json" {
+		printAgentHelpJSON(md)
+	} else {
+		fmt.Print(md)
+	}
+	os.Exit(0)
+}
+
+// printAgentHelpJSON parses the --agent-help markdown into structured JSON
+// and prints it to stdout. The parser is intentionally simple and works on
+// the established ## Section / - list-item structure.
+func printAgentHelpJSON(md string) {
+	// Split by ## headings. The part before the first ## is the title block.
+	parts := strings.Split(md, "\n## ")
+	titleBlock := parts[0]
+
+	// Extract command name from the # heading.
+	command := strings.TrimPrefix(titleBlock, "# ")
+	if idx := strings.Index(command, "\n"); idx > 0 {
+		command = strings.TrimSpace(command[:idx])
+	}
+	command = strings.TrimSuffix(command, " — Agent Help")
+
+	out := map[string]interface{}{
+		"command": command,
+	}
+
+	sections := make(map[string]interface{})
+	for _, part := range parts[1:] {
+		if strings.TrimSpace(part) == "" {
+			continue
+		}
+
+		// Split section title from body.
+		idx := strings.Index(part, "\n")
+		title := strings.TrimSpace(part)
+		body := ""
+		if idx > 0 {
+			title = strings.TrimSpace(part[:idx])
+			body = strings.TrimSpace(part[idx+1:])
+		}
+
+		// Normalize title to a machine-friendly key.
+		key := normalizeSectionKey(title)
+
+		// Determine if body is a list (lines starting with "- " or "  - ")
+		// or a paragraph. Mixed content defaults to paragraph.
+		lines := strings.Split(body, "\n")
+		isList := false
+		listItems := []string{}
+		paraLines := []string{}
+
+		for _, line := range lines {
+			trimmed := strings.TrimSpace(line)
+			if trimmed == "" {
+				continue
+			}
+			if strings.HasPrefix(trimmed, "- ") {
+				isList = true
+				item := strings.TrimPrefix(trimmed, "- ")
+				// Strip backtick formatting from the item for cleaner JSON.
+				item = strings.ReplaceAll(item, "`", "")
+				listItems = append(listItems, item)
+			} else if strings.HasPrefix(trimmed, "  - ") {
+				isList = true
+				item := strings.TrimPrefix(trimmed, "  - ")
+				item = strings.ReplaceAll(item, "`", "")
+				listItems = append(listItems, item)
+			} else {
+				// For "See also" section, parse `gitee ...` references.
+				if key == "see_also" && strings.Contains(trimmed, "`") {
+					item := strings.TrimSpace(trimmed)
+					// Remove leading "- " if present.
+					item = strings.TrimPrefix(item, "- ")
+					item = strings.ReplaceAll(item, "`", "")
+					listItems = append(listItems, item)
+					isList = true
+				} else {
+					paraLines = append(paraLines, trimmed)
+				}
+			}
+		}
+
+		if isList && len(listItems) > 0 {
+			sections[key] = listItems
+		} else if len(paraLines) > 0 {
+			sections[key] = strings.Join(paraLines, "\n")
+		} else {
+			sections[key] = body
+		}
+	}
+
+	out["sections"] = sections
+
+	b, _ := json.MarshalIndent(out, "", "  ")
+	fmt.Println(string(b))
+}
+
+// normalizeSectionKey converts a human-readable section title to a
+// machine-friendly JSON key (snake_case, lowercase).
+func normalizeSectionKey(title string) string {
+	// Remove trailing "(on success)" or similar qualifiers.
+	title = strings.TrimSuffix(title, " (on success)")
+
+	// Lowercase first.
+	title = strings.ToLower(title)
+
+	// Replace spaces and common punctuation with underscores.
+	title = strings.ReplaceAll(title, " ", "_")
+	title = strings.ReplaceAll(title, "-", "_")
+	title = strings.ReplaceAll(title, "/", "_")
+
+	// Collapse multiple underscores.
+	for strings.Contains(title, "__") {
+		title = strings.ReplaceAll(title, "__", "_")
+	}
+
+	return strings.Trim(title, "_")
 }

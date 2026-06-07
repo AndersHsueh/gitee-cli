@@ -1,11 +1,9 @@
 package label
 
 import (
-	"fmt"
-	"os"
-
 	"gitee-cli/cmd"
 	"gitee-cli/internal/handler"
+
 	"github.com/spf13/cobra"
 )
 
@@ -22,8 +20,7 @@ var deleteCmd = &cobra.Command{
   gitee label delete -R owner/repo -n wontfix --force`,
 	PreRunE: func(c *cobra.Command, args []string) error {
 		if cmd.GlobalAgentHelp {
-			fmt.Print(labelDeleteAgentHelp)
-			os.Exit(0)
+			cmd.PrintAgentHelp(labelDeleteAgentHelp)
 		}
 		return nil
 	},

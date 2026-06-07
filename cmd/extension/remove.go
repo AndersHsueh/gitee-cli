@@ -7,6 +7,7 @@ import (
 	"gitee-cli/cmd"
 	"gitee-cli/internal/extension"
 	"gitee-cli/internal/utils"
+
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )
@@ -25,8 +26,7 @@ var removeCmd = &cobra.Command{
   gitee extension remove myext                       # prompts y/N`,
 	PreRunE: func(c *cobra.Command, args []string) error {
 		if cmd.GlobalAgentHelp {
-			fmt.Print(extensionRemoveAgentHelp)
-			os.Exit(0)
+			cmd.PrintAgentHelp(extensionRemoveAgentHelp)
 		}
 		return nil
 	},

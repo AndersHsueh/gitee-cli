@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"gitee-cli/pkg/types"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

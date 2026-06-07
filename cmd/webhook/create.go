@@ -1,13 +1,11 @@
 package webhook
 
 import (
-	"fmt"
-	"os"
-
 	"gitee-cli/cmd"
 	"gitee-cli/internal/handler"
 	"gitee-cli/internal/utils"
 	"gitee-cli/pkg/types"
+
 	"github.com/spf13/cobra"
 )
 
@@ -34,8 +32,7 @@ var createCmd = &cobra.Command{
       --password s3cret --encryption-type 0`,
 	PreRunE: func(c *cobra.Command, args []string) error {
 		if cmd.GlobalAgentHelp {
-			fmt.Print(webhookCreateAgentHelp)
-			os.Exit(0)
+			cmd.PrintAgentHelp(webhookCreateAgentHelp)
 		}
 		return nil
 	},
