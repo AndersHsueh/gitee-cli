@@ -64,6 +64,15 @@ doc/           # 设计文档（FSD, SDD, developer-guide）
 - Token 凭证存储在 `~/.config/gitee/credentials.yml`，文件权限 `0600`
 - Commit 规范使用 Conventional Commits（`feat/`, `fix/`, `docs/`, `test/`）
 
+## Git 远程与认证
+
+- **Git push/pull** 使用 **SSH 公钥**认证（`~/.ssh/id_ed25519`），远程地址：
+  ```
+  origin  git@gitee.com:andershsueh/gitee-cli.git
+  ```
+- **Gitee OpenAPI**（程序内部 API 调用）使用私人令牌，见 `~/ai-info/gitee-auth-info.md`
+- 不要用 HTTPS + token 方式推送 —— token 会返回 403，SSH 模式已经验证通过
+
 ## Gitee API v5 参考
 
 - Swagger 文档：https://gitee.com/api/v5/swagger
