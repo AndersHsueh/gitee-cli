@@ -2,6 +2,7 @@ package main
 
 import (
 	"gitee-cli/cmd"
+	"gitee-cli/cmd/agent"
 	"gitee-cli/cmd/alias"
 	"gitee-cli/cmd/api"
 	"gitee-cli/cmd/auth"
@@ -49,6 +50,8 @@ func main() {
 		cmdext.ExtensionCmd,
 		// P2c additions
 		alias.AliasCmd,
+		// Agent tooling (v0.10.0)
+		agent.AgentCmd,
 	)
 	// Dynamic loaders: register extension commands from
 	// ~/.gitee-cli/extensions/. Skipped when --no-extensions is set.
