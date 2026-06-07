@@ -40,16 +40,24 @@ coverage.html
 .git-credentials
 .netrc
 
-# Claude Code
+# Claude Code (AGENTS.md is intentionally tracked as public "AI Ready" docs)
 agent.md
 claude.md
 CLAUDE.md
-AGENTS.md
 
-# Guide docs (local only)
+# Guide docs & local working notes (local only)
 issue-fix-guide*.md
 release-guide*.md
 如何编写一份给minimax的可靠开发引导.md
+common-todos.md
+conversation-*.md
+todo-*.md
+xiaohongshu-*.md
+gh-command-list.md
+
+# MCP / editor artifacts
+.playwright-mcp/
+**/.obsidian/
 
 # Claude Code project files
 .claude/

@@ -36,7 +36,7 @@ gitee api        # 直接调用 Gitee API v5                                 ✅
 
 ---
 
-## 🆕 Dual-surface CLI Design: 同一份 CLI，长两张脸 (v0.4.0 首创 · v0.10.0 完善)
+## 🆕 Dual-surface CLI Design: 同一份 CLI，长两张脸 (v0.4.0 率先实践 · v0.10.0 完善)
 
 > 📖 完整设计哲学：[Dual-surface CLI Design](docs/philosophy.md)
 
@@ -347,7 +347,7 @@ gitee repo list
 
 ## 开发
 
-详见 [`documents/developer-guide.md`](documents/developer-guide.md)
+详见 [`docs/zh/developer-guide.md`](docs/zh/developer-guide.md)
 
 ```bash
 # 编译
@@ -365,22 +365,21 @@ golangci-lint run ./...
 
 ### 测试覆盖
 
-| 包 | 测试函数 | 覆盖内容 |
-|---|---------|---------|
-| `internal/api` | 21 | HTTP 客户端、错误处理、端点构建 |
-| `internal/utils` | 4 | 字符串截断、日期处理、仓库名解析 |
-| `internal/config` | 5 | 配置路径、加载/保存、偏好设置 |
-| `cmd/pr` | 2 | PR 审批事件值、API 端点 |
-| `pkg/types` | 2 | PRReviewRequest 序列化/反序列化 |
-| **合计** | **34+** | **5 包、7 测试文件** |
+| 范围 | 覆盖内容 |
+|---|---------|
+| `internal/api` | HTTP 客户端、错误处理、端点构建、分页 |
+| `internal/config` / `internal/utils` / `internal/alias` / `internal/extension` / `internal/atomicfile` | 配置加载/保存、字符串与仓库名解析、别名解析、扩展加载、原子写文件 |
+| `cmd/*`（issue / pr / repo / release / label / webhook / ssh-key / gist / status / help_topics …） | 命令行为、API 端点、agent-help section 契约 |
+| `pkg/types` | 序列化/反序列化 |
+| **合计** | **19 个包 · 53 个测试文件 · 145+ 测试函数** |
 
 ### 项目文档
 
 | 文档 | 说明 |
 |------|------|
-| [`documents/FSD.md`](documents/FSD.md) | 功能规格文档 |
-| [`documents/SDD.md`](documents/SDD.md) | 系统设计文档 |
-| [`documents/developer-guide.md`](documents/developer-guide.md) | 开发指导文档 |
+| [`docs/zh/FSD.md`](docs/zh/FSD.md) | 功能规格文档 |
+| [`docs/zh/SDD.md`](docs/zh/SDD.md) | 系统设计文档 |
+| [`docs/zh/developer-guide.md`](docs/zh/developer-guide.md) | 开发指导文档 |
 
 ---
 
@@ -451,7 +450,7 @@ golangci-lint run ./...
 
 ### v0.4.0 (2026-06-02)
 
-- **🆕 新增**: `--agent-help` 全局 flag + 完整的 agent 文档系统（**行业首创**）
+- **🆕 新增**: `--agent-help` 全局 flag + 完整的 agent 文档系统（**一流的双表面设计 / first-class dual-surface design**）
   - `gitee --agent-help` 列出所有命令的 agent 帮助覆盖情况
   - `gitee issue create --agent-help` 详细 agent 帮助（idempotency / side effects / orchestration hints / race conditions / 解析示例）
   - `gitee pr create --agent-help` 同上，特别强调 "PR 创建后必须 comment issue 闭环"

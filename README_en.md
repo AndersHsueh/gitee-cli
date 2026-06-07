@@ -2,8 +2,8 @@
 
 > Gitee Official CLI Tool — Complete Gitee operations in the terminal, equivalent to GitHub's `gh`
 
-[![Go Version](https://img.shields.io/badge/go-1.23+-blue.svg)](https://golang.org)
-[![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
+[![Go Version](https://img.shields.io/badge/go-1.25+-blue.svg)](https://golang.org)
+[![License](https://img.shields.io/badge/license-MulanPSL--2.0-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey.svg)]()
 [![Version](https://img.shields.io/badge/version-v0.3.0-orange.svg)]()
 
@@ -276,7 +276,7 @@ gitee repo list
 
 ## Development
 
-See [`documents/developer-guide.md`](documents/developer-guide.md)
+See [`docs/en/developer-guide.md`](docs/en/developer-guide.md)
 
 ```bash
 # Clone
@@ -299,9 +299,9 @@ golangci-lint run ./...
 
 | Document | Description |
 |----------|-------------|
-| [`documents/FSD.md`](documents/FSD.md) | Functional Specification |
-| [`documents/SDD.md`](documents/SDD.md) | System Design Document |
-| [`documents/developer-guide.md`](documents/developer-guide.md) | Developer Guide |
+| [`docs/en/FSD.md`](docs/en/FSD.md) | Functional Specification |
+| [`docs/en/SDD.md`](docs/en/SDD.md) | System Design Document |
+| [`docs/en/developer-guide.md`](docs/en/developer-guide.md) | Developer Guide |
 
 ---
 
@@ -316,7 +316,7 @@ golangci-lint run ./...
 
 ## License
 
-[Apache 2.0](LICENSE)
+[Mulan PSL v2](LICENSE)
 
 ---
 

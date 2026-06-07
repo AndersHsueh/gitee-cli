@@ -2,8 +2,8 @@
 
 > Gitee 公式 CLI ツール — ターミナルで Gitee の全操作が可能、GitHub の `gh` に対抗
 
-[![Go Version](https://img.shields.io/badge/go-1.23+-blue.svg)](https://golang.org)
-[![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
+[![Go Version](https://img.shields.io/badge/go-1.25+-blue.svg)](https://golang.org)
+[![License](https://img.shields.io/badge/license-MulanPSL--2.0-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey.svg)]()
 [![Version](https://img.shields.io/badge/version-v0.3.0-orange.svg)]()
 
@@ -276,7 +276,7 @@ gitee repo list
 
 ## 開発
 
-[`documents/developer-guide.md`](documents/developer-guide.md) を参照
+[`docs/ja/developer-guide.md`](docs/ja/developer-guide.md) を参照
 
 ```bash
 # クローン
@@ -299,9 +299,9 @@ golangci-lint run ./...
 
 | ドキュメント | 説明 |
 |------------|------|
-| [`documents/FSD.md`](documents/FSD.md) | 機能仕様書 |
-| [`documents/SDD.md`](documents/SDD.md) | システム設計書 |
-| [`documents/developer-guide.md`](documents/developer-guide.md) | 開発者ガイド |
+| [`docs/ja/FSD.md`](docs/ja/FSD.md) | 機能仕様書 |
+| [`docs/ja/SDD.md`](docs/ja/SDD.md) | システム設計書 |
+| [`docs/ja/developer-guide.md`](docs/ja/developer-guide.md) | 開発者ガイド |
 
 ---
 
@@ -316,7 +316,7 @@ golangci-lint run ./...
 
 ## License
 
-[Apache 2.0](LICENSE)
+[Mulan PSL v2](LICENSE)
 
 ---
 

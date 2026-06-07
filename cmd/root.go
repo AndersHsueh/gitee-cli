@@ -252,13 +252,29 @@ var sectionKeyReplacer = strings.NewReplacer(
 	"/", "_",
 )
 
-// printAgentHelpJSON parses the --agent-help markdown into structured JSON
-// and prints it to stdout. The parser handles the established ## Section /
-// - list-item structure. Limitations (by design):
+// printAgentHelpJSON encodes agentHelpToMap's result as indented JSON to stdout.
+func printAgentHelpJSON(md string) {
+	out := agentHelpToMap(md)
+
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(out); err != nil {
+		fmt.Fprintf(os.Stderr, "error marshaling agent help JSON: %v\n", err)
+	}
+}
+
+// agentHelpToMap is the pure markdown→structured-object core of the
+// --agent-help JSON surface. printAgentHelpJSON encodes whatever this
+// returns; keeping the parsing free of I/O and os.Exit makes the machine
+// contract that agents consume directly unit-testable (see
+// agent_help_contract_test.go).
+//
+// It parses the established ## Section / - list-item structure.
+// Limitations (by design):
 //   - ### sub-sections are treated as paragraph content, not nested objects
 //   - Mixed list/paragraph bodies default to paragraph
 //   - Code fences are not special-cased
-func printAgentHelpJSON(md string) {
+func agentHelpToMap(md string) map[string]any {
 	// Split by ## headings. The part before the first ## is the title block.
 	parts := strings.Split(md, "\n## ")
 	titleBlock := parts[0]
@@ -309,11 +325,7 @@ func printAgentHelpJSON(md string) {
 
 	out["sections"] = sections
 
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "  ")
-	if err := enc.Encode(out); err != nil {
-		fmt.Fprintf(os.Stderr, "error marshaling agent help JSON: %v\n", err)
-	}
+	return out
 }
 
 // parseListItems extracts backtick-stripped items from a markdown list body.
