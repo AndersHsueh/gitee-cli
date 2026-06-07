@@ -583,3 +583,81 @@ staged:     test/comparison-test.sh
 **Commit 状态**：进行中（task #14）
 
 **下次接手**：P3 pipeline 或 v0.9.0-c extension `--go` 脚手架。
+
+---
+
+## 2026-06-07 session (晚) — /simplify 4-agent 清理 + 推送失败
+
+### 4-agent 并行 review
+
+4 个独立 agent (Reuse / Simplification / Efficiency / Altitude) 审查 `origin/master..HEAD` (3 commit, P2c + help topics + docs)。
+- 13 项 finding 应用
+- 6 项 finding 跳过 (会改变行为或超出 diff 范围)
+
+### 应用的 13 项清理
+
+**Reuse (3 项)**:
+- 5 个新 site 改用已有 `output.NewTableWriter()` (消除 orphan,统一表格式)
+- 抽 `internal/atomicfile.WriteAtomic` (alias Save 用) — 第 4 个 site 也用上同一 helper
+- 抽 `internal/utils.ValidateName(noun, name)` — alias 局部 `validateName` 提取到 utils,与 extension 共享
+
+**Simplification (8 项)**:
+- 删 `RootAlias` test shim + `currentHelpCmd` package var + `AllTopicNames()` + `HelpCommandForTest()` + `DescribeExpansion`;`RegisterHelpTopics` 改为 return help cmd
+- 抽 `preRunAgentHelp(s string)` helper,替换 3 个 alias verb 的 byte-identical PreRunE block
+- 合并 Get+Set: `Set` 改返回 `(prev, hadPrev, err)`,消除"created vs updated"分支的二次读盘
+- 删 `walkCommands` 的 `printed` dedup map (cobra 不允许同名 sibling)
+- 删 dead `var _ = sort.Strings` + 1 个 testutil_test.go (空文件)
+- `deleteFlags` struct → 简单 `var forceDelete bool`
+- 单次 whitespace collapse 替换双 pass
+- 删 `FileOverride` package var;测试改用 `t.Setenv("GITEE_ALIASES_FILE", ...)` (1 个 env-var test seam,不是 2 个)
+
+**Comments (2 项)**:
+- `cmd/alias/alias.go` + `internal/alias/store.go` package doc 去掉跨包叙述 (讲其他包干什么的)
+
+### 跳过的 6 项 (out of scope or 改行为)
+
+- `Load()` permissive 改: `TestLoadRejectsBadStoredEntry` 锁定了 loud-failure 行为
+- alias write-time 拒绝 builtin names: 会把"silently shadow"变成硬错误
+- 14-section const AgentHelp 重构: 大,触及其他包
+- 抽 `preRunAgentHelp` 推到 `cmd/` 公共: 仅 3 个 caller,且旧 20+ 命令 inline 风格已成约定
+- 等等
+
+### 测试状态
+- 19 个有 test 的包全部 pass (含新 `internal/atomicfile` 4 个测试 + `internal/utils` 2 个测试)
+- `gofmt -l cmd/... internal/...` 干净
+- `go vet ./...` 干净
+
+### Commit 状态
+✅ `70d5a31 refactor(simplify): tighten P2c alias + help topics diff` — 19 files, +358/-353 (净近平衡,消除重复的同时抽出 2 个新包)
+
+### ⚠️ Push 失败 — token invalid
+
+4 个 commit + 2 个 tag 仍在本地,推 origin 失败:
+- 新 token 写入 `~/.git-credentials` (用 `x-access-token` user)
+- `git push origin master --tags` 返回 `403 The token username invalid`
+
+**新 token 需要重新生成** (或检查 username 字段是否错填)。当前 gitee 用户名 `andershsueh` 是对的,问题在 token 本身。
+
+⚠️ **未把 token 写进任何文件** (git 仓库会被推到 GitHub 公开, memory 文件跨会话保留)。建议存密码管理器。
+
+**下次接手**(任意一个):
+1. **重新生成 Gitee token** (Settings → Private Tokens → 检查 scope 含 `projects` + `pull_requests` + `gists`),再次 push 这 4 commit + 2 tag
+2. **P3 pipeline** (Gitee Go CI/CD, 5 verb, 2-3 周)
+3. **extension --go 脚手架** (可选,小)
+
+**接手时读**:
+- 本文件 — 看 P2c / help topics / simplify 状态
+- `memory/gitee-cli-project-state.md` — 跨 session 持久化的进度
+- 推送命令: `git push origin master --tags` (凭据已就绪,只需 token 正确)
+
+### 🛡️ 顺手修了 1 个安全洞
+
+发现 `.git-credentials` **未在 .gitignore** 中 — 如果 `git add .` 误操作,凭据会被推到 GitHub 公开仓库。已加到 `.gitignore`:
+
+```
+# Git credentials (NEVER commit — would leak tokens to public remote)
+.git-credentials
+.netrc
+```
+
+未 commit,等下次 push 时一起带上。

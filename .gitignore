@@ -36,6 +36,10 @@ coverage.html
 # CI / CD
 .gitee-ci/
 
+# Git credentials (NEVER commit — would leak tokens to public remote)
+.git-credentials
+.netrc
+
 # Claude Code
 agent.md
 claude.md
