@@ -3,9 +3,9 @@
 > Gitee 官方命令行工具 — 在终端中完整操作 Gitee，功能对标 GitHub `gh`
 
 [![Go Version](https://img.shields.io/badge/go-1.25+-blue.svg)](https://golang.org)
-[![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-MulanPSL--2.0-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey.svg)]()
-[![Version](https://img.shields.io/badge/version-v0.4.2-orange.svg)](https://gitee.com/andershsueh/gitee-cli/releases/latest)
+[![Version](https://img.shields.io/badge/version-v0.10.0-orange.svg)](https://gitee.com/andershsueh/gitee-cli/releases/latest)
 [![Downloads](https://img.shields.io/badge/downloads-releases-blue.svg)](https://gitee.com/andershsueh/gitee-cli/releases/latest)
 
 ---
@@ -466,7 +466,7 @@ golangci-lint run ./...
 
 ## License
 
-[Apache 2.0](LICENSE)
+[木兰宽松许可证 v2](LICENSE)
 
 ---
 
