@@ -19,7 +19,13 @@ var viewCmd = &cobra.Command{
 	Short:   "View details of an issue",
 	Args:    cobra.ExactArgs(1),
 	Example: `  gitee issue view 42 --repo owner/repo`,
-	RunE:    runView,
+	PreRunE: func(c *cobra.Command, args []string) error {
+		if cmd.GlobalAgentHelp {
+			cmd.PrintAgentHelp(issueViewAgentHelp)
+		}
+		return nil
+	},
+	RunE: runView,
 }
 
 func runView(cobraCmd *cobra.Command, args []string) error {
@@ -73,3 +79,134 @@ func runView(cobraCmd *cobra.Command, args []string) error {
 	}
 	return nil
 }
+
+// issueViewAgentHelp is the agent-targeted help for `gitee issue view`.
+// It is intentionally long, structured, and includes machine-relevant
+// details (idempotency, side effects, orchestration hints) that the
+// default --help omits because they're noise for humans.
+//
+// Maintainer note: keep this in sync with the actual command behavior.
+// When flags change, update the relevant section here.
+const issueViewAgentHelp = `# gitee issue view — Agent Help
+
+## Purpose
+Fetch and display the full details of a single Gitee issue — title,
+state, author, assignees, labels, body, and timestamps. Use this to
+inspect an issue that was just discovered via ` + "`" + `gitee issue list` + "`" + `,
+or to read an issue referenced by number from a PR / commit message.
+
+## Pre-conditions
+- Authenticated: token present in config (~/.gitee-cli/settings.json),
+  env var (GITEE_TOKEN), or --token flag. Verify with: gitee auth status
+- Repository exists: --repo (or --owner + --repo) points to an accessible repo
+- Read access: token must have read permission on the target repo
+  (private repos require projects or higher)
+- Issue number is valid: the issue must exist in the target repo
+
+## Required arguments
+  <number>  Issue number (integer, e.g. 42). Must be a positional arg
+            after the verb. Use ` + "`" + `gitee issue list` + "`" + ` to discover numbers.
+
+## Optional flags
+  --repo / -R       owner/repo format (falls back to global --repo, then git remote)
+  --output / -o     text (default) | json — json prints the full types.Issue
+                    struct with all fields (title, body, state, labels,
+                    assignees, milestones, html_url, created_at, updated_at,
+                    comments, etc.) for downstream pipelines
+
+## Idempotency
+Idempotent (read-only). Re-running this command does not change any
+remote state. The output may differ between calls if the issue has
+been edited between them (e.g. title changed, labels added).
+
+## Atomicity
+Atomic. Either the full issue is returned, or an error is raised.
+There is no partial-success state.
+
+## Side effects
+None. This is a pure read. No notifications, no webhooks, no
+mutations on the issue, and no "viewed" event is fired.
+
+## Post-conditions (on success)
+- Stdout contains the issue details (text or JSON) — see Output sections
+- No state change on the issue (no view counter, no last-read tracking)
+- The data returned reflects the API at the time of the call
+
+## Output (stdout, text mode)
+  <title>  #<number>
+
+    State   : open | closed
+    Author  : <username>
+    Assignee: <username>          (only if assigned)
+    Labels  : <name>, <name>      (only if any)
+    URL     : https://gitee.com/owner/repo/issues/<number>
+    Created : 2026-06-28 14:32
+
+  <body markdown, if any>
+
+## Output (stdout, json mode)
+  -o json prints the full types.Issue struct (all fields) to stdout,
+  one object. Suitable for downstream pipelines.
+
+## Parsing hints
+  # Get the state of a specific issue:
+  gitee issue view 42 --repo owner/repo -o json | jq -r '.state'
+
+  # Get the title:
+  gitee issue view 42 --repo owner/repo -o json | jq -r '.title'
+
+  # Get the body (may be empty):
+  gitee issue view 42 --repo owner/repo -o json | jq -r '.body // ""'
+
+  # Get the labels:
+  gitee issue view 42 --repo owner/repo -o json | jq -r '.labels[].name'
+
+  # Get the assignees:
+  gitee issue view 42 --repo owner/repo -o json | jq -r '.assignee.login // empty'
+
+## Common errors
+- 401 Unauthorized:  token expired or invalid    →  gitee auth login
+- 403 Forbidden:     token lacks read scope      →  check token permissions
+- 404 Not Found:     repo or issue doesn't exist →  verify owner/repo + number
+- 422 Unprocessable: issue number malformed      →  must be a positive integer
+
+## Next steps (orchestration hints)
+After viewing an issue, an agent typically wants to:
+1. Edit it: ` + "`" + `gitee issue edit {N} --title '...'` + "`" + ` (or --body, --labels, etc.)
+2. Comment on it: ` + "`" + `gitee issue comment {N} --body '...'` + "`" + `
+3. Read all comments: ` + "`" + `gitee issue comments {N}` + "`" + `
+4. Close it: ` + "`" + `gitee issue close {N}` + "`" + ` (or ` + "`" + `gitee issue reopen {N}` + "`" + `)
+5. If this issue describes a bug to fix, create a PR that closes it:
+   ` + "`" + `gitee pr create --body 'Closes #{N} ...'` + "`" + `
+6. To see the cross-repo activity summary, ` + "`" + `gitee status` + "`" + `
+
+## OAuth scope required
+projects (read)
+
+## Rate limit
+Gitee API v5: 1000 requests/hour for authenticated users.
+Each call to this command counts as 1 request.
+
+## Example
+  # Quick check
+  gitee issue view 42 --repo owner/repo
+
+  # Capture full state for an automated decision
+  STATE=$(gitee issue view 42 --repo owner/repo -o json | jq -r '.state')
+  if [ "$STATE" = "open" ]; then
+    gitee issue close 42 --repo owner/repo
+  fi
+
+  # Get the author
+  AUTHOR=$(gitee issue view 42 --repo owner/repo -o json | jq -r '.user.login')
+
+## See also
+- ` + "`" + `gitee issue list` + "`" + `        — discover issue numbers in a repo
+- ` + "`" + `gitee issue edit N` + "`" + `     — modify an existing issue
+- ` + "`" + `gitee issue close N` + "`" + `    — close an issue
+- ` + "`" + `gitee issue reopen N` + "`" + `   — reopen a closed issue
+- ` + "`" + `gitee issue comment N` + "`" + `  — add a comment
+- ` + "`" + `gitee issue comments N` + "`" + ` — list all comments on an issue
+- ` + "`" + `gitee pr create` + "`" + `        — create a PR (link via "Closes #N" in body)
+- ` + "`" + `gitee --agent-help` + "`" + `     — overview of all commands with agent help
+`

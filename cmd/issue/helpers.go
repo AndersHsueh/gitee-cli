@@ -50,28 +50,52 @@ var editCmd = &cobra.Command{
 	Use:     "edit <number>",
 	Short:   "Edit an issue",
 	Example: `  gitee issue edit 42 --repo owner/repo --title "New title"`,
-	RunE:    runEdit,
+	PreRunE: func(c *cobra.Command, args []string) error {
+		if cmd.GlobalAgentHelp {
+			cmd.PrintAgentHelp(issueEditAgentHelp)
+		}
+		return nil
+	},
+	RunE: runEdit,
 }
 
 var closeCmd = &cobra.Command{
 	Use:     "close <number>",
 	Short:   "Close an issue",
 	Example: `  gitee issue close 42 --repo owner/repo`,
-	RunE:    runClose,
+	PreRunE: func(c *cobra.Command, args []string) error {
+		if cmd.GlobalAgentHelp {
+			cmd.PrintAgentHelp(issueCloseAgentHelp)
+		}
+		return nil
+	},
+	RunE: runClose,
 }
 
 var reopenCmd = &cobra.Command{
 	Use:     "reopen <number>",
 	Short:   "Reopen an issue",
 	Example: `  gitee issue reopen 42 --repo owner/repo`,
-	RunE:    runReopen,
+	PreRunE: func(c *cobra.Command, args []string) error {
+		if cmd.GlobalAgentHelp {
+			cmd.PrintAgentHelp(issueReopenAgentHelp)
+		}
+		return nil
+	},
+	RunE: runReopen,
 }
 
 var commentCmd = &cobra.Command{
 	Use:     "comment <number>",
 	Short:   "Add a comment to an issue",
 	Example: `  gitee issue comment 42 --repo owner/repo --body "Comment text"`,
-	RunE:    runComment,
+	PreRunE: func(c *cobra.Command, args []string) error {
+		if cmd.GlobalAgentHelp {
+			cmd.PrintAgentHelp(issueCommentAgentHelp)
+		}
+		return nil
+	},
+	RunE: runComment,
 }
 
 func init() {
@@ -225,3 +249,436 @@ func runComment(cobraCmd *cobra.Command, args []string) error {
 	fmt.Printf("Comment added to issue #%s\n", issueNum)
 	return nil
 }
+
+// issueEditAgentHelp is the agent-targeted help for `gitee issue edit`.
+// It is intentionally long, structured, and includes machine-relevant
+// details (idempotency, side effects, orchestration hints) that the
+// default --help omits because they're noise for humans.
+//
+// Maintainer note: keep this in sync with the actual command behavior.
+// When flags change, update the relevant section here.
+const issueEditAgentHelp = `# gitee issue edit — Agent Help
+
+## Purpose
+Modify an existing Gitee issue in place — change its title, body, labels,
+assignees, or milestone. Use this as the "update" half of create-then-edit
+flows, or for batch-triage where you set labels/assignees on a list of
+issues returned by ` + "`" + `gitee issue list` + "`" + `.
+
+## Pre-conditions
+- Authenticated: token present in config (~~/.gitee-cli/settings.json),
+  env var (GITEE_TOKEN), or --token flag. Verify with: gitee auth status
+- Repository exists: --repo (or --owner + --repo) points to an accessible repo
+- Write access: token must have write permission on the target repo
+- Issue exists: the issue number must be valid in the target repo
+
+## Required arguments
+  <number>  Issue number (integer, e.g. 42). Must be a positional arg
+            after the verb. Use ` + "`" + `gitee issue list` + "`" + ` to discover numbers.
+
+## Optional flags
+  --title        New title (replaces the existing one)
+  --body         New body (replaces the existing one; Markdown supported)
+  --labels       Comma-separated label names (replaces the existing labels)
+  --assignees    Comma-separated usernames (replaces the existing assignees)
+  --milestone    Milestone number
+  --owner        Repository owner
+  --repo / -R    Repository name or owner/repo
+
+Note: flags that are not passed are left UNCHANGED on the issue. This is
+critical — calling ` + "`" + `gitee issue edit 42 --title '...'` + "`" + ` does NOT clear
+the body or the labels. To clear a field, pass an empty value explicitly
+(e.g. ` + "`" + `--body ''` + "`" + `) — but note that Gitee v5 currently treats an
+empty string as "no change" for body; to clear the body, use the web UI.
+
+## Idempotency
+Idempotent for the same inputs. Re-running with the same flags results
+in the same end state. However, calling it with DIFFERENT inputs each
+time mutates the issue toward the most recent call — there is no
+merge/3-way semantics.
+
+## Atomicity
+Atomic at the field-set level: all passed flags are applied together
+in a single PATCH request. There is no partial-success state where some
+fields were updated and others failed.
+
+## Side effects
+- The issue's updated_at timestamp advances
+- Email notification sent to watchers if title/body/assignee/labels change
+- Webhooks subscribed to "Issue" events fire (per the changed fields)
+- The issue's state is preserved (this command does NOT close/reopen;
+  use ` + "`" + `gitee issue close` + "`" + ` or ` + "`" + `gitee issue reopen` + "`" + ` for that)
+
+## Post-conditions (on success)
+- The named fields on the issue are updated
+- Stdout: "Issue #N updated"
+- The issue number is unchanged (this command does not create or delete)
+- Other fields not passed are untouched
+
+## Common errors
+- 401 Unauthorized:  token expired or invalid    →  gitee auth login
+- 403 Forbidden:     token lacks write scope     →  check token permissions
+- 404 Not Found:     repo or issue doesn't exist →  verify owner/repo + number
+- 422 Unprocessable: bad label name or assignee  →  check spelling, label must exist
+
+## Next steps (orchestration hints)
+After editing an issue, an agent typically wants to:
+1. Verify the change: ` + "`" + `gitee issue view {N}` + "`" + `
+2. Add a note about the change: ` + "`" + `gitee issue comment {N} --body '...'` + "`" + `
+3. If this is a test-reported bug now triaged, create a fix PR:
+   ` + "`" + `gitee pr create --body 'Closes #{N} ...'` + "`" + `
+4. If the issue is resolved (fix merged, won't fix, etc.), close it:
+   ` + "`" + `gitee issue close {N}` + "`" + `
+5. To set the issue's state to closed in a single call, use
+   ` + "`" + `gitee issue close` + "`" + ` instead — it has the same auth and
+   pre-conditions but is more semantically clear.
+
+## OAuth scope required
+projects (write)
+
+## Rate limit
+Gitee API v5: 1000 requests/hour for authenticated users.
+Each call to this command counts as 1 request.
+
+## Example
+  # Triage: add the "bug" label and assign to alice
+  gitee issue edit 42 --repo owner/repo --labels "bug,priority/high" \
+    --assignees alice
+
+  # Rewrite the title and body
+  gitee issue edit 42 --repo owner/repo \
+    --title "Bug: crash on startup (regression in v0.10.0)" \
+    --body "Steps to reproduce..."
+
+  # Attach to a milestone
+  gitee issue edit 42 --repo owner/repo --milestone 7
+
+## See also
+- ` + "`" + `gitee issue view N` + "`" + `       — read full details for one issue
+- ` + "`" + `gitee issue list` + "`" + `        — discover issue numbers
+- ` + "`" + `gitee issue close N` + "`" + `    — close the issue (state change)
+- ` + "`" + `gitee issue reopen N` + "`" + `   — reopen the issue
+- ` + "`" + `gitee issue comment N` + "`" + `  — add a comment (use for notes/audit trail)
+- ` + "`" + `gitee --agent-help` + "`" + `     — overview of all commands with agent help
+`
+
+// issueCloseAgentHelp is the agent-targeted help for `gitee issue close`.
+// It is intentionally long, structured, and includes machine-relevant
+// details (idempotency, side effects, orchestration hints) that the
+// default --help omits because they're noise for humans.
+//
+// Maintainer note: keep this in sync with the actual command behavior.
+// When flags change, update the relevant section here.
+const issueCloseAgentHelp = `# gitee issue close — Agent Help
+
+## Purpose
+Close an existing Gitee issue by transitioning its state to "closed".
+Use this when an issue is resolved (fix merged), won't fix, duplicate,
+or otherwise no longer actionable.
+
+## Pre-conditions
+- Authenticated: token present in config (~/.gitee-cli/settings.json),
+  env var (GITEE_TOKEN), or --token flag. Verify with: gitee auth status
+- Repository exists: --repo (or --owner + --repo) points to an accessible repo
+- Write access: token must have write permission on the target repo
+- Issue exists: the issue number must be valid in the target repo
+- The action is REVERSIBLE — you can re-open with ` + "`" + `gitee issue reopen {N}` + "`" + `
+
+## Required arguments
+  <number>  Issue number (integer, e.g. 42). Must be a positional arg
+            after the verb. Use ` + "`" + `gitee issue list` + "`" + ` to discover numbers.
+
+## Optional flags
+  --owner        Repository owner
+  --repo / -R    Repository name or owner/repo
+
+## Idempotency
+Idempotent in effect (not in result). Re-running this command on an
+already-closed issue is a no-op server-side and still returns success,
+but the closed_at timestamp does NOT advance. The Gitee API treats
+"close a closed issue" as a no-op rather than an error.
+
+## Atomicity
+Atomic. Either the issue transitions to closed (with closed_at set),
+or no change happens. There is no partial-success state.
+
+## Side effects
+- The issue's state is set to "closed" and closed_at is set to "now"
+- Email notification sent to watchers
+- Webhooks subscribed to "Issue" events fire (state: closed)
+- If the closing issue is referenced by an open PR via "Closes #N",
+  the PR is NOT auto-closed by Gitee — you must merge the PR separately
+- The close action is REVERSIBLE: ` + "`" + `gitee issue reopen {N}` + "`" + `
+  re-opens the issue and clears closed_at
+- The issue is removed from the default "open" issue list and moves
+  to the "closed" filter
+
+## Post-conditions (on success)
+- The issue's state is "closed"
+- Stdout: "Issue #N closed"
+- The issue's number is unchanged
+- closed_at timestamp is set to "now"
+
+## Common errors
+- 401 Unauthorized:  token expired or invalid    →  gitee auth login
+- 403 Forbidden:     token lacks write scope     →  check token permissions
+- 404 Not Found:     repo or issue doesn't exist →  verify owner/repo + number
+
+## Reversibility
+This command is REVERSIBLE. To re-open a closed issue, run
+` + "`" + `gitee issue reopen {N} --repo owner/repo` + "`" + `. The reopen restores
+the issue to "open" state and clears closed_at. Issue comments and
+history are preserved across close/reopen cycles.
+
+## Next steps (orchestration hints)
+After closing an issue, an agent typically wants to:
+1. Verify the state: ` + "`" + `gitee issue view {N}` + "`" + ` (state should be "closed")
+2. If you closed by mistake, immediately: ` + "`" + `gitee issue reopen {N}` + "`" + `
+3. To record why it was closed, add a final comment BEFORE closing:
+   ` + "`" + `gitee issue comment {N} --body 'Closing: fixed in PR #M'` + "`" + `
+4. To clean up labels, run ` + "`" + `gitee issue edit {N} --labels ''` + "`" + ` first
+   (Gitee treats an empty labels string as "no change" — to remove
+   all labels you must use the web UI)
+5. For the inverse (open a new issue): ` + "`" + `gitee issue create` + "`" + `
+
+## OAuth scope required
+projects (write)
+
+## Rate limit
+Gitee API v5: 1000 requests/hour for authenticated users.
+Each call to this command counts as 1 request.
+
+## Example
+  # Close issue 42
+  gitee issue close 42 --repo owner/repo
+
+  # Atomic close loop: comment, then close
+  gitee issue comment 42 --repo owner/repo --body "Closing as duplicate of #41"
+  gitee issue close 42 --repo owner/repo
+
+  # Close after a fix PR is merged
+  PR=$(gitee pr list --repo owner/repo --state merged -o json | jq -r '.[0].number')
+  ISSUE=$(gitee pr view "$PR" --repo owner/repo -o json | jq -r '.body' | grep -oE 'Closes #[0-9]+' | head -1 | tr -d 'Closes #')
+  if [ -n "$ISSUE" ]; then
+    gitee issue close "$ISSUE" --repo owner/repo
+  fi
+
+## See also
+- ` + "`" + `gitee issue view N` + "`" + `       — read full details for one issue
+- ` + "`" + `gitee issue list` + "`" + `        — discover issue numbers
+- ` + "`" + `gitee issue reopen N` + "`" + `   — inverse of this command
+- ` + "`" + `gitee issue edit N` + "`" + `     — change title/body/labels (does NOT close)
+- ` + "`" + `gitee issue comment N` + "`" + `  — add a comment (recommended before close)
+- ` + "`" + `gitee --agent-help` + "`" + `     — overview of all commands with agent help
+`
+
+// issueReopenAgentHelp is the agent-targeted help for `gitee issue reopen`.
+// It is intentionally long, structured, and includes machine-relevant
+// details (idempotency, side effects, orchestration hints) that the
+// default --help omits because they're noise for humans.
+//
+// Maintainer note: keep this in sync with the actual command behavior.
+// When flags change, update the relevant section here.
+const issueReopenAgentHelp = `# gitee issue reopen — Agent Help
+
+## Purpose
+Re-open a previously-closed Gitee issue by transitioning its state
+back to "open". Use this when an issue was closed prematurely, was
+regressed, or needs further work.
+
+## Pre-conditions
+- Authenticated: token present in config (~/.gitee-cli/settings.json),
+  env var (GITEE_TOKEN), or --token flag. Verify with: gitee auth status
+- Repository exists: --repo (or --owner + --repo) points to an accessible repo
+- Write access: token must have write permission on the target repo
+- Issue exists: the issue number must be valid in the target repo
+- The action is REVERSIBLE — you can close again with
+  ` + "`" + `gitee issue close {N}` + "`" + `
+
+## Required arguments
+  <number>  Issue number (integer, e.g. 42). Must be a positional arg
+            after the verb. Use ` + "`" + `gitee issue list` + "`" + ` to discover numbers.
+
+## Optional flags
+  --owner        Repository owner
+  --repo / -R    Repository name or owner/repo
+
+## Idempotency
+Idempotent in effect (not in result). Re-running this command on an
+already-open issue is a no-op server-side and still returns success.
+The Gitee API treats "reopen an open issue" as a no-op rather than
+an error.
+
+## Atomicity
+Atomic. Either the issue transitions to open (with closed_at cleared),
+or no change happens. There is no partial-success state.
+
+## Side effects
+- The issue's state is set to "open" and closed_at is cleared
+- Email notification sent to watchers
+- Webhooks subscribed to "Issue" events fire (state: reopened)
+- The issue reappears in the default "open" issue list
+- The action is REVERSIBLE: ` + "`" + `gitee issue close {N}` + "`" + `
+  closes the issue again and resets closed_at
+
+## Post-conditions (on success)
+- The issue's state is "open"
+- Stdout: "Issue #N reopened"
+- The issue's number is unchanged
+- closed_at is cleared
+- All previous comments and history are preserved
+
+## Common errors
+- 401 Unauthorized:  token expired or invalid    →  gitee auth login
+- 403 Forbidden:     token lacks write scope     →  check token permissions
+- 404 Not Found:     repo or issue doesn't exist →  verify owner/repo + number
+
+## Reversibility
+This command is REVERSIBLE. To close the issue again, run
+` + "`" + `gitee issue close {N} --repo owner/repo` + "`" + `. Comments and history
+are preserved across close/reopen cycles — the audit trail is not
+erased.
+
+## Next steps (orchestration hints)
+After reopening an issue, an agent typically wants to:
+1. Verify the state: ` + "`" + `gitee issue view {N}` + "`" + ` (state should be "open")
+2. Comment to record why it was reopened:
+   ` + "`" + `gitee issue comment {N} --body 'Reopening: regression in v0.10.1'` + "`" + `
+3. If the issue is back in scope, add a fix label and assignee:
+   ` + "`" + `gitee issue edit {N} --labels bug --assignees alice` + "`" + `
+4. If you reopened by mistake, immediately: ` + "`" + `gitee issue close {N}` + "`" + `
+5. For the inverse (close a still-open issue): ` + "`" + `gitee issue close` + "`" + `
+
+## OAuth scope required
+projects (write)
+
+## Rate limit
+Gitee API v5: 1000 requests/hour for authenticated users.
+Each call to this command counts as 1 request.
+
+## Example
+  # Reopen a prematurely-closed issue
+  gitee issue reopen 42 --repo owner/repo
+
+  # Reopen and immediately re-assign
+  gitee issue reopen 42 --repo owner/repo
+  gitee issue edit 42 --repo owner/repo --assignees alice --labels "bug,regression"
+
+## See also
+- ` + "`" + `gitee issue view N` + "`" + `       — read full details for one issue
+- ` + "`" + `gitee issue list` + "`" + `        — discover issue numbers
+- ` + "`" + `gitee issue close N` + "`" + `    — inverse of this command
+- ` + "`" + `gitee issue edit N` + "`" + `     — change title/body/labels
+- ` + "`" + `gitee issue comment N` + "`" + `  — add a comment (recommended after reopen)
+- ` + "`" + `gitee --agent-help` + "`" + `     — overview of all commands with agent help
+`
+
+// issueCommentAgentHelp is the agent-targeted help for `gitee issue comment`.
+// It is intentionally long, structured, and includes machine-relevant
+// details (idempotency, side effects, orchestration hints) that the
+// default --help omits because they're noise for humans.
+//
+// Maintainer note: keep this in sync with the actual command behavior.
+// When flags change, update the relevant section here.
+const issueCommentAgentHelp = `# gitee issue comment — Agent Help
+
+## Purpose
+Add a comment to an existing Gitee issue. Use this for triage notes,
+status updates, audit trails, or to record automated decisions (e.g.
+a CI agent noting "failing on master, see run #1234").
+
+## Pre-conditions
+- Authenticated: token present in config (~/.gitee-cli/settings.json),
+  env var (GITEE_TOKEN), or --token flag. Verify with: gitee auth status
+- Repository exists: --repo (or --owner + --repo) points to an accessible repo
+- Write access: token must have write permission on the target repo
+  (you need permission to comment, not just read)
+- Issue exists: the issue number must be valid in the target repo
+- --body is non-empty (enforced by Cobra MarkFlagRequired)
+
+## Required flags
+  --body         Comment body, Markdown supported (required, non-empty)
+
+## Required arguments
+  <number>  Issue number (integer, e.g. 42). Must be a positional arg
+            after the verb. Use ` + "`" + `gitee issue list` + "`" + ` to discover numbers.
+
+## Optional flags
+  --owner        Repository owner
+  --repo / -R    Repository name or owner/repo
+
+## Idempotency
+NOT idempotent. Each invocation creates a NEW comment with a fresh
+ID. Re-running this command creates a duplicate comment. To update
+an existing comment, use the Gitee web UI (gitee-cli does not yet
+support ` + "`" + `gitee issue comment edit` + "`" + `).
+
+## Atomicity
+Atomic. Either the comment is created and an ID is returned, or no
+change happens. There is no partial-success state.
+
+## Side effects
+- Email notification sent to all issue subscribers (watchers, the
+  author, assignees, and anyone @-mentioned in the body)
+- Webhooks subscribed to "Issue comment" events fire
+- The comment appears immediately in the issue's comment list (web UI)
+- If the body contains @username, that user gets a direct mention ping
+- The new comment is in chronological order at the bottom of the
+  existing comment list
+
+## Post-conditions (on success)
+- A new comment is appended to the issue
+- Stdout: "Comment added to issue #N"
+- The issue itself is unchanged (title, state, labels, etc. preserved)
+- The new comment does NOT have any reactions by default
+
+## Common errors
+- 401 Unauthorized:  token expired or invalid    →  gitee auth login
+- 403 Forbidden:     token lacks write scope     →  check token permissions
+- 404 Not Found:     repo or issue doesn't exist →  verify owner/repo + number
+- 422 Unprocessable: --body is empty             →  provide non-empty body
+
+## Race condition warning ⚠️
+If you are about to comment on an issue as part of a multi-step
+orchestration, the issue state may have changed between your last
+` + "`" + `gitee issue view` + "`" + ` and this comment call. If your action depends
+on the state (e.g. "only comment if open"), re-check with
+` + "`" + `gitee issue view {N}` + "`" + ` immediately before this call.
+
+## Next steps (orchestration hints)
+After adding a comment, an agent typically wants to:
+1. Verify the comment landed: ` + "`" + `gitee issue comments {N}` + "`" + `
+2. If the comment resolved a discussion, close the issue:
+   ` + "`" + `gitee issue close {N}` + "`" + `
+3. If the issue is still actionable, leave it open and add a label
+   for tracking: ` + "`" + `gitee issue edit {N} --labels '...'` + "`" + `
+4. To add a follow-up comment later, run this command again
+   (each call appends a new comment — there is no edit-in-place)
+5. If you need to mention a specific user, include @username in body
+
+## OAuth scope required
+projects (write)
+
+## Rate limit
+Gitee API v5: 1000 requests/hour for authenticated users.
+Each call to this command counts as 1 request.
+
+## Example
+  # Add a triage note
+  gitee issue comment 42 --repo owner/repo --body "Reproduced on master (commit abc123). Investigating."
+
+  # Comment then close (common pattern)
+  gitee issue comment 42 --repo owner/repo --body "Closing as fixed in PR #99"
+  gitee issue close 42 --repo owner/repo
+
+  # Mention a teammate
+  gitee issue comment 42 --repo owner/repo --body "@alice can you take a look at the stack trace?"
+
+## See also
+- ` + "`" + `gitee issue view N` + "`" + `       — read full details for one issue
+- ` + "`" + `gitee issue comments N` + "`" + ` — list all comments on an issue
+- ` + "`" + `gitee issue list` + "`" + `        — discover issue numbers
+- ` + "`" + `gitee issue close N` + "`" + `    — close the issue (often follows a comment)
+- ` + "`" + `gitee issue edit N` + "`" + `     — change title/body/labels (does NOT comment)
+- ` + "`" + `gitee --agent-help` + "`" + `     — overview of all commands with agent help
+`

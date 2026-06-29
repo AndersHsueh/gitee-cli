@@ -38,45 +38,45 @@ gitee-cli ships TWO help systems side-by-side:
 ## How to invoke
   gitee <command> [subcommand] --agent-help
 
-## Coverage matrix (v0.10.0)
+## Coverage matrix (v0.11.0)
 
 ### repo — Repository management
-  gitee repo list           --agent-help   ❌ not yet
-  gitee repo create         --agent-help   ❌ not yet
-  gitee repo view           --agent-help   ❌ not yet
-  gitee repo fork           --agent-help   ❌ not yet
-  gitee repo edit           --agent-help   ❌ not yet
-  gitee repo delete         --agent-help   ❌ not yet
-  gitee repo clone          --agent-help   ❌ not yet
-  gitee repo browse         --agent-help   ❌ not yet
-  gitee repo branches       --agent-help   ❌ not yet
+  gitee repo list           --agent-help   ✅ available  🆕 v0.11.0
+  gitee repo create         --agent-help   ✅ available  🆕 v0.11.0
+  gitee repo view           --agent-help   ✅ available  🆕 v0.11.0
+  gitee repo fork           --agent-help   ✅ available  🆕 v0.11.0
+  gitee repo edit           --agent-help   ✅ available  🆕 v0.11.0
+  gitee repo delete         --agent-help   ✅ available  🆕 v0.11.0
+  gitee repo clone          --agent-help   ✅ available  🆕 v0.11.0
+  gitee repo browse         --agent-help   ✅ available  🆕 v0.11.0
+  gitee repo branches       --agent-help   ✅ available  🆕 v0.11.0
   gitee repo archive        --agent-help   ✅ available  🆕 v0.5.0
   gitee repo sync           --agent-help   ✅ available  🆕 v0.5.0
   gitee repo rename         --agent-help   ✅ available  🆕 v0.5.0
   gitee repo set-default    --agent-help   n/a  (operational/config — use --help)
 
 ### issue — Issue management
-  gitee issue list          --agent-help   ❌ not yet
+  gitee issue list          --agent-help   ✅ available  🆕 v0.11.0
   gitee issue create        --agent-help   ✅ available
-  gitee issue view          --agent-help   ❌ not yet
-  gitee issue edit          --agent-help   ❌ not yet
-  gitee issue close         --agent-help   ❌ not yet
-  gitee issue reopen        --agent-help   ❌ not yet
-  gitee issue comment       --agent-help   ❌ not yet
+  gitee issue view          --agent-help   ✅ available  🆕 v0.11.0
+  gitee issue edit          --agent-help   ✅ available  🆕 v0.11.0
+  gitee issue close         --agent-help   ✅ available  🆕 v0.11.0
+  gitee issue reopen        --agent-help   ✅ available  🆕 v0.11.0
+  gitee issue comment       --agent-help   ✅ available  🆕 v0.11.0
   gitee issue comments      --agent-help   ✅ available  🆕 v0.8.0
   gitee issue status        --agent-help   ✅ available  🆕 v0.10.0
   gitee issue label         --agent-help   ❌ not yet (legacy path; use 'gitee label')
 
 ### pr — Pull Request management
-  gitee pr list             --agent-help   ❌ not yet
+  gitee pr list             --agent-help   ✅ available  🆕 v0.11.0
   gitee pr create           --agent-help   ✅ available
-  gitee pr view             --agent-help   ❌ not yet
-  gitee pr merge            --agent-help   ❌ not yet
-  gitee pr review           --agent-help   ❌ not yet
-  gitee pr close            --agent-help   ❌ not yet
-  gitee pr reopen           --agent-help   ❌ not yet
-  gitee pr diff             --agent-help   ❌ not yet
-  gitee pr comments         --agent-help   ❌ not yet
+  gitee pr view             --agent-help   ✅ available  🆕 v0.11.0
+  gitee pr merge            --agent-help   ✅ available  🆕 v0.11.0
+  gitee pr review           --agent-help   ✅ available  🆕 v0.11.0
+  gitee pr close            --agent-help   ✅ available  🆕 v0.11.0
+  gitee pr reopen           --agent-help   ✅ available  🆕 v0.11.0
+  gitee pr diff             --agent-help   ✅ available  🆕 v0.11.0
+  gitee pr comments         --agent-help   ✅ available  🆕 v0.11.0
   gitee pr comment          --agent-help   ✅ available  🆕 v0.8.0
   gitee pr checkout         --agent-help   ✅ available  🆕 v0.5.0
   gitee pr ready            --agent-help   ✅ available  🆕 v0.8.0
@@ -85,13 +85,13 @@ gitee-cli ships TWO help systems side-by-side:
   gitee pr status           --agent-help   ✅ available  🆕 v0.10.0
 
 ### gist — Code snippets
-  gitee gist list           --agent-help   ❌ not yet
-  gitee gist view           --agent-help   ❌ not yet
-  gitee gist create         --agent-help   ❌ not yet
-  gitee gist edit           --agent-help   ❌ not yet
-  gitee gist delete         --agent-help   ❌ not yet
-  gitee gist star           --agent-help   ❌ not yet
-  gitee gist unstar         --agent-help   ❌ not yet
+  gitee gist list           --agent-help   ✅ available  🆕 v0.11.0
+  gitee gist view           --agent-help   ✅ available  🆕 v0.11.0
+  gitee gist create         --agent-help   ✅ available  🆕 v0.11.0
+  gitee gist edit           --agent-help   ✅ available  🆕 v0.11.0
+  gitee gist delete         --agent-help   ✅ available  🆕 v0.11.0
+  gitee gist star           --agent-help   ✅ available  🆕 v0.11.0
+  gitee gist unstar         --agent-help   ✅ available  🆕 v0.11.0
   gitee gist clone          --agent-help   ✅ available  🆕 v0.6.0
 
 ### ssh-key — SSH key management  🆕 v0.6.0
@@ -112,7 +112,14 @@ gitee-cli ships TWO help systems side-by-side:
   gitee webhook test        --agent-help   ✅ available
 
 ### org — Organization management
-  All subcommands           --agent-help   ❌ not yet
+  gitee org list            --agent-help   ✅ available  🆕 v0.11.0
+  gitee org view            --agent-help   ✅ available  🆕 v0.11.0
+  gitee org member          --agent-help   ✅ available  🆕 v0.11.0
+  gitee org repo            --agent-help   ✅ available  🆕 v0.11.0
+  gitee org issue           --agent-help   ✅ available  🆕 v0.11.0
+
+### agent — Agent onboarding  🆕 v0.11.0
+  gitee agent onboard       --agent-help   ✅ available  🆕 v0.11.0
 
 ### release — Release management  🆕 v0.5.0
   gitee release list        --agent-help   ✅ available
@@ -165,9 +172,9 @@ gitee-cli ships TWO help systems side-by-side:
   command. The reference page is generated from the live cobra tree at run time.
 
 ### search — Search (code + commits are 🆕 v0.10.0)
-  gitee search repos        --agent-help   ❌ not yet
-  gitee search issues       --agent-help   ❌ not yet
-  gitee search users        --agent-help   ❌ not yet
+  gitee search repos        --agent-help   ✅ available  🆕 v0.11.0
+  gitee search issues       --agent-help   ✅ available  🆕 v0.11.0
+  gitee search users        --agent-help   ✅ available  🆕 v0.11.0
   gitee search code         --agent-help   ✅ available  🆕 v0.10.0
   gitee search commits      --agent-help   ✅ available  🆕 v0.10.0
 
@@ -191,6 +198,8 @@ gitee-cli ships TWO help systems side-by-side:
   v0.9.0  ✅  Help topics: environment / exit-codes / formatting / reference
   v0.10.0 ✅  8 small features: pr/issue status, release upload/delete-asset,
                 search code/commits, auth switch, repo set-default
+  v0.11.0 ✅  Expand --agent-help to repo/issue/pr/gist/org/search coverage
+                (full read/write/agent surface)
   v0.9.0       P3: pipeline (Gitee Go)
 
 ## Design philosophy

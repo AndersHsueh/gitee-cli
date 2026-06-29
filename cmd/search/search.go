@@ -48,7 +48,13 @@ var searchReposCmd = &cobra.Command{
 	Use:   "repos <query>",
 	Short: "Search repositories",
 	Args:  cobra.MinimumNArgs(1),
-	RunE:  runSearchRepos,
+	PreRunE: func(c *cobra.Command, args []string) error {
+		if cmd.GlobalAgentHelp {
+			cmd.PrintAgentHelp(searchReposAgentHelp)
+		}
+		return nil
+	},
+	RunE: runSearchRepos,
 }
 
 func init() {
@@ -131,7 +137,13 @@ var searchIssuesCmd = &cobra.Command{
 	Use:   "issues <query>",
 	Short: "Search issues across repositories",
 	Args:  cobra.MinimumNArgs(1),
-	RunE:  runSearchIssues,
+	PreRunE: func(c *cobra.Command, args []string) error {
+		if cmd.GlobalAgentHelp {
+			cmd.PrintAgentHelp(searchIssuesAgentHelp)
+		}
+		return nil
+	},
+	RunE: runSearchIssues,
 }
 
 func runSearchIssues(c *cobra.Command, args []string) error {
@@ -181,7 +193,13 @@ var searchUsersCmd = &cobra.Command{
 	Use:   "users <query>",
 	Short: "Search users",
 	Args:  cobra.MinimumNArgs(1),
-	RunE:  runSearchUsers,
+	PreRunE: func(c *cobra.Command, args []string) error {
+		if cmd.GlobalAgentHelp {
+			cmd.PrintAgentHelp(searchUsersAgentHelp)
+		}
+		return nil
+	},
+	RunE: runSearchUsers,
 }
 
 func runSearchUsers(c *cobra.Command, args []string) error {
@@ -627,4 +645,312 @@ Same as ` + "`" + `gitee search code` + "`" + ` — search endpoints may have st
 - ` + "`" + `gitee search code` + "`" + `        — search code
 - ` + "`" + `gitee search repos` + "`" + `       — search repositories
 - ` + "`" + `gitee search issues` + "`" + `      — search issues
+`
+
+const searchReposAgentHelp = `# gitee search repos — Agent Help
+
+## Purpose
+Search for repositories on Gitee using the v5 search API
+(` + "`" + `GET /search/repositories` + "`" + `). Returns a ranked list of repos
+matching the query, optionally filtered by language and sorted by stars,
+forks, or last-updated.
+
+Use this to discover candidate repos before cloning, forking, or
+reading source code. Compare to ` + "`" + `gitee search code` + "`" + `, which searches
+inside files; ` + "`" + `gitee search repos` + "`" + ` searches repo metadata.
+
+## Pre-conditions
+- Authenticated: token present in config (~/.gitee-cli/settings.json),
+  env var (GITEE_TOKEN), or --token flag. Verify with: gitee auth status
+- Token is OPTIONAL for public repos. The Gitee v5 search endpoint
+  returns public results without a token, but the anonymous rate limit
+  is much lower.
+
+## Required arguments
+  <query> (positional)   Search keywords (e.g. "go cobra cli")
+
+## Optional flags
+  --language             Filter by programming language (e.g. go, python, java)
+  --sort                 Sort by: stars|forks|updated (default: Gitee ranking)
+  --order                Sort order: asc|desc (default: desc)
+  --limit / -L           Maximum number of results (default 20)
+  --output / -o          table|json (default table)
+
+## Idempotency
+YES. Pure read — no state is modified. Calling this command any number
+of times with the same arguments returns equivalent (but time-shifted)
+results because the Gitee index is constantly updated.
+
+## Atomicity
+Not applicable (read-only). The response is a single API call; either
+the whole list is returned or the call fails.
+
+## Side effects
+None. No writes, no notifications, no webhooks fired.
+
+## Post-conditions (on success)
+- Stdout contains a table of matching repositories (or JSON array)
+- Exit code is 0
+- The query is not recorded anywhere client-side
+
+## Output (stdout, table mode)
+
+  NAME                  LANGUAGE   STARS   FORKS  DESCRIPTION
+  owner/repo            Go         1234    56     A short description
+  owner/other-repo      Python     890     12     Another description
+
+## Output (stdout, json mode)
+Returns a JSON array of repository objects with the Gitee v5 schema
+(full_name, language, stargazers_count, forks_count, description,
+html_url, etc.). Each object is exactly the same shape as
+` + "`" + `gitee repo view` + "`" + ` returns for a single repository.
+
+## Parsing the output
+- table: pipe through ` + "`" + `awk` + "`" + ` or ` + "`" + `column -t -s $'\t'` + "`" + ` for human consumption
+- json:  ` + "`" + `jq '.[].full_name'` + "`" + ` to extract a list of owner/repo slugs
+
+  REPOS=$(gitee search repos "go cli" --limit 10 --output json | jq -r '.[].full_name')
+  for r in $REPOS; do
+    gitee repo view "$r"
+  done
+
+## Common errors
+- 401 Unauthorized:  token expired or invalid          →  gitee auth login
+- 403 Forbidden:     rate limit exceeded for anonymous  →  authenticate
+- 404 Not Found:     malformed query or bad URL        →  check query syntax
+- Empty results:     no repos matched the query         →  try broader terms
+
+## Next steps (orchestration hints)
+After ` + "`" + `gitee search repos` + "`" + `, an agent typically wants to:
+1. Pick a candidate from the table and call ` + "`" + `gitee repo view owner/repo` + "`" + `
+   to read the README / description / topics
+2. If interested in contributing: ` + "`" + `gitee repo fork owner/repo` + "`" + ` then clone
+3. If the user wants to read the source: ` + "`" + `gitee repo clone owner/repo` + "`" + `
+4. To find issues to work on inside one of these repos, follow up with
+   ` + "`" + `gitee issue list --repo owner/repo` + "`" + ` (NOT another search call)
+
+## OAuth scope required
+None for public repos. For searching private repos you need a token
+with at least ` + "`" + `projects` + "`" + ` (read).
+
+## Rate limit
+Gitee API v5: 1000 requests/hour for authenticated users. Anonymous
+requests are capped at a much lower IP-based limit and will return 403
+if exhausted. Each call to this command counts as 1 request.
+
+## Example
+  # Discover Go CLI tools on Gitee
+  gitee search repos "go cli" --language go --sort stars --limit 10
+
+  # Machine-friendly: pull top 5 star counts as JSON
+  gitee search repos "machine learning" --language python \
+    --sort stars --order desc --limit 5 --output json
+
+## See also
+- ` + "`" + `gitee repo view` + "`" + `       — read a single repo's metadata
+- ` + "`" + `gitee repo clone` + "`" + `      — clone a repo locally
+- ` + "`" + `gitee repo fork` + "`" + `       — fork a repo to your account
+- ` + "`" + `gitee search code` + "`" + `      — search code INSIDE repos
+- ` + "`" + `gitee search issues` + "`" + `   — search issues across repos
+- ` + "`" + `gitee --agent-help` + "`" + `    — overview of all commands with agent help
+`
+
+const searchIssuesAgentHelp = `# gitee search issues — Agent Help
+
+## Purpose
+Search for issues across all Gitee repositories using the v5 search
+API (` + "`" + `GET /search/issues` + "`" + `). Returns a ranked list of issues
+matching the query, with optional state and label filters.
+
+Use this to discover issues by keyword across the entire Gitee
+ecosystem — for example "memory leak", "translation", or a specific
+error message string. For issues in a single repo, prefer
+` + "`" + `gitee issue list --repo owner/repo` + "`" + ` (it's faster and respects
+the repo's local view).
+
+## Pre-conditions
+- Authenticated: token present in config (~/.gitee-cli/settings.json),
+  env var (GITEE_TOKEN), or --token flag. Verify with: gitee auth status
+- Token is OPTIONAL for public issues. The Gitee v5 search endpoint
+  returns public issues without a token, but the anonymous rate limit
+  is much lower.
+
+## Required arguments
+  <query> (positional)   Search keywords (e.g. "memory leak in loader")
+
+## Optional flags
+  --state                Filter by state: open|closed|all (default: open)
+  --labels               Filter by label names (comma-separated, AND-ed)
+  --limit / -L           Maximum number of results (default 20)
+  --output / -o          table|json (default table)
+
+## Idempotency
+YES. Pure read — no state is modified.
+
+## Atomicity
+Not applicable (read-only). The response is a single API call.
+
+## Side effects
+None. No writes, no notifications, no webhooks fired.
+
+## Post-conditions (on success)
+- Stdout contains a table of matching issues (or JSON array)
+- Exit code is 0
+
+## Output (stdout, table mode)
+
+  REPOSITORY          NUMBER  TITLE                          STATE    LABELS              UPDATED
+  owner/repo          42      Memory leak in loader          open     bug                 2026-06-08
+  owner/other         17      Translation fr-CA missing      closed   i18n,help wanted   2026-06-07
+
+## Output (stdout, json mode)
+Returns a JSON array of issue objects with the Gitee v5 schema
+(repo, number, title, state, labels, updated_at, etc.).
+
+## Parsing the output
+- table: ` + "`" + `awk '{print $1"#"$2}'` + "`" + ` to extract ` + "`" + `owner/repo#N` + "`" + ` references
+- json:  ` + "`" + `jq '.[] | "\(.repo)#\(.number)"'` + "`" + ` to build the same refs
+
+  REFS=$(gitee search issues "memory leak" --output json \
+    | jq -r '.[] | "\(.repo)#\(.number)"')
+  for ref in $REFS; do
+    gitee issue view "$ref"
+  done
+
+## Common errors
+- 401 Unauthorized:  token expired or invalid  →  gitee auth login
+- 403 Forbidden:     rate limit exceeded for anonymous  →  authenticate
+- 404 Not Found:     malformed query or bad URL  →  check query syntax
+- Empty results:     no issues matched the query   →  try broader terms
+
+## Next steps (orchestration hints)
+After ` + "`" + `gitee search issues` + "`" + `, an agent typically wants to:
+1. Pick a candidate issue and call ` + "`" + `gitee issue view owner/repo#N` + "`" + `
+   to read the full body and any existing comments
+2. If the issue is a duplicate, add a comment via
+   ` + "`" + `gitee issue comment N --repo owner/repo --body "..."` + "`" + `
+3. If you intend to fix it: ` + "`" + `gitee repo fork owner/repo` + "`" + `, then
+   create a PR with ` + "`" + `Closes owner/repo#N` + "`" + ` in the body
+4. If the issue is a false positive: skip — do not "close" issues you
+   did not author without explicit user consent
+
+## OAuth scope required
+None for public issues. For searching issues in private repos you need
+a token with at least ` + "`" + `projects` + "`" + ` (read).
+
+## Rate limit
+Gitee API v5: 1000 requests/hour for authenticated users. Anonymous
+requests are capped at a much lower IP-based limit and will return 403
+if exhausted.
+
+## Example
+  # Find open translation issues
+  gitee search issues "translation" --state open --limit 20
+
+  # Find issues tagged "bug" in any repo
+  gitee search issues "crash" --labels bug --limit 10 --output json
+
+## See also
+- ` + "`" + `gitee issue list` + "`" + `       — list issues in ONE repo (faster)
+- ` + "`" + `gitee issue view` + "`" + `       — read a single issue with body
+- ` + "`" + `gitee issue comment` + "`" + `   — add a comment to an issue
+- ` + "`" + `gitee search repos` + "`" + `     — find repos by metadata
+- ` + "`" + `gitee --agent-help` + "`" + `    — overview of all commands with agent help
+`
+
+const searchUsersAgentHelp = `# gitee search users — Agent Help
+
+## Purpose
+Search for Gitee users by username, display name, or bio using the
+v5 search API (` + "`" + `GET /search/users` + "`" + `). Returns a ranked list of
+matching user profiles.
+
+Use this to discover potential collaborators, find a user whose work
+you want to follow, or look up someone's public repos and gists.
+
+## Pre-conditions
+- Authenticated: token present in config (~/.gitee-cli/settings.json),
+  env var (GITEE_TOKEN), or --token flag. Verify with: gitee auth status
+- Token is OPTIONAL for public user profiles. The Gitee v5 search
+  endpoint returns public users without a token, but the anonymous
+  rate limit is much lower.
+
+## Required arguments
+  <query> (positional)   Search keywords (username fragment, name, or bio text)
+
+## Optional flags
+  --limit / -L           Maximum number of results (default 20)
+  --output / -o          table|json (default table)
+
+## Idempotency
+YES. Pure read — no state is modified.
+
+## Atomicity
+Not applicable (read-only). The response is a single API call.
+
+## Side effects
+None. No writes, no notifications. Note that user-search is rate
+limited more aggressively than repo/issue search on the Gitee API.
+
+## Post-conditions (on success)
+- Stdout contains a table of matching users (or JSON array)
+- Exit code is 0
+
+## Output (stdout, table mode)
+
+  USERNAME         NAME             FOLLOWERS   REPOS  BIO
+  andershsueh      Anders Hsueh     142         28     Maintainer of gitee-cli
+  octocat          Octocat          9999        8      The GitHub/Gitee mascot
+
+## Output (stdout, json mode)
+Returns a JSON array of user objects with the Gitee v5 schema
+(login, name, followers, public_repos, bio, html_url, etc.).
+
+## Parsing the output
+- table: ` + "`" + `awk '{print $1}'` + "`" + ` to extract the login column
+- json:  ` + "`" + `jq -r '.[].login'` + "`" + ` to get just the usernames
+
+  USERS=$(gitee search users "go" --output json | jq -r '.[].login')
+  for u in $USERS; do
+    gitee repo list --owner "$u" --limit 5
+  done
+
+## Common errors
+- 401 Unauthorized:  token expired or invalid  →  gitee auth login
+- 403 Forbidden:     rate limit exceeded for anonymous  →  authenticate,
+                                                          or wait 60s
+- 404 Not Found:     malformed query  →  check query syntax
+- Empty results:     no users matched the query   →  try broader terms
+
+## Next steps (orchestration hints)
+After ` + "`" + `gitee search users` + "`" + `, an agent typically wants to:
+1. Pick a candidate and explore their public repos:
+   ` + "`" + `gitee repo list --owner USERNAME --limit 10` + "`" + `
+2. If the user is the owner of a repo you want to fork:
+   ` + "`" + `gitee repo fork owner/repo` + "`" + `
+3. To send the user a notification (issue mention / PR review request),
+   reference them with ` + "`" + `@USERNAME` + "`" + ` in the body text
+
+## OAuth scope required
+None for public user profiles. For full email/follower details of
+private accounts, a token with ` + "`" + `user_info` + "`" + ` scope may be required.
+
+## Rate limit
+Gitee API v5: 1000 requests/hour for authenticated users on the global
+search endpoint. User search specifically is throttled at ~60 req/min
+per token. Each call to this command counts as 1 request.
+
+## Example
+  # Find Go developers on Gitee
+  gitee search users "golang" --limit 10
+
+  # Machine-friendly: extract login list
+  gitee search users "machine learning" --limit 5 --output json \
+    | jq -r '.[].login'
+
+## See also
+- ` + "`" + `gitee repo list` + "`" + `        — list a user's repos (faster than searching)
+- ` + "`" + `gitee org list` + "`" + `        — list orgs the authenticated user belongs to
+- ` + "`" + `gitee search repos` + "`" + `    — search repos by metadata
+- ` + "`" + `gitee --agent-help` + "`" + `    — overview of all commands with agent help
 `

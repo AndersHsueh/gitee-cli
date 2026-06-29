@@ -24,7 +24,13 @@ var memberCmd = &cobra.Command{
 	Use:     "members <org>",
 	Short:   "List organization members",
 	Example: `  gitee org members my-org`,
-	RunE:    runMembers,
+	PreRunE: func(c *cobra.Command, args []string) error {
+		if cmd.GlobalAgentHelp {
+			cmd.PrintAgentHelp(orgMemberAgentHelp)
+		}
+		return nil
+	},
+	RunE: runMembers,
 }
 
 func init() {
@@ -78,3 +84,83 @@ func runMembers(cobraCmd *cobra.Command, args []string) error {
 	}
 	return w.Flush()
 }
+
+// orgMemberAgentHelp is the agent-targeted help for `gitee org members`.
+const orgMemberAgentHelp = `# gitee org members — Agent Help
+
+## Purpose
+List members of a Gitee organization with their display name, email,
+and active state. Use this to identify owners/maintainers for routing
+notifications, audits, or access checks.
+
+## Pre-conditions
+- Authenticated (` + "`" + `gitee auth status` + "`" + `)
+- The org name resolves to an existing organization
+- Token can read org membership (any token the org permits works)
+
+## Required arguments
+  <org>   Organization login (e.g. "my-org")
+
+## Optional flags
+  --org          Equivalent to passing <org> as a positional arg
+  --limit / -L   Maximum number of members to return (default 30, max 100)
+  --output       "table" (default) or "json"
+
+## Idempotency
+YES. Read-only.
+
+## Atomicity
+Atomic.
+
+## Side effects
+None. Pure GET on /orgs/{org}/members.
+
+## Post-conditions (on success)
+- Stdout contains a table of members (LOGIN, NAME, EMAIL, STATE) or
+  a JSON array of OrgMember objects
+- Repo state is unchanged
+- If the org has no members visible to you, "No members found" is printed
+
+## Output (stdout, table mode)
+  LOGIN     NAME         EMAIL                 STATE
+  alice     Alice Liu    alice@example.com     active
+  bob       Bob Chen     -                     active
+
+## Output (stdout, json mode)
+  [
+    {
+      "login": "alice",
+      "name": "Alice Liu",
+      "email": "alice@example.com",
+      "state": "active"
+    }
+  ]
+
+## Common errors
+- 401 Unauthorized: token missing or expired → ` + "`" + `gitee auth login` + "`" + `
+- 404 Not Found:    org name doesn't exist
+
+## Next steps (orchestration hints)
+After listing members, an agent typically wants to:
+1. Pick a ` + "`" + `login` + "`" + ` and run ` + "`" + `gitee user view <login>` + "`" + `
+2. Filter the list down to a single owner for assigning issues
+3. Cross-reference with ` + "`" + `gitee org repos` + "`" + ` to map members to repos
+
+## OAuth scope required
+projects (read) — org membership is a protected resource
+
+## Rate limit
+Gitee API v5: 1000 req/hour authenticated.
+
+## Example
+  # Pull all member logins as a JSON array
+  gitee org members my-org --output json | jq -r '.[].login'
+
+  # Cap at 100 results (Gitee per_page max)
+  gitee org members my-org --limit 100
+
+## See also
+- ` + "`" + `gitee org view` + "`" + `    — org-level metadata
+- ` + "`" + `gitee user view` + "`" + `  — read one user's profile
+- ` + "`" + `gitee org repos` + "`" + `  — list repos in the org
+`

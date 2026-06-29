@@ -23,7 +23,13 @@ var viewCmd = &cobra.Command{
 	Use:     "view [<org>]",
 	Short:   "View organization details",
 	Example: `  gitee org view my-org`,
-	RunE:    runView,
+	PreRunE: func(c *cobra.Command, args []string) error {
+		if cmd.GlobalAgentHelp {
+			cmd.PrintAgentHelp(orgViewAgentHelp)
+		}
+		return nil
+	},
+	RunE: runView,
 }
 
 func init() {
@@ -72,3 +78,85 @@ func runView(cobraCmd *cobra.Command, args []string) error {
 	fmt.Fprintf(w, "URL:\t%s\n", o.HTMLURL)
 	return w.Flush()
 }
+
+// orgViewAgentHelp is the agent-targeted help for `gitee org view`.
+const orgViewAgentHelp = `# gitee org view — Agent Help
+
+## Purpose
+Fetch a single organization's profile and metadata from Gitee
+(public_repos, followers, blog, etc.). Use this to verify an org exists,
+grab its description, or pull its URL for chaining.
+
+## Pre-conditions
+- Authenticated (` + "`" + `gitee auth status` + "`" + `)
+- The org name resolves to an existing organization
+
+## Required arguments
+  <org>   Organization login (the slug, e.g. "my-org")
+
+## Optional flags
+  --org          Equivalent to passing <org> as a positional arg
+  --output       "table" (default) or "json"
+
+## Idempotency
+YES. Read-only.
+
+## Atomicity
+Atomic.
+
+## Side effects
+None. Pure GET on /orgs/{org}.
+
+## Post-conditions (on success)
+- Stdout contains a key/value block (Login, Name, Description, Email,
+  Blog, Public Repos, Followers, Following, URL) or a JSON Organization
+- Repo state is unchanged
+
+## Output (stdout, table mode)
+  Login:        my-org
+  Name:         My Organization
+  Description:  An example org
+  Email:        admin@example.com
+  Blog:         https://example.com
+  Public Repos: 12
+  Followers:    5
+  Following:    1
+  URL:          https://gitee.com/my-org
+
+## Output (stdout, json mode)
+  {
+    "login": "my-org",
+    "name": "My Organization",
+    "description": "An example org",
+    "public_repos": 12,
+    ...
+  }
+
+## Common errors
+- 401 Unauthorized: token missing or expired → ` + "`" + `gitee auth login` + "`" + `
+- 404 Not Found:    org name doesn't exist or has been renamed
+
+## Next steps (orchestration hints)
+After reading org metadata, an agent typically wants to:
+1. Run ` + "`" + `gitee org repos <login>` + "`" + ` to enumerate its repos
+2. Run ` + "`" + `gitee org members <login>` + "`" + ` to see who can act on it
+3. Run ` + "`" + `gitee org issues <login> --state open` + "`" + ` to triage
+
+## OAuth scope required
+None (public endpoint, but auth raises the rate limit)
+
+## Rate limit
+Gitee API v5: 1000 req/hour authenticated; 60 req/hour anonymous.
+
+## Example
+  # Read the org as JSON, extract the website
+  gitee org view my-org --output json | jq -r '.blog'
+
+  # Equivalent using --org flag (no positional)
+  gitee org view --org my-org
+
+## See also
+- ` + "`" + `gitee org list` + "`" + `    — enumerate the user's orgs
+- ` + "`" + `gitee org repos` + "`" + `  — list repos in an org
+- ` + "`" + `gitee org members` + "`" + ` — list members
+`

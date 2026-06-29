@@ -23,6 +23,12 @@ var viewCmd = &cobra.Command{
 	Short: "View a gist",
 	Example: `  gitee gist view abc123def
   gitee gist view abc123def --raw`,
+	PreRunE: func(c *cobra.Command, args []string) error {
+		if cmd.GlobalAgentHelp {
+			cmd.PrintAgentHelp(gistViewAgentHelp)
+		}
+		return nil
+	},
 	RunE: runView,
 }
 
@@ -87,3 +93,105 @@ func runView(cobraCmd *cobra.Command, args []string) error {
 	}
 	return nil
 }
+
+// gistViewAgentHelp is the agent-targeted help for `gitee gist view`.
+// Maintainer note: keep this in sync with the actual command behavior.
+const gistViewAgentHelp = `# gitee gist view — Agent Help
+
+## Purpose
+Read a single gist: metadata (id, description, visibility) plus the
+content of every file in the gist. Use this when an agent needs to
+inspect a gist's contents without writing anything to disk (use
+` + "`" + `gitee gist clone` + "`" + ` when you want a local copy).
+
+## Pre-conditions
+- Authenticated: token present in config (~/.gitee-cli/settings.json),
+  env var (GITEE_TOKEN), or --token flag. Verify with: gitee auth status
+- The gist id must exist. Public gists are readable by anyone;
+  private gists require the owner (or an explicit grant)
+
+## Required arguments
+  <id>   Gist id (positional, required)
+
+## Optional flags
+  --raw   Output raw file content (skips truncation; fetches via raw_url
+          for the full file body). Without this, content is truncated to
+          ~100 chars per file as a preview.
+
+## Idempotency
+Pure read. Safe to call repeatedly; returns the same data each time
+for the same gist id (unless the gist was edited in between).
+
+## Atomicity
+Atomic. Either the full gist metadata + every file is returned or
+the call fails. There is no partial-success state.
+
+## Side effects
+None. Read-only call against the API. Does NOT mutate gist state,
+does NOT trigger webhooks, does NOT send notifications.
+
+## Post-conditions (on success)
+- stdout contains metadata + every file (table mode) OR full JSON
+  payload (json mode)
+- exit code 0
+
+## Output (stdout, table mode)
+  ID: abc123def
+  Description: My snippet
+  Public: true
+  Files: 2
+  URL: https://gitee.com/...
+
+  --- main.go (Go, 142 bytes) ---
+  package main
+  ...
+
+  --- README.md (Markdown, 38 bytes) ---
+  # hello
+
+Note: the per-file content is TRUNCATED by default. Use --raw (or
+-o json) to get the full body.
+
+## Output (stdout, json mode)
+A single ` + "`" + `types.Gist` + "`" + ` object (full API payload). The ` + "`" + `files` + "`" + ` map
+contains every file with ` + "`" + `content` + "`" + ` populated when the API
+returns it inline (small files), or just ` + "`" + `raw_url` + "`" + ` for
+larger files (use the raw_url to fetch the body).
+
+## Common errors
+- 401 Unauthorized:  token expired or invalid  →  gitee auth login
+- 403 Forbidden:     gist is private and the token can't read it
+- 404 Not Found:     gist id is wrong or was deleted  →  gitee gist list
+- 5xx Server error:  transient                →  retry with backoff
+
+## Next steps (orchestration hints)
+After viewing, an agent typically wants to:
+1. ` + "`" + `gitee gist clone <id>` + "`" + `   — bring it local for editing
+2. ` + "`" + `gitee gist edit <id>` + "`" + `    — change description or file contents
+3. ` + "`" + `gitee gist star <id>` + "`" + `     — bookmark it
+4. ` + "`" + `gitee gist delete <id>` + "`" + `   — remove (irreversible)
+
+## OAuth scope required
+projects (read) — or gists (read) on the older token model
+
+## Rate limit
+Gitee API v5: 1000 requests/hour for authenticated users.
+The table-mode view issues 1 + N raw_url fetches (one per file);
+the JSON mode is a single API call.
+
+## Example (closing the loop)
+  # 1. Read full content as JSON for parsing
+  gitee gist view abc123def -o json
+
+  # 2. Or read raw file bodies (no truncation)
+  gitee gist view abc123def --raw
+
+  # 3. Then take it local
+  gitee gist clone abc123def
+
+## See also
+- ` + "`" + `gitee gist list` + "`" + `   — discover ids
+- ` + "`" + `gitee gist clone` + "`" + `  — fetch to local disk
+- ` + "`" + `gitee gist edit` + "`" + `   — modify a gist
+- ` + "`" + `gitee --agent-help` + "`" + ` — overview of all commands with agent help
+`

@@ -24,7 +24,13 @@ var repoCmd = &cobra.Command{
 	Use:     "repos <org>",
 	Short:   "List organization repositories",
 	Example: `  gitee org repos my-org`,
-	RunE:    runOrgRepos,
+	PreRunE: func(c *cobra.Command, args []string) error {
+		if cmd.GlobalAgentHelp {
+			cmd.PrintAgentHelp(orgRepoAgentHelp)
+		}
+		return nil
+	},
+	RunE: runOrgRepos,
 }
 
 func init() {
@@ -82,3 +88,88 @@ func runOrgRepos(cobraCmd *cobra.Command, args []string) error {
 	}
 	return w.Flush()
 }
+
+// orgRepoAgentHelp is the agent-targeted help for `gitee org repos`.
+const orgRepoAgentHelp = `# gitee org repos — Agent Help
+
+## Purpose
+Enumerate every repository owned by a Gitee organization, with
+visibility, language, stars, and forks. Use this to discover which
+repos belong to an org before drilling into a specific one.
+
+## Pre-conditions
+- Authenticated (` + "`" + `gitee auth status` + "`" + `)
+- The org name resolves to an existing organization
+- Private repos only show up if the token has access to them
+
+## Required arguments
+  <org>   Organization login (e.g. "my-org")
+
+## Optional flags
+  --org          Equivalent to passing <org> as a positional arg
+  --limit / -L   Maximum number of repos to return (default 30, max 100)
+  --output       "table" (default) or "json"
+
+## Idempotency
+YES. Read-only.
+
+## Atomicity
+Atomic.
+
+## Side effects
+None. Pure GET on /orgs/{org}/repos.
+
+## Post-conditions (on success)
+- Stdout contains a table of repos (NAME, VISIBILITY, LANGUAGE, STARS,
+  FORKS) or a JSON array of Repository objects
+- Repo state is unchanged
+- If the org has no repos visible to you, "No repositories found" is
+  printed
+
+## Output (stdout, table mode)
+  NAME                    VISIBILITY  LANGUAGE  STARS  FORKS
+  my-org/awesome          public      Go        128    12
+  my-org/internal-api     private     Python    3      0
+
+## Output (stdout, json mode)
+  [
+    {
+      "full_name": "my-org/awesome",
+      "private": false,
+      "language": "Go",
+      "stargazers_count": 128,
+      "forks_count": 12,
+      ...
+    }
+  ]
+
+## Common errors
+- 401 Unauthorized: token missing or expired → ` + "`" + `gitee auth login` + "`" + `
+- 403 Forbidden:    no read access to private repos in the org
+- 404 Not Found:    org name doesn't exist
+
+## Next steps (orchestration hints)
+After enumerating repos, an agent typically wants to:
+1. Pick a ` + "`" + `full_name` + "`" + ` and run ` + "`" + `gitee repo view my-org/awesome` + "`" + `
+2. Or ` + "`" + `gitee repo clone my-org/awesome` + "`" + ` to fetch locally
+3. Or ` + "`" + `gitee issue list -R my-org/awesome --state open` + "`" + ` for triage
+
+## OAuth scope required
+projects (read)
+
+## Rate limit
+Gitee API v5: 1000 req/hour authenticated.
+
+## Example
+  # Pull repo full_names as a JSON array, sort by stars
+  gitee org repos my-org --output json | jq -r '.[].full_name'
+
+  # Cap at 100 (Gitee per_page max)
+  gitee org repos my-org --limit 100
+
+## See also
+- ` + "`" + `gitee repo list` + "`" + `     — list repos owned by the current user
+- ` + "`" + `gitee repo view` + "`" + `    — read one repo's full metadata
+- ` + "`" + `gitee org view` + "`" + `     — org-level metadata
+- ` + "`" + `gitee org members` + "`" + `  — list members
+`
