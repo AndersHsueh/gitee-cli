@@ -48,11 +48,30 @@ var rootCmd = &cobra.Command{
 	Long: `gitee-cli is a OpenSource command-line tool for Gitee, Author: AndersHsueh
 Work with repositories, issues, pull requests, gists and more.
 
-gitee-cli is designed for BOTH human and AI Agent use. Most "write" commands
-support a separate --agent-help flag that prints extended documentation
-optimized for agents: pre/post-conditions, idempotency, side effects,
-common errors, and orchestration hints. Run 'gitee --agent-help' for an
-overview of which commands currently have agent help.`,
+★ Built for AI Agents ★────────────────────────────────────────────────
+gitee-cli ships TWO help systems side-by-side — the only Gitee CLI to do so:
+
+  --help         Short, friendly, optimized for humans skimming docs.
+  --agent-help   Long, structured, optimized for agents reading carefully.
+
+Every write command (pr create, issue create, repo create, ...) has a
+dedicated --agent-help that goes far beyond --help: pre/post-conditions,
+idempotency, side effects, error codes, OAuth scope, rate limits, race
+conditions, and the next command to run in a multi-step workflow.
+
+Quick start:
+  gitee pr create --agent-help             # structured docs (human & agent)
+  gitee pr create --agent-help -o json     # machine-readable JSON for tools
+  gitee --agent-help                       # overview of all covered commands
+  gitee agent onboard                      # scaffold .gitee/agent.md for a repo`,
+	Example: `  # Human quick start
+  gitee auth login
+  gitee repo list
+
+  # Agent-first usage
+  gitee pr create --agent-help -o json     # discover pre/post-conditions first
+  gitee --agent-help                       # see which commands have agent help
+  gitee agent onboard                      # write .gitee/agent.md for the repo`,
 	SilenceUsage:  true,
 	SilenceErrors: true,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
