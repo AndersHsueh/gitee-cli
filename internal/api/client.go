@@ -117,6 +117,25 @@ func (c *Client) Delete(ctx context.Context, path string) error {
 	return checkStatus(resp)
 }
 
+// DeleteWithBody issues a DELETE request with a JSON body. Some Gitee v5
+// endpoints (notably .../contents/{path} for file removal) require
+// parameters in the request body even though the verb is DELETE; resty's
+// SetBody + Delete combination handles this transparently. If `result`
+// is non-nil, the response body is decoded into it.
+func (c *Client) DeleteWithBody(ctx context.Context, path string, body interface{}) error {
+	req := c.r.R().
+		SetContext(ctx).
+		SetHeader("Content-Type", "application/json")
+	if body != nil {
+		req = req.SetBody(body)
+	}
+	resp, err := req.Delete(path)
+	if err != nil {
+		return err
+	}
+	return checkStatus(resp)
+}
+
 // Put issues a PUT request with a JSON body and decodes the response.
 func (c *Client) Put(ctx context.Context, path string, body, result interface{}) error {
 	req := c.r.R().

@@ -401,3 +401,38 @@ func RepoUnwatch(owner, repo string) string {
 func UserStarredList() string {
 	return "/user/starred"
 }
+
+// File content endpoints (P1-7)
+//
+// Gitee v5 file/contents API lives at /repos/{owner}/{repo}/contents/{path}.
+// The same path is used for:
+//   GET    — read a file's metadata + base64 content, or list a directory
+//   POST   — create a new file (requires base64 content + commit message)
+//   PUT    — update an existing file (requires sha + base64 content + message)
+//   DELETE — remove a file (requires sha + commit message)
+//
+// And /repos/{owner}/{repo}/raw/{path} serves the raw bytes for direct
+// download (no JSON envelope).
+//
+// The {path} segment can contain slashes; we do not URL-escape it because
+// Gitee's v5 endpoints expect literal slashes in the path. Callers that
+// want to send a file at the repo root pass "." as the path.
+func RepoContentsGet(owner, repo, path string) string {
+	return fmt.Sprintf("/repos/%s/%s/contents/%s", owner, repo, path)
+}
+
+func RepoContentsCreate(owner, repo, path string) string {
+	return fmt.Sprintf("/repos/%s/%s/contents/%s", owner, repo, path)
+}
+
+func RepoContentsUpdate(owner, repo, path string) string {
+	return fmt.Sprintf("/repos/%s/%s/contents/%s", owner, repo, path)
+}
+
+func RepoContentsDelete(owner, repo, path string) string {
+	return fmt.Sprintf("/repos/%s/%s/contents/%s", owner, repo, path)
+}
+
+func RepoRawContent(owner, repo, path string) string {
+	return fmt.Sprintf("/repos/%s/%s/raw/%s", owner, repo, path)
+}
