@@ -50,6 +50,9 @@ gitee-cli ships TWO help systems side-by-side:
   gitee repo clone          --agent-help   ✅ available  🆕 v0.11.0
   gitee repo browse         --agent-help   ✅ available  🆕 v0.11.0
   gitee repo branches       --agent-help   ✅ available  🆕 v0.11.0
+  gitee repo tag            --agent-help   ✅ available  🆕 v0.12.0
+  gitee repo tag list       --agent-help   ✅ available  🆕 v0.12.0
+  gitee repo tag create     --agent-help   ✅ available  🆕 v0.12.0
   gitee repo archive        --agent-help   ✅ available  🆕 v0.5.0
   gitee repo sync           --agent-help   ✅ available  🆕 v0.5.0
   gitee repo rename         --agent-help   ✅ available  🆕 v0.5.0
@@ -200,6 +203,8 @@ gitee-cli ships TWO help systems side-by-side:
                 search code/commits, auth switch, repo set-default
   v0.11.0 ✅  Expand --agent-help to repo/issue/pr/gist/org/search coverage
                 (full read/write/agent surface)
+  v0.12.0 ✅  P0 gaps: repo tag (list/create), issue edit/close/reopen,
+                milestone CRUD, notification center
   v0.9.0       P3: pipeline (Gitee Go)
 
 ## Design philosophy

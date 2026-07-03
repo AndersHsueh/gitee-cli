@@ -43,6 +43,22 @@ func ReposBranches(owner, repo string) string {
 	return fmt.Sprintf("/repos/%s/%s/branches", owner, repo)
 }
 
+// Tag endpoints (P0-2)
+//
+// Gitee v5 exposes the same path for list (GET) and create (POST):
+// /repos/{owner}/{repo}/tags. Unlike labels / releases we DO NOT need
+// URL-escaping for tag names because Gitee tag names follow the same
+// restrictions as Git ref names (no characters requiring escaping).
+// No DELETE endpoint exists in Gitee v5 — tag removal is delegated to
+// `git push origin :refs/tags/<name>` (documented in the tag --agent-help).
+func ReposTagsList(owner, repo string) string {
+	return fmt.Sprintf("/repos/%s/%s/tags", owner, repo)
+}
+
+func ReposTagsCreate(owner, repo string) string {
+	return fmt.Sprintf("/repos/%s/%s/tags", owner, repo)
+}
+
 // Issues endpoints
 func IssuesList(owner, repo string) string {
 	return fmt.Sprintf("/repos/%s/%s/issues", owner, repo)

@@ -47,3 +47,28 @@ type ReleaseEditRequest struct {
 	Body       string `json:"body,omitempty"`
 	Prerelease *bool  `json:"prerelease,omitempty"`
 }
+
+// Tag represents a Git tag in a Gitee repository, as returned by
+// GET /repos/{owner}/{repo}/tags. Only a subset of fields is exposed
+// by the Gitee v5 API (name + message + commit metadata).
+type Tag struct {
+	Name    string `json:"name"`
+	Message string `json:"message"`
+	Commit  struct {
+		SHA       string `json:"sha"`
+		URL       string `json:"url"`
+		Author    *User  `json:"author,omitempty"`
+		Committer *User  `json:"committer,omitempty"`
+	} `json:"commit"`
+	Tagger *User  `json:"tagger,omitempty"`
+}
+
+// TagCreateRequest is used when creating a new lightweight or annotated
+// tag via POST /repos/{owner}/{repo}/tags. Gitee v5 requires the source
+// commit SHA (refs) plus the tag name; an optional annotation message
+// upgrades a lightweight tag to an annotated one.
+type TagCreateRequest struct {
+	Refs       string `json:"refs"`
+	TagName    string `json:"tag_name"`
+	TagMessage string `json:"tag_message,omitempty"`
+}
