@@ -53,6 +53,10 @@ gitee-cli ships TWO help systems side-by-side:
   gitee repo tag            --agent-help   ✅ available  🆕 v0.12.0
   gitee repo tag list       --agent-help   ✅ available  🆕 v0.12.0
   gitee repo tag create     --agent-help   ✅ available  🆕 v0.12.0
+  gitee repo collaborator            --agent-help   ✅ available  🆕 v0.12.0
+  gitee repo collaborator list       --agent-help   ✅ available  🆕 v0.12.0
+  gitee repo collaborator add        --agent-help   ✅ available  🆕 v0.12.0
+  gitee repo collaborator remove     --agent-help   ✅ available  🆕 v0.12.0
   gitee repo archive        --agent-help   ✅ available  🆕 v0.5.0
   gitee repo sync           --agent-help   ✅ available  🆕 v0.5.0
   gitee repo rename         --agent-help   ✅ available  🆕 v0.5.0

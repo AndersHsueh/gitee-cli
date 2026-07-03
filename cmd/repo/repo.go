@@ -24,4 +24,5 @@ func init() {
 	RepoCmd.AddCommand(syncCmd)
 	RepoCmd.AddCommand(renameCmd)
 	RepoCmd.AddCommand(tagCmd)
+	RepoCmd.AddCommand(collaboratorCmd)
 }

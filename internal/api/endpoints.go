@@ -343,3 +343,23 @@ func NotificationMarkRead(threadID string) string {
 func NotificationsMarkAllRead() string {
 	return "/notifications/threads"
 }
+
+// Collaborator endpoints (P1-5)
+//
+// Gitee v5 collaborator paths under /repos/{owner}/{repo}/collaborators.
+// The username in the add/remove path is URL-escaped because Gitee usernames
+// may contain characters that require encoding (rare but possible).
+// The list (GET) and add (PUT) share the same path; the add call additionally
+// accepts a `permission` body field (pull | push | admin). Remove uses the
+// username path-segment with DELETE.
+func CollaboratorsList(owner, repo string) string {
+	return fmt.Sprintf("/repos/%s/%s/collaborators", owner, repo)
+}
+
+func CollaboratorAdd(owner, repo, username string) string {
+	return fmt.Sprintf("/repos/%s/%s/collaborators/%s", owner, repo, url.QueryEscape(username))
+}
+
+func CollaboratorRemove(owner, repo, username string) string {
+	return fmt.Sprintf("/repos/%s/%s/collaborators/%s", owner, repo, url.QueryEscape(username))
+}
