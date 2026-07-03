@@ -22,6 +22,7 @@ import (
 	sshkey "gitee-cli/cmd/ssh-key"
 	gpgkey "gitee-cli/cmd/gpg-key"
 	"gitee-cli/cmd/status"
+	"gitee-cli/cmd/user"
 	"gitee-cli/cmd/webhook"
 	gitext "gitee-cli/internal/extension"
 )
@@ -55,6 +56,8 @@ func main() {
 		cmdext.ExtensionCmd,
 		// P2c additions
 		alias.AliasCmd,
+		// P2-10 addition
+		user.UserCmd,
 		// Agent tooling (v0.10.0)
 		agent.AgentCmd,
 	)

@@ -124,6 +124,13 @@ gitee-cli ships TWO help systems side-by-side:
   gitee gpg-key add         --agent-help   ✅ available
   gitee gpg-key delete      --agent-help   ✅ available
 
+### user — Account profiles and follow graph  🆕 v0.12.0
+  gitee user view           --agent-help   ✅ available
+  gitee user follow         --agent-help   ✅ available
+  gitee user unfollow       --agent-help   ✅ available
+  gitee user followers      --agent-help   ✅ available
+  gitee user following      --agent-help   ✅ available
+
 ### webhook — Repository webhooks  🆕 v0.7.0
   gitee webhook list        --agent-help   ✅ available
   gitee webhook create      --agent-help   ✅ available
@@ -235,6 +242,10 @@ gitee-cli ships TWO help systems side-by-side:
                 (full read/write/agent surface)
   v0.12.0 ✅  P0 gaps: repo tag (list/create), issue edit/close/reopen,
                 milestone CRUD, notification center
+  v0.12.0 ✅  P1 gaps: repo collaborator, star/unstar/watch/unwatch,
+                repo file push/delete, commits/compare
+  v0.12.0 ✅  P2 gaps: gpg-key, user (view/follow/unfollow/followers/following),
+                gist comments, branch protect/unprotect
   v0.9.0       P3: pipeline (Gitee Go)
 
 ## Design philosophy

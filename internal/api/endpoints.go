@@ -468,3 +468,44 @@ func ReposCompare(owner, repo, base, head string) string {
 	return fmt.Sprintf("/repos/%s/%s/compare/%s...%s",
 		owner, repo, url.QueryEscape(base), url.QueryEscape(head))
 }
+
+// User endpoints (P2-10)
+//
+// Gitee v5 exposes user accounts under /users/{username} (any user,
+// public data) and the authenticated user under /user (no segments).
+// Followers/following are per-user lists at /users/{username}/{followers,following}.
+//
+// The follow / unfollow verb is user-scoped, not per-pair: PUT (or DELETE)
+// /user/following/{username} targets the AUTHENTICATED user's relationship
+// with `username`. There is no body — PUT simply creates the follow edge
+// and DELETE removes it; both return 204 No Content on success.
+//
+// `username` in the followers/following list paths is URL-escaped even
+// though Gitee usernames are usually plain slugs — same defensive habit
+// as the SSH/GPG key builders.
+func UserGet(username string) string {
+	return fmt.Sprintf("/users/%s", url.QueryEscape(username))
+}
+
+// UserCurrent returns the authenticated user's profile. Path is constant
+// because it carries no segments; the token on the request identifies
+// the user.
+func UserCurrent() string {
+	return "/user"
+}
+
+func UserFollowers(username string) string {
+	return fmt.Sprintf("/users/%s/followers", url.QueryEscape(username))
+}
+
+func UserFollowing(username string) string {
+	return fmt.Sprintf("/users/%s/following", url.QueryEscape(username))
+}
+
+func UserFollow(username string) string {
+	return fmt.Sprintf("/user/following/%s", url.QueryEscape(username))
+}
+
+func UserUnfollow(username string) string {
+	return fmt.Sprintf("/user/following/%s", url.QueryEscape(username))
+}
