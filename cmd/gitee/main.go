@@ -20,6 +20,7 @@ import (
 	"gitee-cli/cmd/repo"
 	"gitee-cli/cmd/search"
 	sshkey "gitee-cli/cmd/ssh-key"
+	gpgkey "gitee-cli/cmd/gpg-key"
 	"gitee-cli/cmd/status"
 	"gitee-cli/cmd/webhook"
 	gitext "gitee-cli/internal/extension"
@@ -44,8 +45,8 @@ func main() {
 		notification.NotificationCmd,
 		// P1a additions
 		sshkey.SSHKeyCmd,
-		// NOTE: gpg-key removed — Gitee v5 does not expose a GPG key API
-		// (verified 2026-06). See common-todos.md §6.
+		// gpg-key added in P2-9 — endpoints/types already existed; only cmd layer is new.
+		gpgkey.GPGKeyCmd,
 		// P1b additions
 		webhook.WebhookCmd,
 		// P2a additions
