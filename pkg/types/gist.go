@@ -1,5 +1,7 @@
 package types
 
+import "time"
+
 // Gist represents a Gitee gist.
 type Gist struct {
 	ID          string              `json:"id"`
@@ -51,4 +53,27 @@ type GistEditRequest struct {
 		Content  string `json:"content,omitempty"`
 		Filename string `json:"filename,omitempty"`
 	} `json:"files,omitempty"`
+}
+
+// GistComment represents a comment on a gist. Returned by
+// GET /gists/{gist_id}/comments and by the response of POST. The id is a
+// numeric comment id used as the path segment for DELETE.
+type GistComment struct {
+	ID        int64     `json:"id"`
+	Body      string    `json:"body"`
+	CreatedAt string    `json:"created_at"`
+	UpdatedAt string    `json:"updated_at"`
+	User      User      `json:"user"`
+	// Parsed time mirrors of the timestamp strings; populated when the
+	// timestamp parses successfully, otherwise zero. Kept optional so a
+	// malformed response from the API does not break unmarshal.
+	CreatedAtTime time.Time `json:"-"`
+	UpdatedAtTime time.Time `json:"-"`
+}
+
+// GistCommentRequest is the create-payload for
+// POST /gists/{gist_id}/comments. Distinct from GistComment (the
+// response object).
+type GistCommentRequest struct {
+	Body string `json:"body"`
 }

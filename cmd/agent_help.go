@@ -113,6 +113,9 @@ gitee-cli ships TWO help systems side-by-side:
   gitee gist star           --agent-help   ✅ available  🆕 v0.11.0
   gitee gist unstar         --agent-help   ✅ available  🆕 v0.11.0
   gitee gist clone          --agent-help   ✅ available  🆕 v0.6.0
+  gitee gist comments       --agent-help   ✅ available  🆕 v0.12.0
+  gitee gist comment        --agent-help   ✅ available  🆕 v0.12.0
+  gitee gist comment-delete --agent-help   ✅ available  🆕 v0.12.0
 
 ### ssh-key — SSH key management  🆕 v0.6.0
   gitee ssh-key list        --agent-help   ✅ available

@@ -134,6 +134,29 @@ func GistUnstar(gistID string) string {
 	return fmt.Sprintf("/gists/%s/star", gistID)
 }
 
+// Gist comment endpoints (P2-11)
+//
+// Gitee v5 gist comment paths under /gists/{gist_id}/comments:
+//   GET    — list comments on a gist
+//   POST   — create a new comment on the gist (body: {body})
+//   DELETE — remove a comment by id
+//
+// The same path is used for list (GET) and create (POST); the numeric
+// comment id is appended as a path segment for DELETE. Gist ids are
+// URL-safe alphanumeric/hyphen strings so no QueryEscape is needed —
+// matches the existing GistGet / GistEdit builders above.
+func GistCommentsList(gistID string) string {
+	return fmt.Sprintf("/gists/%s/comments", gistID)
+}
+
+func GistCommentCreate(gistID string) string {
+	return fmt.Sprintf("/gists/%s/comments", gistID)
+}
+
+func GistCommentDelete(gistID string, commentID int64) string {
+	return fmt.Sprintf("/gists/%s/comments/%d", gistID, commentID)
+}
+
 // Organization endpoints
 func OrgsList() string {
 	return "/user/orgs"
