@@ -363,3 +363,41 @@ func CollaboratorAdd(owner, repo, username string) string {
 func CollaboratorRemove(owner, repo, username string) string {
 	return fmt.Sprintf("/repos/%s/%s/collaborators/%s", owner, repo, url.QueryEscape(username))
 }
+
+// Star / unstar endpoints (P1-6)
+//
+// Gitee v5 stars and watches are user-scoped (no {owner}/{repo} in the
+// body — the path itself carries it). The watch endpoint additionally
+// accepts a `watch_type` body field with three values:
+//   watching       — full activity (issues, PRs, releases, comments)
+//   releases_only  — release-only notifications
+//   ignoring       — unsubscribe entirely (the user can still star)
+//
+// Star and watch live at different paths (starred vs subscriptions) so
+// they are independent: starring does not subscribe, and subscribing
+// does not star. Both PUT/DELETE pairs return 204 No Content on
+// success; the list endpoint echoes the user's starred repos as full
+// Repository objects (compatible with /user/repos shape).
+func RepoStar(owner, repo string) string {
+	return fmt.Sprintf("/user/starred/%s/%s", owner, repo)
+}
+
+func RepoUnstar(owner, repo string) string {
+	return fmt.Sprintf("/user/starred/%s/%s", owner, repo)
+}
+
+func RepoWatch(owner, repo string) string {
+	return fmt.Sprintf("/user/subscriptions/%s/%s", owner, repo)
+}
+
+func RepoUnwatch(owner, repo string) string {
+	return fmt.Sprintf("/user/subscriptions/%s/%s", owner, repo)
+}
+
+// UserStarredList returns the path to list repositories the authenticated
+// user has starred. Optional query params (sort, direction, per_page) are
+// appended at the call site; the builder is a constant because the path
+// is user-scoped with no segments to fill.
+func UserStarredList() string {
+	return "/user/starred"
+}

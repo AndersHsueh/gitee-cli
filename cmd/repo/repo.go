@@ -25,4 +25,6 @@ func init() {
 	RepoCmd.AddCommand(renameCmd)
 	RepoCmd.AddCommand(tagCmd)
 	RepoCmd.AddCommand(collaboratorCmd)
+	RepoCmd.AddCommand(starCmd)
+	RepoCmd.AddCommand(watchCmd)
 }
