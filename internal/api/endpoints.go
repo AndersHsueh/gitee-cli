@@ -313,3 +313,33 @@ func ReleaseAssetUpload(owner, repo string, releaseID int64) string {
 func ReleaseDeleteAsset(owner, repo string, releaseID int64, assetID int64) string {
 	return fmt.Sprintf("/repos/%s/%s/releases/%d/assets/%d", owner, repo, releaseID, assetID)
 }
+
+// Notification endpoints (P0-4)
+//
+// Gitee v5 exposes a GitHub-compatible notification center:
+//   GET    /notifications/count          — unread count for the authenticated user
+//   GET    /notifications/threads        — list threads (optionally ?unread=true)
+//   PUT    /notifications/threads/{id}   — mark a single thread as read
+//   PUT    /notifications/threads        — mark ALL threads as read (body controls scope)
+//
+// These are user-scoped (no {owner}/{repo} in the path), so the endpoints
+// are constants rather than builders. The id in the mark-read-single path
+// is a string (Gitee uses alphanumeric thread ids) so it is URL-escaped.
+func NotificationsCount() string {
+	return "/notifications/count"
+}
+
+func NotificationsList() string {
+	return "/notifications/threads"
+}
+
+func NotificationMarkRead(threadID string) string {
+	return fmt.Sprintf("/notifications/threads/%s", url.QueryEscape(threadID))
+}
+
+// NotificationsMarkAllRead is the same path as NotificationsList; the
+// distinction is purely the HTTP verb (PUT vs GET). Kept as a separate
+// builder for symmetry and to make call-sites self-documenting.
+func NotificationsMarkAllRead() string {
+	return "/notifications/threads"
+}

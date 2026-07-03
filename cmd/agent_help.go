@@ -149,6 +149,11 @@ gitee-cli ships TWO help systems side-by-side:
   gitee milestone edit      --agent-help   ✅ available
   gitee milestone delete    --agent-help   ✅ available
 
+### notification — Notification center  🆕 v0.12.0
+  gitee notification list   --agent-help   ✅ available
+  gitee notification count  --agent-help   ✅ available
+  gitee notification read   --agent-help   ✅ available
+
 ### api — Raw API access
   gitee api                 --agent-help   ❌ not yet (escape hatch — see --help)
 
