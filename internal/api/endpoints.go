@@ -436,3 +436,35 @@ func RepoContentsDelete(owner, repo, path string) string {
 func RepoRawContent(owner, repo, path string) string {
 	return fmt.Sprintf("/repos/%s/%s/raw/%s", owner, repo, path)
 }
+
+// Commit / compare endpoints (P1-8)
+//
+// Gitee v5 exposes the commit history and diff comparison under:
+//
+//   GET  /repos/{owner}/{repo}/commits              — list commits
+//   GET  /repos/{owner}/{repo}/commits/{sha}        — single commit detail
+//   GET  /repos/{owner}/{repo}/compare/{base}...{head}
+//                                                  — diff two refs
+//
+// The {sha} in the single-commit path is URL-escaped because Gitee
+// accepts both 40-char SHAs and short refs (branch/tag names) and the
+// latter can contain slashes. The compare path also accepts short refs
+// (branches, tags) so its segments are likewise escaped.
+//
+// List/detail/compare support optional query params (sha, path, author,
+// since, until, per_page, page) that the cmd layer attaches via url.Values
+// when it builds the final request URL — no parameter passing through the
+// builder, matching how ReposTagsList / RepoContentsGet work elsewhere
+// in this file.
+func ReposCommitsList(owner, repo string) string {
+	return fmt.Sprintf("/repos/%s/%s/commits", owner, repo)
+}
+
+func RepoCommitGet(owner, repo, sha string) string {
+	return fmt.Sprintf("/repos/%s/%s/commits/%s", owner, repo, url.QueryEscape(sha))
+}
+
+func ReposCompare(owner, repo, base, head string) string {
+	return fmt.Sprintf("/repos/%s/%s/compare/%s...%s",
+		owner, repo, url.QueryEscape(base), url.QueryEscape(head))
+}

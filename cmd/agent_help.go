@@ -66,6 +66,10 @@ gitee-cli ships TWO help systems side-by-side:
   gitee repo file view               --agent-help   ✅ available  🆕 v0.12.0
   gitee repo file push               --agent-help   ✅ available  🆕 v0.12.0
   gitee repo file delete             --agent-help   ✅ available  🆕 v0.12.0
+  gitee repo commits                 --agent-help   ✅ available  🆕 v0.12.0
+  gitee repo commits list            --agent-help   ✅ available  🆕 v0.12.0
+  gitee repo commits view            --agent-help   ✅ available  🆕 v0.12.0
+  gitee repo compare                 --agent-help   ✅ available  🆕 v0.12.0
   gitee repo archive        --agent-help   ✅ available  🆕 v0.5.0
   gitee repo sync           --agent-help   ✅ available  🆕 v0.5.0
   gitee repo rename         --agent-help   ✅ available  🆕 v0.5.0

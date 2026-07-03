@@ -28,4 +28,6 @@ func init() {
 	RepoCmd.AddCommand(starCmd)
 	RepoCmd.AddCommand(watchCmd)
 	RepoCmd.AddCommand(fileCmd)
+	RepoCmd.AddCommand(commitsCmd)
+	RepoCmd.AddCommand(compareCmd)
 }
