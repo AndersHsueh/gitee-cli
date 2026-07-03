@@ -532,3 +532,32 @@ func UserFollow(username string) string {
 func UserUnfollow(username string) string {
 	return fmt.Sprintf("/user/following/%s", url.QueryEscape(username))
 }
+
+// Branch protection endpoints (P2-12)
+//
+// Gitee v5 branch protection paths under /repos/{owner}/{repo}/branches:
+//   PUT    /repos/{owner}/{repo}/branches/{branch}/protection — enable protection
+//   DELETE /repos/{owner}/{repo}/branches/{branch}/protection — remove protection
+//   GET    /repos/{owner}/{repo}/branches/{branch}            — read `protected` field
+//
+// The {branch} segment is URL-escaped because branch names may contain
+// slashes (e.g. `feature/foo`) or other ref-name characters that require
+// encoding. Both protect and unprotect share the same path; the verb
+// (PUT vs DELETE) is what differentiates them, mirroring how
+// RepoStar / RepoUnstar, RepoWatch / RepoUnwatch, and the
+// collaborator add/remove endpoints are structured in this file.
+//
+// The PUT body is empty — protection in Gitee v5 is binary on/off with
+// no per-branch options exposed by the API at this time (the
+// `protected` field returned by the GET branch response is the only
+// state we can toggle).
+func RepoBranchProtection(owner, repo, branch string) string {
+	return fmt.Sprintf("/repos/%s/%s/branches/%s/protection", owner, repo, url.QueryEscape(branch))
+}
+
+// RepoUnprotectBranch shares the path with RepoBranchProtection; the
+// distinction is purely the HTTP verb (DELETE vs PUT). Kept as a
+// separate builder for symmetry and to make call-sites self-documenting.
+func RepoUnprotectBranch(owner, repo, branch string) string {
+	return fmt.Sprintf("/repos/%s/%s/branches/%s/protection", owner, repo, url.QueryEscape(branch))
+}
