@@ -276,6 +276,32 @@ func PRsChecks(owner, repo, ref string) string {
 	return fmt.Sprintf("/repos/%s/%s/commits/%s/check-runs", owner, repo, url.QueryEscape(ref))
 }
 
+// Milestone endpoints (P0-3)
+//
+// Gitee v5 milestones are scoped per-repo and addressed by `number`
+// (not by internal id) on read/edit/delete. The id is reserved for
+// read-only contexts (e.g. webhook payloads) and is not part of the URL
+// for normal CRUD. `state` defaults to "open" on POST when omitted.
+func MilestonesList(owner, repo string) string {
+	return fmt.Sprintf("/repos/%s/%s/milestones", owner, repo)
+}
+
+func MilestoneGet(owner, repo string, number int) string {
+	return fmt.Sprintf("/repos/%s/%s/milestones/%d", owner, repo, number)
+}
+
+func MilestoneCreate(owner, repo string) string {
+	return fmt.Sprintf("/repos/%s/%s/milestones", owner, repo)
+}
+
+func MilestoneUpdate(owner, repo string, number int) string {
+	return fmt.Sprintf("/repos/%s/%s/milestones/%d", owner, repo, number)
+}
+
+func MilestoneDelete(owner, repo string, number int) string {
+	return fmt.Sprintf("/repos/%s/%s/milestones/%d", owner, repo, number)
+}
+
 // Release asset endpoints (v0.10.0)
 // Gitee v5 asset operations use the numeric release ID (not tag name).
 // The caller should first call ReleasesGet to resolve tag → ID, then

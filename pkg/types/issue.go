@@ -13,10 +13,37 @@ type Label struct {
 }
 
 type Milestone struct {
-	ID     int64  `json:"id"`
-	Number int    `json:"number"`
-	Title  string `json:"title"`
-	State  string `json:"state"`
+	ID           int64      `json:"id"`
+	Number       int        `json:"number"`
+	Title        string     `json:"title"`
+	Description  string     `json:"description,omitempty"`
+	State        string     `json:"state"` // "open" or "closed"
+	OpenIssues   int        `json:"open_issues"`
+	ClosedIssues int        `json:"closed_issues"`
+	DueOn        *time.Time `json:"due_on,omitempty"`
+	HTMLURL      string     `json:"html_url"`
+	CreatedAt    time.Time  `json:"created_at"`
+	UpdatedAt    time.Time  `json:"updated_at"`
+}
+
+// MilestoneCreateRequest is the body for POST /repos/{owner}/{repo}/milestones.
+// Only `title` is required; everything else is optional and will be omitted
+// from the wire payload when empty.
+type MilestoneCreateRequest struct {
+	Title       string `json:"title"`
+	Description string `json:"description,omitempty"`
+	DueOn       string `json:"due_on,omitempty"` // ISO 8601 date (YYYY-MM-DD)
+	State       string `json:"state,omitempty"`  // "open" (default) or "closed"
+}
+
+// MilestoneUpdateRequest is the body for PATCH /repos/{owner}/{repo}/milestones/{number}.
+// All fields are optional; only the supplied fields are sent (omitempty),
+// so leaving a field blank preserves its current value on the server.
+type MilestoneUpdateRequest struct {
+	Title       string `json:"title,omitempty"`
+	Description string `json:"description,omitempty"`
+	DueOn       string `json:"due_on,omitempty"`
+	State       string `json:"state,omitempty"`
 }
 
 type Issue struct {

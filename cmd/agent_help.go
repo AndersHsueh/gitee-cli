@@ -142,6 +142,13 @@ gitee-cli ships TWO help systems side-by-side:
   gitee label delete        --agent-help   ✅ available
   gitee label clone         --agent-help   ✅ available
 
+### milestone — Repository milestones  🆕 v0.12.0
+  gitee milestone list      --agent-help   ✅ available
+  gitee milestone view      --agent-help   ✅ available
+  gitee milestone create    --agent-help   ✅ available
+  gitee milestone edit      --agent-help   ✅ available
+  gitee milestone delete    --agent-help   ✅ available
+
 ### api — Raw API access
   gitee api                 --agent-help   ❌ not yet (escape hatch — see --help)
 

@@ -12,6 +12,7 @@ import (
 	"gitee-cli/cmd/help_topics"
 	"gitee-cli/cmd/issue"
 	"gitee-cli/cmd/label"
+	"gitee-cli/cmd/milestone"
 	"gitee-cli/cmd/org"
 	"gitee-cli/cmd/pr"
 	"gitee-cli/cmd/release"
@@ -38,6 +39,7 @@ func main() {
 		// P0 additions
 		release.ReleaseCmd,
 		label.LabelCmd,
+		milestone.MilestoneCmd,
 		// P1a additions
 		sshkey.SSHKeyCmd,
 		// NOTE: gpg-key removed — Gitee v5 does not expose a GPG key API
