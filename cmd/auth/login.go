@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	"gitee-cli/cmd"
@@ -26,6 +27,13 @@ and verifies it against the /user endpoint.
 Pass --token to log in with a new token; on success the token is
 written to ~/.gitee-cli/settings.json so later commands can use it
 without re-authenticating.`,
+	PreRunE: func(c *cobra.Command, args []string) error {
+		if cmd.GlobalAgentHelp {
+			fmt.Fprintln(os.Stderr, "auth login is an operational/config command. Use --help for usage.")
+			os.Exit(0)
+		}
+		return nil
+	},
 	RunE: runLogin,
 }
 

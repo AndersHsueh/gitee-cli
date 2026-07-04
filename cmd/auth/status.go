@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -19,6 +20,13 @@ var statusCmd = &cobra.Command{
 	Short: "Show authentication status",
 	Example: `  gitee auth status
   gitee auth status --hostname enterprise.gitee.com`,
+	PreRunE: func(c *cobra.Command, args []string) error {
+		if cmd.GlobalAgentHelp {
+			fmt.Fprintln(os.Stderr, "auth status is an operational/config command. Use --help for usage.")
+			os.Exit(0)
+		}
+		return nil
+	},
 	RunE: runStatus,
 }
 
