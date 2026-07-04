@@ -202,24 +202,30 @@ with the originating issue. Run:
 
 ## 当前覆盖
 
-截至 v0.10.0(2026-06-08),共 **42 个 verb** 已获得完整 `--agent-help`:
+截至 v0.12.1(2026-07-04),共 **131 个 verb** 已获得完整 `--agent-help`(实测:`gitee help reference` 列出全部叶子命令,逐个跑 `--agent-help`,统计输出以 `# gitee` 开头的数量):
 
 | 命令组 | 已有 Agent Help |
 |--------|----------------|
-| repo | archive, sync, rename |
-| issue | create, comments, status |
-| pr | create, comment, checkout, ready, edit, checks, status |
-| gist | clone |
+| agent | onboard |
+| repo | list, create, view, fork, edit, delete, clone, browse, branches, archive, sync, rename, set-default (n/a), tag (list, create), collaborator (list, add, remove), star (list, star, unstar), watch (watch, unwatch), file (view, push, delete), commits (list, view), compare, protect (protect, unprotect) |
+| issue | list, create, view, edit, close, reopen, comment, comments, status |
+| pr | list, create, view, merge, review, close, reopen, diff, comments, comment, checkout, ready, edit, checks, status |
+| gist | list, view, create, edit, delete, star, unstar, clone, comments, comment, comment-delete |
 | ssh-key | list, add, delete |
+| user | view, follow, unfollow, followers, following |
 | webhook | list, create, view, edit, delete, test |
+| org | list, view, member, repo, issue |
 | release | list, view, create, edit, delete, download, upload, delete-asset |
 | label | list, view, create, edit, delete, clone |
+| milestone | list, view, create, edit, delete |
+| notification | list, count, read |
 | status | ✅ |
 | extension | list, install, remove, upgrade, create |
 | alias | set, list, delete |
-| search | code, commits |
+| search | repos, issues, users, code, commits |
+| api | raw (auth-free doc) |
 
-**覆盖策略**:所有"写"命令优先,跨仓状态查询次之。Operational/config 类命令(auth、config、completion)标注为 `n/a`。
+**覆盖策略**:所有"写"命令优先,跨仓状态查询次之。Operational/config 类命令(auth、config、completion)标注为 `n/a` —— `gitee auth login --agent-help` 等会打印一行 `operational/config — use --help` 后 exit 0,作为 Agent 探测时的稳定信号,而不是触发真实登录流。
 
 ---
 
@@ -234,7 +240,7 @@ with the originating issue. Run:
 | 更新 coverage matrix | 1 分钟 |
 | **每个命令合计** | **~30 分钟** |
 
-gitee-cli 当前有 42 个带 agent-help 的 verb。如果每个平均 30 分钟,**总投入约 21 小时**——不到三个工作日。
+gitee-cli 当前有 131 个带 agent-help 的 verb。如果每个平均 30 分钟,**总投入约 65.5 小时**——约 8 个工作日。
 
 对于一个能让 Agent 可靠性提升一个量级的特性来说,这是整个项目里 ROI 最高的投资之一。
 
