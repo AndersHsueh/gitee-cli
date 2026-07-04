@@ -1,18 +1,19 @@
 ---
 title: "Dual-surface CLI Design: 同一份 CLI,长两张脸"
 date: 2026-06-08
+updated: 2026-07-04
 author: AndersHsueh
 tags: [cli, ai-agent, developer-tools, open-source, gitee, golang, design-pattern]
 description: >
   gitee-cli 是全球第一个实现 Dual-surface CLI Design 的开源 CLI 工具。
   传统 --help 试图用同一份文档同时服务人类和 AI Agent,结果两边都不爽——
-  这篇文章解释我们为什么把 CLI 拆成两张脸、怎么做、以及你的项目为什么
-  也应该这么做。
+  这篇文章解释我们为什么把 CLI 拆成两张脸、怎么做、踩过哪些坑、
+  以及你的项目为什么也应该这么做。
 ---
 
 # Dual-surface CLI Design: 同一份 CLI,长两张脸
 
-> **TL;DR**: CLI 工具有两类用户——**人**和 **AI Agent**——他们对"帮助文档"的需求不是详略版关系,而是**结构上正交**的两套需求。我们在 gitee-cli 里实现了 `--help`(人类)和 `--agent-help`(AI Agent)两套并行的帮助系统,把这套设计叫做 **Dual-surface CLI Design**。本文解释为什么传统 --help 是错误妥协、双面架构怎么做、以及你的项目为什么也应该这么做。
+> **TL;DR**: CLI 工具有两类用户——**人**和 **AI Agent**——他们对"帮助文档"的需求不是详略版关系,而是**结构上正交**的两套需求。我们在 gitee-cli 里实现了 `--help`(人类)和 `--agent-help`(AI Agent)两套并行的帮助系统,把这套设计叫做 **Dual-surface CLI Design**。截至 v0.12.1,它覆盖 131 个 verb,由 contract test 守护,并遵守三条"可达性法则"。本文解释为什么传统 --help 是错误妥协、双面架构怎么做、我们在真实迭代中踩过什么坑、以及你的项目为什么也应该这么做。
 
 ---
 
@@ -200,6 +201,55 @@ with the originating issue. Run:
 
 ---
 
+## 可达性三法则:文档存在 ≠ 文档可达
+
+这一节是 v0.12.1 用真实事故换来的。我们曾经以为"每个命令都写了 Agent 文档"就够了,直到全量扫描发现:**文档写了,但 Agent 根本够不着。** 三种够不着的方式,对应三条法则:
+
+### 法则一:文档必须在参数校验之前可达
+
+Agent 探测命令用法时,恰恰**因为不知道要传什么参数**才来查文档。如果框架的必填参数校验先于文档钩子执行,`gitee gist comments --agent-help` 会得到 `Error: accepts 1 arg(s), received 0`——文档明明存在,Agent 却永远看不到。
+
+在 cobra 里,`ValidateArgs` 先于 `PreRunE` 执行,所以光把钩子放进 PreRunE 是不够的,必须包装 Args 校验器本身:
+
+```go
+// AgentHelpAwareArgs: --agent-help 在场时跳过位置参数校验
+func AgentHelpAwareArgs(wrapped cobra.PositionalArgs) cobra.PositionalArgs {
+	return func(c *cobra.Command, args []string) error {
+		if GlobalAgentHelp {
+			return nil
+		}
+		return wrapped(c, args)
+	}
+}
+```
+
+这个坑我们在同一天里踩了两次——修完 17 个命令之后,新加的 3 个 n/a notice 又栽在同一个执行顺序上。**框架的钩子执行顺序,是 Dual-surface 实现里最阴险的细节。**
+
+### 法则二:文档必须在认证之前可达
+
+`gitee api raw --agent-help` 曾经返回 `not authenticated`。一个还没配 token 的 Agent(比如刚被 spawn 出来的 CI 子进程)最需要文档,却被认证墙挡在门外。**查文档永远不应该需要权限。** 把 agent-help 判断放在一切认证检查之前。
+
+### 法则三:探测文档绝不能执行真命令
+
+`gitee auth login --agent-help` 曾经会**真的开始登录流程**。对 Agent 来说这是最危险的一类陷阱:它只是想看看说明书,结果误触发了带副作用的交互式流程。对于刻意不提供 Agent 文档的 operational 命令(auth/config/completion),正确行为是打印一行稳定的 n/a 信号后立即退出:
+
+```
+auth login is an operational/config command. Use --help for usage.
+```
+
+Agent 拿到这个信号就知道:这条命令不归我编排,绕开。
+
+> 三条法则合起来就是一句话:**Agent Surface 的可达性是无条件的**——不因缺参数而不可达,不因没 token 而不可达,不因探测本身而产生副作用。
+
+---
+
+## 覆盖会腐烂:用 contract test 把承诺钉死
+
+宣言好写,难的是三个月后新命令还守不守规矩。gitee-cli 用两个机制防腐烂:
+
+1. **Contract test 守门**:`cmd/agent_help_contract_test.go` 断言每个注册的命令都在根覆盖矩阵里有条目。新命令不写 Agent 文档?CI 直接红。覆盖率不是靠自觉,是靠测试。
+2. **根覆盖矩阵**:`gitee --agent-help` 输出全部命令的覆盖状态,Agent(和人)一眼看到哪些命令有完整文档、哪些标注 n/a。矩阵本身也是 Agent Surface 的一部分。
+
 ## 当前覆盖
 
 截至 v0.12.1(2026-07-04),共 **131 个 verb** 已获得完整 `--agent-help`(实测:`gitee help reference` 列出全部叶子命令,逐个跑 `--agent-help`,统计输出以 `# gitee` 开头的数量):
@@ -229,9 +279,9 @@ with the originating issue. Run:
 
 ---
 
-## 成本分析:实现一份 Agent Surface 需要多少工作?
+## 成本分析:一个有趣的元循环
 
-加一个命令的 `--agent-help` 需要多少工作量?
+加一个命令的 `--agent-help` 需要多少工作量?人工写的话:
 
 | 环节 | 时间 |
 |------|------|
@@ -240,9 +290,13 @@ with the originating issue. Run:
 | 更新 coverage matrix | 1 分钟 |
 | **每个命令合计** | **~30 分钟** |
 
-gitee-cli 当前有 131 个带 agent-help 的 verb。如果每个平均 30 分钟,**总投入约 65.5 小时**——约 8 个工作日。
+131 个 verb × 30 分钟 ≈ 65 小时。听起来不少?这里有个**元循环**值得说破:
 
-对于一个能让 Agent 可靠性提升一个量级的特性来说,这是整个项目里 ROI 最高的投资之一。
+gitee-cli 从 v0.11 到 v0.12 的大部分 Agent 文档,是由 **AI Agent 编队**写的——人类定义 11 维度 schema 和验收标准,contract test 守门,Agent 批量生产,另一个独立 Agent 逐条验收。**给 AI Agent 用的文档,由 AI Agent 来写,边际成本趋近于零;人类的角色从"作者"变成"立法者 + 验收者"。**
+
+这恰恰是 Dual-surface 的自证:因为文档是**结构化、有 schema、可校验**的,它才能被机器生产和机器验收。传统 --help 那种自由散文,反而做不到这一点。
+
+对于一个能让 Agent 可靠性提升一个量级的特性来说,这是整个项目里 ROI 最高的投资——而且这个 ROI 还在随着 Agent 生产力的提升继续上涨。
 
 ---
 
@@ -253,11 +307,11 @@ gitee-cli 当前有 131 个带 agent-help 的 verb。如果每个平均 30 分�
 **不需要等"行业标准"出现。** gitee-cli 已经在 2025–2026 年证明了这件事可行且有效。你只需要:
 
 1. 在根命令上加一个 `--agent-help` bool flag
-2. 在目标命令上加 `PreRunE` 钩子,拦截 flag 并输出结构化文档
-3. 写 11 个 section 的 Agent surface(用我们的模板,20 分钟一个命令)
-4. 在 `--agent-help` 根页面维护一张覆盖矩阵
+2. 在目标命令上加 `PreRunE` 钩子,拦截 flag 并输出结构化文档——**并记住可达性三法则**(参数校验、认证、副作用,一个都不能挡在文档前面)
+3. 写 11 个 section 的 Agent surface(用我们的模板;或者像我们一样,让 Agent 写、用测试验收)
+4. 在 `--agent-help` 根页面维护一张覆盖矩阵,用 contract test 钉死它
 
-就这么简单。**几百行文本,几个小时的投入,换来的是一整个 Agent 生态能可靠地使用你的工具。**
+就这么简单。**几百行文本、一个包装函数、一个契约测试,换来的是一整个 Agent 生态能可靠地使用你的工具。**
 
 ---
 
