@@ -3,6 +3,7 @@ package alias
 import (
 	"fmt"
 
+	"gitee-cli/cmd"
 	"gitee-cli/internal/alias"
 	"gitee-cli/internal/utils"
 
@@ -16,7 +17,7 @@ var deleteCmd = &cobra.Command{
 	Use:     "delete <name>",
 	Aliases: []string{"rm"},
 	Short:   "Remove an alias",
-	Args:    cobra.ExactArgs(1),
+	Args:    cmd.AgentHelpAwareArgs(cobra.ExactArgs(1)),
 	Example: `  gitee alias delete co
   gitee alias rm co --force
   gitee alias delete co               # prompts y/N`,

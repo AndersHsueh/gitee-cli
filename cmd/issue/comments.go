@@ -29,7 +29,7 @@ var commentsCmd = &cobra.Command{
 	Example: `  gitee issue comments 42 --repo owner/repo
   gitee issue comments 42 -R owner/repo --limit 50
   gitee issue comments 42 -R owner/repo --output json`,
-	Args: cobra.ExactArgs(1),
+	Args: cmd.AgentHelpAwareArgs(cobra.ExactArgs(1)),
 	PreRunE: func(c *cobra.Command, args []string) error {
 		if cmd.GlobalAgentHelp {
 			cmd.PrintAgentHelp(issueCommentsAgentHelp)

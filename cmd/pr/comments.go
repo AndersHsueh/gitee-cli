@@ -23,7 +23,7 @@ var commentsCmd = &cobra.Command{
 	Use:     "comments <number>",
 	Short:   "List comments on a pull request",
 	Example: `  gitee pr comments 42 --repo owner/repo`,
-	Args:    cobra.ExactArgs(1),
+	Args:    cmd.AgentHelpAwareArgs(cobra.ExactArgs(1)),
 	// PreRunE fires BEFORE the cobra arg check, so an agent can request
 	// --agent-help even when <number> is missing.
 	PreRunE: func(c *cobra.Command, args []string) error {

@@ -47,7 +47,7 @@ var reposFlags struct {
 var searchReposCmd = &cobra.Command{
 	Use:   "repos <query>",
 	Short: "Search repositories",
-	Args:  cobra.MinimumNArgs(1),
+	Args:  cmd.AgentHelpAwareArgs(cobra.MinimumNArgs(1)),
 	PreRunE: func(c *cobra.Command, args []string) error {
 		if cmd.GlobalAgentHelp {
 			cmd.PrintAgentHelp(searchReposAgentHelp)
@@ -136,7 +136,7 @@ var issuesFlags struct {
 var searchIssuesCmd = &cobra.Command{
 	Use:   "issues <query>",
 	Short: "Search issues across repositories",
-	Args:  cobra.MinimumNArgs(1),
+	Args:  cmd.AgentHelpAwareArgs(cobra.MinimumNArgs(1)),
 	PreRunE: func(c *cobra.Command, args []string) error {
 		if cmd.GlobalAgentHelp {
 			cmd.PrintAgentHelp(searchIssuesAgentHelp)
@@ -192,7 +192,7 @@ var usersFlags struct {
 var searchUsersCmd = &cobra.Command{
 	Use:   "users <query>",
 	Short: "Search users",
-	Args:  cobra.MinimumNArgs(1),
+	Args:  cmd.AgentHelpAwareArgs(cobra.MinimumNArgs(1)),
 	PreRunE: func(c *cobra.Command, args []string) error {
 		if cmd.GlobalAgentHelp {
 			cmd.PrintAgentHelp(searchUsersAgentHelp)

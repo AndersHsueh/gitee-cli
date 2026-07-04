@@ -17,7 +17,7 @@ import (
 var viewCmd = &cobra.Command{
 	Use:     "view <number>",
 	Short:   "View details of an issue",
-	Args:    cobra.ExactArgs(1),
+	Args:    cmd.AgentHelpAwareArgs(cobra.ExactArgs(1)),
 	Example: `  gitee issue view 42 --repo owner/repo`,
 	PreRunE: func(c *cobra.Command, args []string) error {
 		if cmd.GlobalAgentHelp {

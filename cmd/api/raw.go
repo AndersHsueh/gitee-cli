@@ -24,7 +24,7 @@ var rawFlags struct {
 var rawCmd = &cobra.Command{
 	Use:   "raw <method> <path>",
 	Short: "Make raw API request",
-	Args:  cobra.ExactArgs(2),
+	Args:  cmd.AgentHelpAwareArgs(cobra.ExactArgs(2)),
 	RunE:  runRaw,
 }
 
@@ -38,7 +38,7 @@ Useful for testing or accessing endpoints not yet covered by dedicated commands.
   gitee api POST /user/repos --field name=my-repo --field private=true
   gitee api DELETE /repos/owner/repo
   gitee api GET /search/repositories?q=gitee --paginate`,
-	Args: cobra.ExactArgs(2),
+	Args: cmd.AgentHelpAwareArgs(cobra.ExactArgs(2)),
 	RunE: runAPI,
 }
 

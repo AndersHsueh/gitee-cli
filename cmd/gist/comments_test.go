@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
 	"gitee-cli/pkg/types"
 
@@ -247,4 +248,43 @@ func TestGistCommentDeleteCommandRejectsNonNumericID(t *testing.T) {
 	err := runGistCommentDelete(commentDeleteCmd, []string{"abc123def", "not-an-int"})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid comment id")
+}
+
+// TestGistCommentsArgsBypassWithAgentHelp verifies the
+// AgentHelpAwareArgs wrapper on cobra.ExactArgs(1) lets
+// `gitee gist comments --agent-help` reach PreRunE without a
+// <gist_id> positional.
+func TestGistCommentsArgsBypassWithAgentHelp(t *testing.T) {
+	orig := cmd.GlobalAgentHelp
+	defer func() { cmd.GlobalAgentHelp = orig }()
+	cmd.GlobalAgentHelp = true
+	assert.NoError(t, commentsCmd.Args(commentsCmd, nil))
+}
+
+// TestGistCommentArgsBypassWithAgentHelp verifies the wrapper on
+// cobra.ExactArgs(1) for `gitee gist comment --agent-help`.
+func TestGistCommentArgsBypassWithAgentHelp(t *testing.T) {
+	orig := cmd.GlobalAgentHelp
+	defer func() { cmd.GlobalAgentHelp = orig }()
+	cmd.GlobalAgentHelp = true
+	assert.NoError(t, commentCmd.Args(commentCmd, nil))
+}
+
+// TestGistCommentDeleteArgsBypassWithAgentHelp verifies the wrapper
+// on cobra.ExactArgs(2) for `gitee gist comment-delete --agent-help`.
+// We pass nil to Args and rely on the wrapper short-circuit.
+func TestGistCommentDeleteArgsBypassWithAgentHelp(t *testing.T) {
+	orig := cmd.GlobalAgentHelp
+	defer func() { cmd.GlobalAgentHelp = orig }()
+	cmd.GlobalAgentHelp = true
+	assert.NoError(t, commentDeleteCmd.Args(commentDeleteCmd, nil))
+}
+
+// TestGistUnstarArgsBypassWithAgentHelp verifies the wrapper on
+// cobra.ExactArgs(1) for `gitee gist unstar --agent-help`.
+func TestGistUnstarArgsBypassWithAgentHelp(t *testing.T) {
+	orig := cmd.GlobalAgentHelp
+	defer func() { cmd.GlobalAgentHelp = orig }()
+	cmd.GlobalAgentHelp = true
+	assert.NoError(t, unstarCmd.Args(unstarCmd, nil))
 }

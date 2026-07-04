@@ -3,6 +3,8 @@ package repo
 import (
 	"strings"
 	"testing"
+
+	"gitee-cli/cmd"
 )
 
 // Each Test<Verb>AgentHelpContent verifies the verb's agent-targeted help
@@ -299,5 +301,18 @@ func TestRepoFlagsCoveredInAgentHelp(t *testing.T) {
 		if !strings.Contains(c.inString, c.flag) {
 			t.Errorf("flag %q must be mentioned in agent help", c.flag)
 		}
+	}
+}
+
+// TestRepoCloneArgsBypassWithAgentHelp verifies the
+// AgentHelpAwareArgs wrapper on cobra.MinimumNArgs(1) lets
+// `gitee repo clone --agent-help` reach PreRunE without the
+// required <owner>/<repo> positional.
+func TestRepoCloneArgsBypassWithAgentHelp(t *testing.T) {
+	orig := cmd.GlobalAgentHelp
+	defer func() { cmd.GlobalAgentHelp = orig }()
+	cmd.GlobalAgentHelp = true
+	if err := cloneCmd.Args(cloneCmd, nil); err != nil {
+		t.Errorf("repo clone --agent-help with no positional should pass Args, got: %v", err)
 	}
 }

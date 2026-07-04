@@ -3,6 +3,8 @@ package extension
 import (
 	"strings"
 	"testing"
+
+	"gitee-cli/cmd"
 )
 
 // TestListAgentHelpContent verifies the list verb's agent-targeted
@@ -139,5 +141,44 @@ func TestExtensionCmdWiring(t *testing.T) {
 		if !got[want] {
 			t.Errorf("ExtensionCmd missing subcommand %q", want)
 		}
+	}
+}
+
+// withAgentHelp temporarily flips cmd.GlobalAgentHelp and restores it
+// at test end. Used by the bypass tests below so they don't bleed
+// state into sibling tests.
+func withAgentHelp(t *testing.T, on bool) {
+	t.Helper()
+	orig := cmd.GlobalAgentHelp
+	cmd.GlobalAgentHelp = on
+	t.Cleanup(func() { cmd.GlobalAgentHelp = orig })
+}
+
+// TestInstallArgsBypassWithAgentHelp verifies the
+// AgentHelpAwareArgs wrapper on cobra.ExactArgs(1) lets
+// `gitee extension install --agent-help` reach PreRunE without the
+// required <source> positional.
+func TestInstallArgsBypassWithAgentHelp(t *testing.T) {
+	withAgentHelp(t, true)
+	if err := installCmd.Args(installCmd, nil); err != nil {
+		t.Errorf("install --agent-help with no positional should pass Args, got: %v", err)
+	}
+}
+
+// TestCreateArgsBypassWithAgentHelp verifies the wrapper on
+// cobra.ExactArgs(1) for `gitee extension create --agent-help`.
+func TestCreateArgsBypassWithAgentHelp(t *testing.T) {
+	withAgentHelp(t, true)
+	if err := createCmd.Args(createCmd, nil); err != nil {
+		t.Errorf("create --agent-help with no positional should pass Args, got: %v", err)
+	}
+}
+
+// TestRemoveArgsBypassWithAgentHelp verifies the wrapper on
+// cobra.ExactArgs(1) for `gitee extension remove --agent-help`.
+func TestRemoveArgsBypassWithAgentHelp(t *testing.T) {
+	withAgentHelp(t, true)
+	if err := removeCmd.Args(removeCmd, nil); err != nil {
+		t.Errorf("remove --agent-help with no positional should pass Args, got: %v", err)
 	}
 }

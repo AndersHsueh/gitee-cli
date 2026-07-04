@@ -20,7 +20,7 @@ var removeCmd = &cobra.Command{
 	Use:     "remove <name>",
 	Aliases: []string{"rm"},
 	Short:   "Remove an installed extension",
-	Args:    cobra.ExactArgs(1),
+	Args:    cmd.AgentHelpAwareArgs(cobra.ExactArgs(1)),
 	Example: `  gitee extension remove myext
   gitee extension rm myext --force
   gitee extension remove myext                       # prompts y/N`,

@@ -1,5 +1,36 @@
 package cmd
 
+import (
+	"github.com/spf13/cobra"
+)
+
+// AgentHelpAwareArgs wraps a cobra positional-args validator so that
+// `--agent-help` can be served even when required positional args are
+// absent. Cobra runs ValidateArgs before PreRunE (where the agent-help
+// hook lives); flags are already parsed at that point, so we can bail
+// out before the wrapped validator rejects the missing args.
+//
+// Usage:
+//
+//	Args: cmd.AgentHelpAwareArgs(cobra.ExactArgs(1)),
+//
+// Or with a custom validator (preserves its error message):
+//
+//	Args: cmd.AgentHelpAwareArgs(func(c *cobra.Command, args []string) error {
+//	    if len(args) < 2 {
+//	        return fmt.Errorf("accepts 2 arg(s), received %d", len(args))
+//	    }
+//	    return nil
+//	}),
+func AgentHelpAwareArgs(wrapped cobra.PositionalArgs) cobra.PositionalArgs {
+	return func(c *cobra.Command, args []string) error {
+		if GlobalAgentHelp {
+			return nil
+		}
+		return wrapped(c, args)
+	}
+}
+
 // rootAgentHelp is the agent-targeted help printed when the user runs
 // `gitee --agent-help`. It is intentionally longer and more structured than
 // the default `--help` output: agents read carefully, humans skim.

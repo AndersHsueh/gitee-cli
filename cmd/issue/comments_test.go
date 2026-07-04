@@ -3,6 +3,8 @@ package issue
 import (
 	"strings"
 	"testing"
+
+	"gitee-cli/cmd"
 )
 
 func TestCommentsAgentHelpContent(t *testing.T) {
@@ -25,5 +27,29 @@ func TestCommentsAgentHelpContent(t *testing.T) {
 		if !strings.Contains(issueCommentsAgentHelp, want) {
 			t.Errorf("agent help missing required section: %q", want)
 		}
+	}
+}
+
+// TestIssueCommentsArgsBypassWithAgentHelp verifies the
+// AgentHelpAwareArgs wrapper on cobra.ExactArgs(1) lets
+// `gitee issue comments --agent-help` reach PreRunE without the
+// required <number> positional.
+func TestIssueCommentsArgsBypassWithAgentHelp(t *testing.T) {
+	orig := cmd.GlobalAgentHelp
+	defer func() { cmd.GlobalAgentHelp = orig }()
+	cmd.GlobalAgentHelp = true
+	if err := commentsCmd.Args(commentsCmd, nil); err != nil {
+		t.Errorf("issue comments --agent-help with no positional should pass Args, got: %v", err)
+	}
+}
+
+// TestIssueViewArgsBypassWithAgentHelp verifies the wrapper for
+// `gitee issue view --agent-help`.
+func TestIssueViewArgsBypassWithAgentHelp(t *testing.T) {
+	orig := cmd.GlobalAgentHelp
+	defer func() { cmd.GlobalAgentHelp = orig }()
+	cmd.GlobalAgentHelp = true
+	if err := viewCmd.Args(viewCmd, nil); err != nil {
+		t.Errorf("issue view --agent-help with no positional should pass Args, got: %v", err)
 	}
 }

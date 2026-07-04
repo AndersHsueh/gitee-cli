@@ -15,7 +15,7 @@ import (
 var createCmd = &cobra.Command{
 	Use:   "create <name>",
 	Short: "Scaffold a new extension in the current directory",
-	Args:  cobra.ExactArgs(1),
+	Args:  cmd.AgentHelpAwareArgs(cobra.ExactArgs(1)),
 	Example: `  gitee extension create myext
   # creates ./gitee-myext/ with myext/ executable + README
 

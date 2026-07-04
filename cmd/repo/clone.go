@@ -17,7 +17,7 @@ var cloneCmd = &cobra.Command{
 	Example: `  gitee repo clone owner/repo
   gitee repo clone owner/repo my-dir
   gitee repo clone owner/repo --depth 1`,
-	Args: cobra.MinimumNArgs(1),
+	Args: cmd.AgentHelpAwareArgs(cobra.MinimumNArgs(1)),
 	PreRunE: func(c *cobra.Command, args []string) error {
 		if cmd.GlobalAgentHelp {
 			cmd.PrintAgentHelp(repoCloneAgentHelp)

@@ -15,7 +15,7 @@ var unstarCmd = &cobra.Command{
 	Use:     "unstar <id>",
 	Short:   "Unstar a gist",
 	Example: `  gitee gist unstar <gistID>`,
-	Args:    cobra.ExactArgs(1),
+	Args:    cmd.AgentHelpAwareArgs(cobra.ExactArgs(1)),
 	PreRunE: func(c *cobra.Command, args []string) error {
 		if cmd.GlobalAgentHelp {
 			cmd.PrintAgentHelp(gistUnstarAgentHelp)

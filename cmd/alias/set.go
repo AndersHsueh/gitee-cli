@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"gitee-cli/cmd"
 	"gitee-cli/internal/alias"
 
 	"github.com/fatih/color"
@@ -13,12 +14,12 @@ import (
 var setCmd = &cobra.Command{
 	Use:   "set <name> <expansion>",
 	Short: "Define a new alias, or overwrite an existing one",
-	Args: func(c *cobra.Command, args []string) error {
+	Args: cmd.AgentHelpAwareArgs(func(c *cobra.Command, args []string) error {
 		if len(args) < 2 {
 			return fmt.Errorf("accepts 2 arg(s), received %d\n\nUsage: gitee alias set <name> <expansion...>\n\nExample: gitee alias set co 'pr checkout'", len(args))
 		}
 		return nil
-	},
+	}),
 	Example: `  gitee alias set co 'pr checkout'
   gitee alias set issues 'issue list --limit 50'
   gitee alias set mine 'issue list --assignee @me'`,

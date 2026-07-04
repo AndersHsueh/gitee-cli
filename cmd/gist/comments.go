@@ -23,7 +23,7 @@ var commentsCmd = &cobra.Command{
 	Short: "List comments on a gist",
 	Example: `  gitee gist comments abc123def
   gitee gist comments abc123def --output json`,
-	Args:    cobra.ExactArgs(1),
+	Args:    cmd.AgentHelpAwareArgs(cobra.ExactArgs(1)),
 	PreRunE: func(c *cobra.Command, args []string) error {
 		if cmd.GlobalAgentHelp {
 			cmd.PrintAgentHelp(gistCommentsAgentHelp)

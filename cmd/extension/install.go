@@ -23,7 +23,7 @@ var installFlags struct {
 var installCmd = &cobra.Command{
 	Use:   "install <owner/repo | /local/path>",
 	Short: "Install an extension from Gitee or a local path",
-	Args:  cobra.ExactArgs(1),
+	Args:  cmd.AgentHelpAwareArgs(cobra.ExactArgs(1)),
 	Example: `  gitee extension install andershsueh/my-tool
   gitee extension install https://gitee.com/owner/repo.git
   gitee extension install ./my-local-tool

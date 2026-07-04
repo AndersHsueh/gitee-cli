@@ -3,6 +3,8 @@ package search
 import (
 	"strings"
 	"testing"
+
+	"gitee-cli/cmd"
 )
 
 // TestReposAgentHelpContent verifies the repos verb's agent-targeted help
@@ -38,5 +40,40 @@ func TestReposAgentHelpContent(t *testing.T) {
 		if !strings.Contains(searchReposAgentHelp, want) {
 			t.Errorf("search repos --agent-help missing section/flag: %q", want)
 		}
+	}
+}
+
+// TestSearchReposArgsBypassWithAgentHelp verifies the
+// AgentHelpAwareArgs wrapper on cobra.MinimumNArgs(1) lets
+// `gitee search repos --agent-help` reach PreRunE without a
+// <query> positional.
+func TestSearchReposArgsBypassWithAgentHelp(t *testing.T) {
+	orig := cmd.GlobalAgentHelp
+	defer func() { cmd.GlobalAgentHelp = orig }()
+	cmd.GlobalAgentHelp = true
+	if err := searchReposCmd.Args(searchReposCmd, nil); err != nil {
+		t.Errorf("search repos --agent-help with no positional should pass Args, got: %v", err)
+	}
+}
+
+// TestSearchIssuesArgsBypassWithAgentHelp verifies the wrapper for
+// `gitee search issues --agent-help`.
+func TestSearchIssuesArgsBypassWithAgentHelp(t *testing.T) {
+	orig := cmd.GlobalAgentHelp
+	defer func() { cmd.GlobalAgentHelp = orig }()
+	cmd.GlobalAgentHelp = true
+	if err := searchIssuesCmd.Args(searchIssuesCmd, nil); err != nil {
+		t.Errorf("search issues --agent-help with no positional should pass Args, got: %v", err)
+	}
+}
+
+// TestSearchUsersArgsBypassWithAgentHelp verifies the wrapper for
+// `gitee search users --agent-help`.
+func TestSearchUsersArgsBypassWithAgentHelp(t *testing.T) {
+	orig := cmd.GlobalAgentHelp
+	defer func() { cmd.GlobalAgentHelp = orig }()
+	cmd.GlobalAgentHelp = true
+	if err := searchUsersCmd.Args(searchUsersCmd, nil); err != nil {
+		t.Errorf("search users --agent-help with no positional should pass Args, got: %v", err)
 	}
 }

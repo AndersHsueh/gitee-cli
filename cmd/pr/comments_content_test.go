@@ -3,6 +3,8 @@ package pr
 import (
 	"strings"
 	"testing"
+
+	"gitee-cli/cmd"
 )
 
 // TestCommentsAgentHelpContent verifies the comments verb's
@@ -44,5 +46,18 @@ func TestCommentsAgentHelpFlags(t *testing.T) {
 		if !strings.Contains(prCommentsAgentHelp, want) {
 			t.Errorf("pr comments --agent-help missing flag %q", want)
 		}
+	}
+}
+
+// TestPRCommentsArgsBypassWithAgentHelp verifies the
+// AgentHelpAwareArgs wrapper on cobra.ExactArgs(1) lets
+// `gitee pr comments --agent-help` reach PreRunE without the
+// required <number> positional.
+func TestPRCommentsArgsBypassWithAgentHelp(t *testing.T) {
+	orig := cmd.GlobalAgentHelp
+	defer func() { cmd.GlobalAgentHelp = orig }()
+	cmd.GlobalAgentHelp = true
+	if err := commentsCmd.Args(commentsCmd, nil); err != nil {
+		t.Errorf("pr comments --agent-help with no positional should pass Args, got: %v", err)
 	}
 }
