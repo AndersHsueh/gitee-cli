@@ -50,7 +50,7 @@ var listCmd = &cobra.Command{
 var getCmd = &cobra.Command{
 	Use:    "get <key>",
 	Short:  "Get a configuration value",
-	Args:   cobra.ExactArgs(1),
+	Args:   cmd.AgentHelpAwareArgs(cobra.ExactArgs(1)),
 	PreRunE: agentHelpNA("config get"),
 	RunE: func(c *cobra.Command, args []string) error {
 		s, err := giteeconfig.Load()
@@ -79,7 +79,7 @@ var getCmd = &cobra.Command{
 var setCmd = &cobra.Command{
 	Use:    "set <key> <value>",
 	Short:  "Set a configuration value",
-	Args:   cobra.ExactArgs(2),
+	Args:   cmd.AgentHelpAwareArgs(cobra.ExactArgs(2)),
 	PreRunE: agentHelpNA("config set"),
 	RunE: func(c *cobra.Command, args []string) error {
 		s, err := giteeconfig.Load()
@@ -115,7 +115,7 @@ var setCmd = &cobra.Command{
 var unsetCmd = &cobra.Command{
 	Use:    "unset <key>",
 	Short:  "Unset a configuration value",
-	Args:   cobra.ExactArgs(1),
+	Args:   cmd.AgentHelpAwareArgs(cobra.ExactArgs(1)),
 	PreRunE: agentHelpNA("config unset"),
 	RunE: func(c *cobra.Command, args []string) error {
 		s, err := giteeconfig.Load()
