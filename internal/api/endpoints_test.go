@@ -80,22 +80,6 @@ func TestSSHKeyEndpoints(t *testing.T) {
 	}
 }
 
-func TestGPGKeyEndpoints(t *testing.T) {
-	cases := []struct {
-		name string
-		got  string
-		want string
-	}{
-		{"list", GPGKeysList(), "/user/gpg_keys"},
-		{"create", GPGKeyCreate(), "/user/gpg_keys"},
-		{"delete", GPGKeyDelete(7), "/user/gpg_keys/7"},
-	}
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			assert.Equal(t, c.want, c.got)
-		})
-	}
-}
 
 func TestWebhookEndpoints(t *testing.T) {
 	cases := []struct {

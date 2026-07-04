@@ -243,10 +243,6 @@ func SSHKeysList() string          { return "/user/keys" }
 func SSHKeyCreate() string         { return "/user/keys" }
 func SSHKeyDelete(id int64) string { return fmt.Sprintf("/user/keys/%d", id) }
 
-// GPG key endpoints (P1a)
-func GPGKeysList() string          { return "/user/gpg_keys" }
-func GPGKeyCreate() string         { return "/user/gpg_keys" }
-func GPGKeyDelete(id int64) string { return fmt.Sprintf("/user/gpg_keys/%d", id) }
 
 // Webhook endpoints (P1b)
 // Gitee v5 webhook paths under /repos/{owner}/{repo}/hooks. The id is an
@@ -505,7 +501,7 @@ func ReposCompare(owner, repo, base, head string) string {
 //
 // `username` in the followers/following list paths is URL-escaped even
 // though Gitee usernames are usually plain slugs — same defensive habit
-// as the SSH/GPG key builders.
+// as the SSH key builders.
 func UserGet(username string) string {
 	return fmt.Sprintf("/users/%s", url.QueryEscape(username))
 }

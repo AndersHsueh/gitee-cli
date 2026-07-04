@@ -248,7 +248,7 @@ gitee-cli ships TWO help systems side-by-side:
                 milestone CRUD, notification center
   v0.12.0 ✅  P1 gaps: repo collaborator, star/unstar/watch/unwatch,
                 repo file push/delete, commits/compare
-  v0.12.0 ✅  P2 gaps: gpg-key, user (view/follow/unfollow/followers/following),
+  v0.12.0 ✅  P2 gaps: user (view/follow/unfollow/followers/following),
                 gist comments, branch protect/unprotect
   v0.9.0       P3: pipeline (Gitee Go)
 
