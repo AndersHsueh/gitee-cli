@@ -25,7 +25,13 @@ var rawCmd = &cobra.Command{
 	Use:   "raw <method> <path>",
 	Short: "Make raw API request",
 	Args:  cmd.AgentHelpAwareArgs(cobra.ExactArgs(2)),
-	RunE:  runRaw,
+	PreRunE: func(c *cobra.Command, args []string) error {
+		if cmd.GlobalAgentHelp {
+			cmd.PrintAgentHelp(apiRawAgentHelp)
+		}
+		return nil
+	},
+	RunE: runRaw,
 }
 
 var apiCmd = &cobra.Command{
@@ -39,6 +45,12 @@ Useful for testing or accessing endpoints not yet covered by dedicated commands.
   gitee api DELETE /repos/owner/repo
   gitee api GET /search/repositories?q=gitee --paginate`,
 	Args: cmd.AgentHelpAwareArgs(cobra.ExactArgs(2)),
+	PreRunE: func(c *cobra.Command, args []string) error {
+		if cmd.GlobalAgentHelp {
+			cmd.PrintAgentHelp(apiRawAgentHelp)
+		}
+		return nil
+	},
 	RunE: runAPI,
 }
 
@@ -194,3 +206,105 @@ func runRaw(cobraCmd *cobra.Command, args []string) error {
 	// For backwards compatibility, delegate to runAPI
 	return runAPI(cobraCmd.Parent(), args)
 }
+
+// apiRawAgentHelp is the agent-targeted help for `gitee api raw` and
+// the parent `gitee api` command. It is intentionally reachable
+// WITHOUT a token: agents use --agent-help as a discovery probe and
+// should not be blocked by the auth check in runAPI.
+//
+// Built via fmt.Sprintf to avoid raw-string-literal nesting limits;
+// the markdown body uses double-quoted concatenation everywhere an
+// inline code span appears so the final string is a single literal.
+const apiRawAgentHelp = `# gitee api raw — Agent Help
+
+## Purpose
+Make a raw HTTP request to any Gitee v5 API endpoint. Use this as an
+escape hatch when the dedicated verbs do not cover an endpoint yet
+(very rare after v0.11.0+), or to script multi-step workflows without
+needing a dedicated CLI verb for each call.
+
+The same command is exposed under two names:
+  - ` + "`" + `gitee api <method> <path>` + "`" + `      (canonical)
+  - ` + "`" + `gitee api raw <method> <path>` + "`" + `  (legacy alias)
+
+## Pre-conditions
+- Authenticated: token present in config (~/.gitee-cli/settings.json),
+  env var (GITEE_TOKEN), or --token flag. Public read endpoints work
+  without a token.
+- <method> is one of: GET, POST, PUT, PATCH, DELETE (case-insensitive)
+- <path> starts with ` + "`" + `/` + "`" + ` and matches a Gitee v5 endpoint
+
+## Required arguments
+  <method>   HTTP method (GET | POST | PUT | PATCH | DELETE)
+  <path>     Gitee API path, including leading slash (e.g. ` + "`" + `/user` + "`" + `)
+
+## Required flags
+  none — but most write endpoints need form fields via ` + "`" + `--field` + "`" + `
+
+## Optional flags
+  --field key=value   Form field, repeatable. Used for POST/PUT/PATCH
+                      bodies (ignored for GET and DELETE).
+  --raw               Print the response body without JSON indent
+  --paginate / -P     Walk all pages of a paginated GET response
+  --page N            Page number for single-page mode (default 1)
+  --per-page N        Items per page (default 30, max 100)
+  --limit N           Total cap across pages when --paginate is set
+
+## Idempotency
+Depends on <method>:
+  - GET / DELETE: idempotent (re-running yields same result)
+  - POST / PUT / PATCH: NOT idempotent (each call creates/updates state)
+
+## Atomicity
+A single HTTP request. Either the full response is returned or the
+call fails. No partial-success state at the wire level; downstream
+side effects on the Gitee side depend on the endpoint.
+
+## Side effects
+- Depends entirely on the endpoint called. The CLI itself does not
+  mutate any local state (it does not write to ` + "`" + `~/.gitee-cli/` + "`" + `).
+- Rate-limit counter advances by 1 (or N pages when --paginate is set).
+
+## Post-conditions (on success)
+- Stdout contains the response body (JSON, pretty-printed unless
+  --raw is set)
+- Exit code is 0
+
+## Common errors
+- 401 Unauthorized: token missing or expired  →  gitee auth login
+- 403 Forbidden:    token lacks required scope for the endpoint
+- 404 Not Found:    endpoint path is wrong
+- 422 Unprocessable: payload validation failed (form fields)
+- Network timeouts: bump --timeout and retry
+
+## Next steps (orchestration hints)
+After ` + "`" + `gitee api raw` + "`" + `, an agent typically wants to:
+1. Pipe through jq to extract a field:
+   ` + "`" + `gitee api GET /user/repos --paginate | jq -r '.[].full_name'` + "`" + `
+2. Compare to a list of dedicated verbs first — if a verb exists for
+   this endpoint, prefer it (more flags, structured output, retry).
+3. If you discover an endpoint missing a dedicated verb, file an
+   issue mentioning "raw needed for <path>".
+
+## OAuth scope required
+Depends on endpoint. Public GETs need no scope; private resources
+need projects (read or write); admin actions need user_info.
+
+## Rate limit
+Gitee API v5: 1000 requests/hour for authenticated users.
+
+## Example
+  # Fetch the authenticated user
+  gitee api GET /user
+
+  # Paginate all of alice's repos
+  gitee api GET /users/alice/repos --paginate --limit 100
+
+  # POST a new comment (uses --field for the body)
+  gitee api POST /repos/owner/repo/issues/42/comments \
+    --field body='Thanks for the report!'
+
+## See also
+- ` + "`" + `gitee --agent-help` + "`" + `      — overview of all commands
+- ` + "`" + `gitee help reference` + "`" + ` — index of dedicated verbs
+`
