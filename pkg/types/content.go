@@ -37,8 +37,8 @@ type ContentCreateRequest struct {
 	Branch     string `json:"branch,omitempty"`      // target branch
 	Author     string `json:"author,omitempty"`      // author name (uses token owner if blank)
 	AuthorEmail string `json:"author_email,omitempty"`
-	Comitter   string `json:"committer,omitempty"`
-	ComitterEmail string `json:"committer_email,omitempty"`
+	Committer   string `json:"committer,omitempty"`
+	CommitterEmail string `json:"committer_email,omitempty"`
 }
 
 // ContentUpdateRequest is the body for PUT .../contents/{path}. Differs
@@ -51,8 +51,8 @@ type ContentUpdateRequest struct {
 	Branch     string `json:"branch,omitempty"`
 	Author     string `json:"author,omitempty"`
 	AuthorEmail string `json:"author_email,omitempty"`
-	Comitter   string `json:"committer,omitempty"`
-	ComitterEmail string `json:"committer_email,omitempty"`
+	Committer   string `json:"committer,omitempty"`
+	CommitterEmail string `json:"committer_email,omitempty"`
 }
 
 // ContentDeleteRequest is the body for DELETE .../contents/{path}.
@@ -64,8 +64,8 @@ type ContentDeleteRequest struct {
 	Branch         string `json:"branch,omitempty"`
 	Author         string `json:"author,omitempty"`
 	AuthorEmail    string `json:"author_email,omitempty"`
-	Comitter       string `json:"committer,omitempty"`
-	ComitterEmail  string `json:"committer_email,omitempty"`
+	Committer       string `json:"committer,omitempty"`
+	CommitterEmail  string `json:"committer_email,omitempty"`
 }
 
 // ContentCommit is the nested "commit" object Gitee returns alongside the
