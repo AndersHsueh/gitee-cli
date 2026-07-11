@@ -2,6 +2,7 @@ package utils
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os/exec"
 	"regexp"
@@ -57,19 +58,33 @@ func GitRemoteURL(remoteName string) (string, error) {
 // directory is what we want to inspect (so `cd /tmp && gitee status`
 // sees /tmp, not the gitee-cli source repo).
 //
-// The error is returned as a plain string (not wrapped with %w) because
-// every caller re-wraps with a higher-level message — a wrapped-wrapped
-// error chain would have to be unwrapped twice by the user. Keeping
-// this error a flat string makes the final user-facing message clearer.
+// The underlying *exec.ExitError is wrapped with %w so callers can use
+// errors.As to recover the exit code (e.g. GitConfigGet distinguishes
+// exit 1 "key not set" from exit 128 "bad config"). The stderr text is
+// appended for human-readable context; most callers re-wrap with a
+// higher-level message and the chain only needs a single Unwrap.
 func runGitCapture(args ...string) (string, error) {
 	cmd := exec.Command("git", args...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("git %s: %s: %s", strings.Join(args, " "), err, strings.TrimSpace(stderr.String()))
+		return "", fmt.Errorf("git %s: %w: %s", strings.Join(args, " "), err, strings.TrimSpace(stderr.String()))
 	}
 	return stdout.String(), nil
+}
+
+// isExitCodeOne reports whether err is an *exec.ExitError with exit
+// code 1 — git's convention for "key not set" (git config) and similar
+// benign "not found" conditions. Non-exec errors (e.g. git not on
+// PATH) and other exit codes return false so callers can bubble them
+// up rather than misclassifying them as "not set".
+func isExitCodeOne(err error) bool {
+	var ee *exec.ExitError
+	if errors.As(err, &ee) {
+		return ee.ExitCode() == 1
+	}
+	return false
 }
 
 // giteeRemoteHTTPS matches https://[gitee.com|<enterprise-host>]/owner/repo[.git].
@@ -85,16 +100,24 @@ var giteeRemoteSSH = regexp.MustCompile(`^git@([^:]+):([^/]+)/([^/]+?)(?:\.git)?
 
 // GitConfigGet reads a git config value (--local first, then --global).
 // Returns ("", nil) if the key is not set — git exit code 1 is treated as
-// "not found" rather than an error. Any other non-zero exit is an error.
+// "not found" rather than an error. Any other failure (git unavailable,
+// exit 128 "bad config", etc.) is returned as an error so callers don't
+// silently mask real problems as "not set".
 //
 // This is used by `gitee repo set-default` and by ResolveRepo to read the
 // per-directory default repo. (v0.10.0)
 func GitConfigGet(key string) (string, error) {
 	out, err := runGitCapture("config", "--local", key)
 	if err != nil {
-		// Key not set locally — try global.
+		if !isExitCodeOne(err) {
+			return "", fmt.Errorf("git config --local %s: %w", key, err)
+		}
+		// exit 1 = key not set locally, try global
 		out, err = runGitCapture("config", "--global", key)
 		if err != nil {
+			if !isExitCodeOne(err) {
+				return "", fmt.Errorf("git config --global %s: %w", key, err)
+			}
 			return "", nil // key not set anywhere
 		}
 	}
