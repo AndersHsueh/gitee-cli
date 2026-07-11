@@ -5,13 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
-	"os"
 	"sync"
-	"text/tabwriter"
 	"time"
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
+	"gitee-cli/internal/output"
 	"gitee-cli/internal/utils"
 	"gitee-cli/pkg/types"
 
@@ -202,7 +201,7 @@ func renderPRSection(title string, items []prStatusItem) {
 		fmt.Printf("  %s\n\n", prStatusDimStyle("none"))
 		return
 	}
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	w := output.NewTableWriter()
 	fmt.Fprintln(w, "REPO\t#\tTITLE\tBRANCH")
 	for _, item := range items {
 		fmt.Fprintf(w, "%s\t#%d\t%s\t%s\n",

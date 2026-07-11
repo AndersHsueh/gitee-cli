@@ -10,13 +10,12 @@ import (
 	"context"
 	"fmt"
 	"net/url"
-	"os"
 	"strings"
-	"text/tabwriter"
 	"time"
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
+	"gitee-cli/internal/output"
 	"gitee-cli/internal/utils"
 	"gitee-cli/pkg/types"
 
@@ -67,7 +66,7 @@ func MilestoneList(repo, stateFilter string, limit int) error {
 		return nil
 	}
 
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	w := output.NewTableWriter()
 	fmt.Fprintln(w, "NUMBER\tTITLE\tSTATE\tOPEN\tCLOSED\tDUE")
 	for _, m := range milestones {
 		due := ""

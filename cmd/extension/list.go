@@ -2,12 +2,11 @@ package extension
 
 import (
 	"fmt"
-	"os"
-	"text/tabwriter"
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/extension"
 	"gitee-cli/internal/handler"
+	"gitee-cli/internal/output"
 
 	"github.com/spf13/cobra"
 )
@@ -35,7 +34,7 @@ var listCmd = &cobra.Command{
 		if cmd.GlobalOutput == "json" {
 			return handler.PrintJSON(manifests)
 		}
-		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+		w := output.NewTableWriter()
 		fmt.Fprintln(w, "NAME\tSOURCE\tINSTALLED")
 		for _, m := range manifests {
 			fmt.Fprintf(w, "%s\t%s\t%s\n", m.Name, m.Source, m.InstalledAt.Format("2006-01-02"))

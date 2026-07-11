@@ -13,13 +13,14 @@ import (
 	"net/url"
 	"os"
 	"strings"
-	"text/tabwriter"
 	"time"
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
+	"gitee-cli/internal/output"
 	"gitee-cli/internal/utils"
 	"gitee-cli/pkg/types"
+
 	"github.com/fatih/color"
 )
 
@@ -92,7 +93,7 @@ func LabelList(repo, filter string, limit int) error {
 		return nil
 	}
 
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	w := output.NewTableWriter()
 	fmt.Fprintln(w, "NAME\tCOLOR\tURL")
 	for _, l := range labels {
 		colorHex := l.Color

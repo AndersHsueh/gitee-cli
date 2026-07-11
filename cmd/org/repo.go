@@ -5,12 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
-	"os"
-	"text/tabwriter"
 	"time"
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
+	"gitee-cli/internal/output"
 	"gitee-cli/pkg/types"
 
 	"github.com/spf13/cobra"
@@ -83,7 +82,7 @@ func runOrgRepos(cobraCmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	w := output.NewTableWriter()
 	fmt.Fprintln(w, "NAME\tVISIBILITY\tLANGUAGE\tSTARS\tFORKS")
 	for _, r := range repos {
 		vis := "public"

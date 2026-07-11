@@ -5,13 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
-	"os"
 	"strings"
-	"text/tabwriter"
 	"time"
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
+	"gitee-cli/internal/output"
 	"gitee-cli/pkg/types"
 
 	"github.com/fatih/color"
@@ -182,7 +181,7 @@ func printCompareSummary(owner, repoName, base, head string, r *types.CompareRes
 // between the two commands without relearning the layout.
 func printCompareCommits(commits []types.CompareCommit) {
 	fmt.Println("  Commits:")
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	w := output.NewTableWriter()
 	fmt.Fprintln(w, "    SHA\tAUTHOR\tDATE\tMESSAGE")
 	for _, cm := range commits {
 		short := shortSHA(cm.SHA)
@@ -213,7 +212,7 @@ func printCompareCommits(commits []types.CompareCommit) {
 // table in `commits view`.
 func printCompareFiles(files []types.CommitFile) {
 	fmt.Println("  Files:")
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	w := output.NewTableWriter()
 	fmt.Fprintln(w, "    STATUS\tADD\tDEL\tFILE")
 	for _, f := range files {
 		status := strings.ToUpper(f.Status)

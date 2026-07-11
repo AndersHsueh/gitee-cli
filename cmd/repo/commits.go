@@ -5,13 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
-	"os"
 	"strings"
-	"text/tabwriter"
 	"time"
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
+	"gitee-cli/internal/output"
 	"gitee-cli/pkg/types"
 
 	"github.com/fatih/color"
@@ -186,7 +185,7 @@ func runCommitsList(cobraCmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	w := output.NewTableWriter()
 	fmt.Fprintln(w, "SHA\tAUTHOR\tDATE\tMESSAGE")
 	for _, cm := range commits {
 		cc := cm
@@ -297,7 +296,7 @@ func printCommitSummary(owner, repoName string, cm *types.Commit) {
 // the filename, and the +/- counts.
 func printCommitFiles(files []types.CommitFile) {
 	fmt.Println("  Files:")
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	w := output.NewTableWriter()
 	fmt.Fprintln(w, "    STATUS\tADD\tDEL\tFILE")
 	for _, f := range files {
 		status := strings.ToUpper(f.Status)

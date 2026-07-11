@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"text/tabwriter"
 	"time"
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
+	"gitee-cli/internal/output"
 	"gitee-cli/internal/utils"
 
 	"github.com/fatih/color"
@@ -194,7 +194,7 @@ func renderIssueSection(title string, items []issueStatusItem) {
 		fmt.Printf("  %s\n\n", issueStatusDimStyle("none"))
 		return
 	}
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	w := output.NewTableWriter()
 	fmt.Fprintln(w, "REPOSITORY\t#\tTITLE\tSTATE")
 	for _, item := range items {
 		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n",

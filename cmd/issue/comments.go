@@ -5,12 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
-	"os"
-	"text/tabwriter"
 	"time"
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
+	"gitee-cli/internal/output"
 	"gitee-cli/internal/utils"
 	"gitee-cli/pkg/types"
 
@@ -82,7 +81,7 @@ func runComments(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	fmt.Printf("Comments on issue #%s in %s/%s:\n\n", args[0], owner, repoName)
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	w := output.NewTableWriter()
 	fmt.Fprintln(w, "ID\tAUTHOR\tCREATED\tBODY")
 	for _, c := range comments {
 		author := c.User.Login

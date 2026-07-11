@@ -4,13 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
-	"text/tabwriter"
 	"time"
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
+	"gitee-cli/internal/output"
 	"gitee-cli/pkg/types"
 
 	"github.com/fatih/color"
@@ -172,7 +171,7 @@ func runCollaboratorList(cobraCmd *cobra.Command, args []string) error {
 		fmt.Println("  (none)")
 		return nil
 	}
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	w := output.NewTableWriter()
 	fmt.Fprintln(w, "USERNAME\tNAME\tPERMISSION\tURL")
 	for _, c := range collabs {
 		perm := c.Permission

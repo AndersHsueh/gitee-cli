@@ -5,14 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
-	"os"
 	"strings"
-	"text/tabwriter"
 	"time"
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
 	"gitee-cli/internal/config"
+	"gitee-cli/internal/output"
 	"gitee-cli/internal/utils"
 
 	"github.com/spf13/cobra"
@@ -401,7 +400,7 @@ func printSearchResults(result interface{}, searchType string) error {
 		return nil
 	}
 
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	w := output.NewTableWriter()
 
 	switch searchType {
 	case "repos":

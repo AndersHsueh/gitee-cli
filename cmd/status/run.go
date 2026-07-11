@@ -11,6 +11,7 @@ import (
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
+	"gitee-cli/internal/output"
 	"gitee-cli/internal/utils"
 	"gitee-cli/pkg/types"
 
@@ -239,7 +240,7 @@ func renderSection(title string, count int, body func(w *tabwriter.Writer)) {
 		fmt.Printf("  %s\n\n", dimStyle("none"))
 		return
 	}
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	w := output.NewTableWriter()
 	body(w)
 	_ = w.Flush()
 	fmt.Println()

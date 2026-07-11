@@ -4,12 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
-	"text/tabwriter"
 	"time"
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
+	"gitee-cli/internal/output"
 	"gitee-cli/pkg/types"
 
 	"github.com/spf13/cobra"
@@ -66,7 +65,7 @@ func runView(cobraCmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	w := output.NewTableWriter()
 	fmt.Fprintf(w, "Login:\t%s\n", o.Login)
 	fmt.Fprintf(w, "Name:\t%s\n", o.Name)
 	fmt.Fprintf(w, "Description:\t%s\n", o.Description)

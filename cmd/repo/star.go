@@ -4,12 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
-	"text/tabwriter"
 	"time"
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
+	"gitee-cli/internal/output"
 	"gitee-cli/internal/utils"
 	"gitee-cli/pkg/types"
 
@@ -227,7 +226,7 @@ func runRepoStarList(cobraCmd *cobra.Command, args []string) error {
 		fmt.Println("  (none)")
 		return nil
 	}
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	w := output.NewTableWriter()
 	fmt.Fprintln(w, "NAME\tLANGUAGE\tSTARS\tDESCRIPTION")
 	for _, r := range repos {
 		lang := r.Language

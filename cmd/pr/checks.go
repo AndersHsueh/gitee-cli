@@ -5,12 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
-	"os"
-	"text/tabwriter"
 	"time"
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
+	"gitee-cli/internal/output"
 	"gitee-cli/internal/utils"
 	"gitee-cli/pkg/types"
 
@@ -115,7 +114,7 @@ func runChecks(cobraCmd *cobra.Command, args []string) error {
 	dim := color.New(color.Faint).SprintFunc()
 
 	fmt.Printf("Check runs for PR #%d (head=%s) in %s/%s:\n\n", prNum, cyan(headRef), owner, repoName)
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	w := output.NewTableWriter()
 	fmt.Fprintln(w, "NAME\tSTATUS\tCONCLUSION\tCOMPLETED")
 	for _, cr := range checkRuns {
 		status := cr.Status

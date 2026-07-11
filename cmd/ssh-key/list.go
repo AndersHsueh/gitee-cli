@@ -3,13 +3,12 @@ package sshkey
 import (
 	"context"
 	"fmt"
-	"os"
-	"text/tabwriter"
 	"time"
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
 	"gitee-cli/internal/handler"
+	"gitee-cli/internal/output"
 	"gitee-cli/pkg/types"
 
 	"github.com/spf13/cobra"
@@ -76,7 +75,7 @@ func runList(cobraCmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	w := output.NewTableWriter()
 	fmt.Fprintln(w, "ID\tTITLE\tCREATED")
 	for _, k := range keys {
 		fmt.Fprintf(w, "%d\t%s\t%s\n", k.ID, k.Title, k.CreatedAt)

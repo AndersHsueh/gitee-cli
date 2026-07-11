@@ -11,13 +11,12 @@ import (
 	"context"
 	"fmt"
 	"net/url"
-	"os"
 	"strconv"
-	"text/tabwriter"
 	"time"
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
+	"gitee-cli/internal/output"
 	"gitee-cli/internal/utils"
 	"gitee-cli/pkg/types"
 
@@ -27,9 +26,10 @@ import (
 // NotificationList runs the notification-list operation.
 //
 // unreadFilter:
-//   ""     → all threads
-//   "true" → only unread
-//   "false"→ only read
+//
+//	""     → all threads
+//	"true" → only unread
+//	"false"→ only read
 func NotificationList(unreadFilter string, limit int) error {
 	client, err := cmd.NewAPIClient()
 	if err != nil {
@@ -69,7 +69,7 @@ func NotificationList(unreadFilter string, limit int) error {
 		return nil
 	}
 
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	w := output.NewTableWriter()
 	fmt.Fprintln(w, "ID\tREPO\tTYPE\tSUBJECT\tWHEN")
 	for _, t := range threads {
 		marker := " "
@@ -122,9 +122,9 @@ func NotificationCount() error {
 
 // NotificationRead marks threads as read.
 //
-//   all == true   → mark ALL threads as read (PUT /notifications/threads)
-//   all == false  → mark a single thread id as read
-//                   (PUT /notifications/threads/{id})
+//	all == true   → mark ALL threads as read (PUT /notifications/threads)
+//	all == false  → mark a single thread id as read
+//	                (PUT /notifications/threads/{id})
 //
 // markUnread, when true, flips state back to UNREAD instead. This
 // satisfies the inverse operation; useful for agents that want to

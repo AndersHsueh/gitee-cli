@@ -4,13 +4,12 @@ import (
 	"context"
 	"fmt"
 	"net/url"
-	"os"
-	"text/tabwriter"
 	"time"
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
 	"gitee-cli/internal/handler"
+	"gitee-cli/internal/output"
 	"gitee-cli/internal/utils"
 	"gitee-cli/pkg/types"
 
@@ -78,7 +77,7 @@ func runList(cobraCmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	w := output.NewTableWriter()
 	fmt.Fprintln(w, "TAG\tNAME\tPRERELEASE\tPUBLISHED")
 	for _, r := range releases {
 		pre := ""
