@@ -82,33 +82,13 @@ func runList(cobraCmd *cobra.Command, args []string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
 	defer cancel()
 
-	perPage := cmd.GlobalPerPage
-	if perPage < 1 {
-		perPage = 30
-	}
-	if perPage > 100 {
-		perPage = 100
-	}
-
-	var prs []types.PullRequest
-	if cmd.GlobalPaginate {
-		if err := api.FetchAllPages(ctx, client, basePath, perPage, cmd.GlobalLimit, &prs); err != nil {
-			return fmt.Errorf("listing PRs: %w", err)
-		}
-	} else {
-		// Single page (legacy behavior). --page and --per-page apply directly.
-		pagePath, err := addPRPageParams(basePath, cmd.GlobalPage, perPage)
-		if err != nil {
-			return fmt.Errorf("building page URL: %w", err)
-		}
-		if err := client.Get(ctx, pagePath, &prs); err != nil {
-			// Gitee API returns 404 when there are no PRs, treat as empty result
-			if api.IsNotFound(err) {
-				prs = []types.PullRequest{}
-			} else {
-				return fmt.Errorf("listing PRs: %w", err)
-			}
-		}
+	// FetchListOrAll handles perPage clamp (1-100), --paginate dispatch, and
+	// treats a 404 as an empty result (unified with issue list / commits).
+	prs, err := api.FetchListOrAll[types.PullRequest](ctx, client, basePath,
+		cmd.GlobalPaginate, cmd.GlobalPerPage, cmd.GlobalLimit, cmd.GlobalPage,
+		"listing PRs")
+	if err != nil {
+		return err
 	}
 
 	if cmd.GlobalOutput == "json" {
@@ -144,20 +124,6 @@ func resolvePRRepo(owner, repo string) (string, string, error) {
 		repo = cmd.GlobalRepo
 	}
 	return utils.ResolveRepo(owner, repo, nil)
-}
-
-// addPRPageParams is a local helper because the issue package's
-// addPageParams is unexported. It does the same thing.
-func addPRPageParams(basePath string, page, perPage int) (string, error) {
-	u, err := url.Parse(basePath)
-	if err != nil {
-		return "", err
-	}
-	q := u.Query()
-	q.Set("page", fmt.Sprintf("%d", page))
-	q.Set("per_page", fmt.Sprintf("%d", perPage))
-	u.RawQuery = q.Encode()
-	return u.String(), nil
 }
 
 // prListAgentHelp is the agent-targeted help for `gitee pr list`.

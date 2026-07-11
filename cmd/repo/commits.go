@@ -166,27 +166,13 @@ func runCommitsList(cobraCmd *cobra.Command, args []string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
 	defer cancel()
 
-	perPage := cmd.GlobalPerPage
-	if perPage < 1 {
-		perPage = 30
-	}
-	if perPage > 100 {
-		perPage = 100
-	}
-
-	var commits []types.Commit
-	if cmd.GlobalPaginate {
-		if err := api.FetchAllPages(ctx, client, basePath, perPage, cmd.GlobalLimit, &commits); err != nil {
-			return fmt.Errorf("listing commits: %w", err)
-		}
-	} else {
-		pagePath, err := addPageParams(basePath, cmd.GlobalPage, perPage)
-		if err != nil {
-			return fmt.Errorf("building page URL: %w", err)
-		}
-		if err := client.Get(ctx, pagePath, &commits); err != nil {
-			return fmt.Errorf("listing commits: %w", err)
-		}
+	// FetchListOrAll handles perPage clamp (1-100), --paginate dispatch, and
+	// treats a 404 as an empty result (unified with issue list / pr list).
+	commits, err := api.FetchListOrAll[types.Commit](ctx, client, basePath,
+		cmd.GlobalPaginate, cmd.GlobalPerPage, cmd.GlobalLimit, cmd.GlobalPage,
+		"listing commits")
+	if err != nil {
+		return err
 	}
 
 	if cmd.GlobalOutput == "json" {
@@ -392,23 +378,6 @@ func firstLine(msg string) string {
 		return msg[:i]
 	}
 	return msg
-}
-
-// addPageParams appends/overrides ?page= and ?per_page= on a base path
-// that may already contain a query string. Local copy of the helper that
-// lives in cmd/issue: defining it here keeps the cmd/repo package
-// self-contained and avoids an internal cross-package dependency for a
-// 10-line utility.
-func addPageParams(basePath string, page, perPage int) (string, error) {
-	u, err := url.Parse(basePath)
-	if err != nil {
-		return "", err
-	}
-	q := u.Query()
-	q.Set("page", fmt.Sprintf("%d", page))
-	q.Set("per_page", fmt.Sprintf("%d", perPage))
-	u.RawQuery = q.Encode()
-	return u.String(), nil
 }
 
 const repoCommitsAgentHelp = `# gitee repo commits — Agent Help

@@ -78,38 +78,19 @@ func runList(cobraCmd *cobra.Command, args []string) error {
 	if listFlags.milestone != "" {
 		qv.Set("milestone", listFlags.milestone)
 	}
-	basePath := fmt.Sprintf("/repos/%s/%s/issues?%s", owner, repoName, qv.Encode())
+	basePath := api.IssuesList(owner, repoName) + "?" + qv.Encode()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
 	defer cancel()
 
-	perPage := cmd.GlobalPerPage
-	if perPage < 1 {
-		perPage = 30
-	}
-	if perPage > 100 {
-		perPage = 100
-	}
-
-	var issues []types.Issue
-	if cmd.GlobalPaginate {
-		// Walk all pages up to --limit. The agent use case: `gitee issue list
-		// --paginate --limit 0` fetches everything, which is what the AI
-		// pipeline needs to see newly-created issues that landed past page 1.
-		if err := api.FetchAllPages(ctx, client, basePath, perPage, cmd.GlobalLimit, &issues); err != nil {
-			return fmt.Errorf("listing issues: %w", err)
-		}
-	} else {
-		// Single page (legacy behavior). --page and --per-page apply directly.
-		// --limit is ignored when not paginating (a single page either fits
-		// within perPage or it doesn't — there's no "total" to cap).
-		pagePath, err := addPageParams(basePath, cmd.GlobalPage, perPage)
-		if err != nil {
-			return fmt.Errorf("building page URL: %w", err)
-		}
-		if err := client.Get(ctx, pagePath, &issues); err != nil {
-			return fmt.Errorf("listing issues: %w", err)
-		}
+	// FetchListOrAll handles perPage clamp (1-100), --paginate dispatch, and
+	// treats a 404 as an empty result (previously issue list errored on 404
+	// while pr list returned empty — now consistent).
+	issues, err := api.FetchListOrAll[types.Issue](ctx, client, basePath,
+		cmd.GlobalPaginate, cmd.GlobalPerPage, cmd.GlobalLimit, cmd.GlobalPage,
+		"listing issues")
+	if err != nil {
+		return err
 	}
 
 	if cmd.GlobalOutput == "json" {
@@ -140,22 +121,6 @@ func runList(cobraCmd *cobra.Command, args []string) error {
 	}
 	_ = w.Flush()
 	return nil
-}
-
-// addPageParams appends/overrides ?page= and ?per_page= on a base path that
-// may already contain a query string. It mirrors what FetchAllPages does
-// internally but is exported so the single-page path can use the same
-// query-building logic.
-func addPageParams(basePath string, page, perPage int) (string, error) {
-	u, err := url.Parse(basePath)
-	if err != nil {
-		return "", err
-	}
-	q := u.Query()
-	q.Set("page", fmt.Sprintf("%d", page))
-	q.Set("per_page", fmt.Sprintf("%d", perPage))
-	u.RawQuery = q.Encode()
-	return u.String(), nil
 }
 
 // issueListAgentHelp is the agent-targeted help for `gitee issue list`.
