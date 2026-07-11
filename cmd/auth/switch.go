@@ -24,14 +24,8 @@ The active host is stored in ~/.gitee-cli/settings.json and used
 as the default when --hostname is not explicitly provided.`,
 	Example: `  gitee auth switch
   gitee auth switch enterprise.gitee.com`,
-	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
-			fmt.Fprintln(os.Stderr, "auth switch is an operational/config command. Use --help for usage.")
-			os.Exit(0)
-		}
-		return nil
-	},
-	RunE: runSwitch,
+	PreRunE: cmd.AgentHelpNA("auth switch"),
+	RunE:    runSwitch,
 }
 
 func init() {

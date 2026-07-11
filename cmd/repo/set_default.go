@@ -2,7 +2,6 @@ package repo
 
 import (
 	"fmt"
-	"os"
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/utils"
@@ -27,14 +26,8 @@ Run with no arguments to view the current default. Use --owner and
 --repo to set independently.`,
 	Example: `  gitee repo set-default owner/repo
   gitee repo set-default           # show current default`,
-	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
-			fmt.Fprintln(os.Stderr, "repo set-default is an operational/config command. Use --help for usage.")
-			os.Exit(0)
-		}
-		return nil
-	},
-	RunE: runSetDefault,
+	PreRunE: cmd.AgentHelpNA("repo set-default"),
+	RunE:    runSetDefault,
 }
 
 func init() {

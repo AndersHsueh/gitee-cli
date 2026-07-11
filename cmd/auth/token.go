@@ -11,15 +11,9 @@ import (
 )
 
 var tokenCmd = &cobra.Command{
-	Use:   "token",
-	Short: "Print the auth token",
-	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
-			fmt.Fprintln(os.Stderr, "auth token is an operational/config command. Use --help for usage.")
-			os.Exit(0)
-		}
-		return nil
-	},
+	Use:      "token",
+	Short:    "Print the auth token",
+	PreRunE:  cmd.AgentHelpNA("auth token"),
 	RunE: func(cobraCmd *cobra.Command, args []string) error {
 		token := cmd.GlobalToken
 		if token == "" {
@@ -34,15 +28,9 @@ var tokenCmd = &cobra.Command{
 }
 
 var logoutCmd = &cobra.Command{
-	Use:   "logout",
-	Short: "Log out and remove stored token",
-	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
-			fmt.Fprintln(os.Stderr, "auth logout is an operational/config command. Use --help for usage.")
-			os.Exit(0)
-		}
-		return nil
-	},
+	Use:      "logout",
+	Short:    "Log out and remove stored token",
+	PreRunE:  cmd.AgentHelpNA("auth logout"),
 	RunE: func(cobraCmd *cobra.Command, args []string) error {
 		s, err := config.Load()
 		if err != nil {

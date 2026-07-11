@@ -3,27 +3,12 @@ package config
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 
 	"gitee-cli/cmd"
 	giteeconfig "gitee-cli/internal/config"
 
 	"github.com/spf13/cobra"
 )
-
-// n/a notice for agent-help: emitted to stderr and exits 0 so an agent
-// probing for `--agent-help` on an operational/config verb gets a
-// stable signal instead of the verb actually running (which would
-// trigger e.g. a real OAuth flow or a settings.json write).
-func agentHelpNA(prefix string) func(*cobra.Command, []string) error {
-	return func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
-			fmt.Fprintf(os.Stderr, "%s is an operational/config command. Use --help for usage.\n", prefix)
-			os.Exit(0)
-		}
-		return nil
-	}
-}
 
 var ConfigCmd = &cobra.Command{
 	Use:   "config <subcommand>",
@@ -33,7 +18,7 @@ var ConfigCmd = &cobra.Command{
 var listCmd = &cobra.Command{
 	Use:    "list",
 	Short:  "List configuration values",
-	PreRunE: agentHelpNA("config list"),
+	PreRunE: cmd.AgentHelpNA("config list"),
 	RunE: func(c *cobra.Command, args []string) error {
 		s, err := giteeconfig.Load()
 		if err != nil {
@@ -51,7 +36,7 @@ var getCmd = &cobra.Command{
 	Use:    "get <key>",
 	Short:  "Get a configuration value",
 	Args:   cmd.AgentHelpAwareArgs(cobra.ExactArgs(1)),
-	PreRunE: agentHelpNA("config get"),
+	PreRunE: cmd.AgentHelpNA("config get"),
 	RunE: func(c *cobra.Command, args []string) error {
 		s, err := giteeconfig.Load()
 		if err != nil {
@@ -80,7 +65,7 @@ var setCmd = &cobra.Command{
 	Use:    "set <key> <value>",
 	Short:  "Set a configuration value",
 	Args:   cmd.AgentHelpAwareArgs(cobra.ExactArgs(2)),
-	PreRunE: agentHelpNA("config set"),
+	PreRunE: cmd.AgentHelpNA("config set"),
 	RunE: func(c *cobra.Command, args []string) error {
 		s, err := giteeconfig.Load()
 		if err != nil {
@@ -116,7 +101,7 @@ var unsetCmd = &cobra.Command{
 	Use:    "unset <key>",
 	Short:  "Unset a configuration value",
 	Args:   cmd.AgentHelpAwareArgs(cobra.ExactArgs(1)),
-	PreRunE: agentHelpNA("config unset"),
+	PreRunE: cmd.AgentHelpNA("config unset"),
 	RunE: func(c *cobra.Command, args []string) error {
 		s, err := giteeconfig.Load()
 		if err != nil {

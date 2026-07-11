@@ -1,8 +1,31 @@
 package cmd
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/spf13/cobra"
 )
+
+// AgentHelpNA returns a PreRunE hook that emits the operational/config
+// n/a notice to stderr and exits 0 when --agent-help is set. This is
+// the single shared implementation for verbs that have no agent-help
+// documentation (auth, config, repo set-default, etc.). Using a shared
+// helper keeps the notice wording identical across all such verbs so
+// the agent-help contract tests can assert on a stable string.
+//
+// Usage:
+//
+//	PreRunE: cmd.AgentHelpNA("auth login"),
+func AgentHelpNA(prefix string) func(*cobra.Command, []string) error {
+	return func(c *cobra.Command, args []string) error {
+		if GlobalAgentHelp {
+			fmt.Fprintf(os.Stderr, "%s is an operational/config command. Use --help for usage.\n", prefix)
+			os.Exit(0)
+		}
+		return nil
+	}
+}
 
 // AgentHelpAwareArgs wraps a cobra positional-args validator so that
 // `--agent-help` can be served even when required positional args are
