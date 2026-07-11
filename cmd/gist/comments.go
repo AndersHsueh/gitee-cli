@@ -47,7 +47,18 @@ func runGistComments(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	path := api.GistCommentsList(gistID)
+	// Clamp perPage to Gitee v5's 1-100 range before sending it.
+	perPage := commentsFlags.limit
+	if perPage < 1 {
+		perPage = 30
+	}
+	if perPage > 100 {
+		perPage = 100
+	}
+	path, err := api.WithPageParams(api.GistCommentsList(gistID), commentsFlags.page, perPage)
+	if err != nil {
+		return fmt.Errorf("listing gist comments: %w", err)
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
 	defer cancel()
 
@@ -56,8 +67,8 @@ func runGistComments(cobraCmd *cobra.Command, args []string) error {
 		return fmt.Errorf("listing gist comments: %w", err)
 	}
 
-	// Apply --limit (page-level, naive truncation; matches how other
-	// Gitee list commands handle the same flag without --paginate).
+	// Apply --limit as client-side truncation (safety net; matches how
+	// other Gitee list commands handle the same flag without --paginate).
 	if commentsFlags.limit > 0 && len(comments) > commentsFlags.limit {
 		comments = comments[:commentsFlags.limit]
 	}

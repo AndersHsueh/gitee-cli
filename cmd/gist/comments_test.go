@@ -261,6 +261,131 @@ func TestGistCommentsArgsBypassWithAgentHelp(t *testing.T) {
 	assert.NoError(t, commentsCmd.Args(commentsCmd, nil))
 }
 
+// TestGistCommentsSendsPageAndPerPage verifies that --page and --limit
+// are actually sent to the API as page / per_page query params. Before
+// the fix, runGistComments called api.GistCommentsList(gistID) (bare
+// /gists/{id}/comments) and both flags were silently ignored — --page
+// returned page 1 every time.
+func TestGistCommentsSendsPageAndPerPage(t *testing.T) {
+	var (
+		gotPerPage string
+		gotPage    string
+		gotPath    string
+	)
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		q := r.URL.Query()
+		gotPerPage = q.Get("per_page")
+		gotPage = q.Get("page")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`[]`))
+	}))
+	defer ts.Close()
+
+	origAPIURL := cmd.GlobalAPIURL
+	origToken := cmd.GlobalToken
+	origTimeout := cmd.GlobalTimeout
+	defer func() {
+		cmd.GlobalAPIURL = origAPIURL
+		cmd.GlobalToken = origToken
+		cmd.GlobalTimeout = origTimeout
+		resetGistCommentFlags()
+	}()
+	cmd.GlobalAPIURL = ts.URL
+	cmd.GlobalToken = "test-token"
+	cmd.GlobalTimeout = 30
+	commentsFlags.limit = 50
+	commentsFlags.page = 2
+
+	if err := runGistComments(commentsCmd, []string{"abc123def"}); err != nil {
+		t.Fatalf("runGistComments failed: %v", err)
+	}
+	if gotPath != "/gists/abc123def/comments" {
+		t.Errorf("expected path /gists/abc123def/comments, got %s", gotPath)
+	}
+	if gotPerPage != "50" {
+		t.Errorf("expected per_page=50, got %q", gotPerPage)
+	}
+	if gotPage != "2" {
+		t.Errorf("expected page=2, got %q", gotPage)
+	}
+}
+
+// TestGistCommentsClampsPerPageTo100 verifies --limit is clamped to the
+// Gitee v5 hard max of 100 so a value like 200 is not sent as-is.
+func TestGistCommentsClampsPerPageTo100(t *testing.T) {
+	var gotPerPage string
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPerPage = r.URL.Query().Get("per_page")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`[]`))
+	}))
+	defer ts.Close()
+
+	origAPIURL := cmd.GlobalAPIURL
+	origToken := cmd.GlobalToken
+	origTimeout := cmd.GlobalTimeout
+	defer func() {
+		cmd.GlobalAPIURL = origAPIURL
+		cmd.GlobalToken = origToken
+		cmd.GlobalTimeout = origTimeout
+		resetGistCommentFlags()
+	}()
+	cmd.GlobalAPIURL = ts.URL
+	cmd.GlobalToken = "test-token"
+	cmd.GlobalTimeout = 30
+	commentsFlags.limit = 200
+	commentsFlags.page = 1
+
+	if err := runGistComments(commentsCmd, []string{"abc123def"}); err != nil {
+		t.Fatalf("runGistComments failed: %v", err)
+	}
+	if gotPerPage != "100" {
+		t.Errorf("expected per_page clamped to 100, got %q", gotPerPage)
+	}
+}
+
+// TestGistCommentsClientSideTruncation verifies --limit truncates the
+// result client-side when the server returns more items than requested.
+// This is the safety net that supplements per_page (the server may
+// return a full page even if the user wanted fewer).
+func TestGistCommentsClientSideTruncation(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		// Return 5 comments; --limit 2 should truncate to 2.
+		_, _ = w.Write([]byte(`[
+			{"id":1,"body":"a","user":{"login":"x"}},
+			{"id":2,"body":"b","user":{"login":"x"}},
+			{"id":3,"body":"c","user":{"login":"x"}},
+			{"id":4,"body":"d","user":{"login":"x"}},
+			{"id":5,"body":"e","user":{"login":"x"}}
+		]`))
+	}))
+	defer ts.Close()
+
+	origAPIURL := cmd.GlobalAPIURL
+	origToken := cmd.GlobalToken
+	origTimeout := cmd.GlobalTimeout
+	origOutput := cmd.GlobalOutput
+	defer func() {
+		cmd.GlobalAPIURL = origAPIURL
+		cmd.GlobalToken = origToken
+		cmd.GlobalTimeout = origTimeout
+		cmd.GlobalOutput = origOutput
+		resetGistCommentFlags()
+	}()
+	cmd.GlobalAPIURL = ts.URL
+	cmd.GlobalToken = "test-token"
+	cmd.GlobalTimeout = 30
+	cmd.GlobalOutput = "json"
+	commentsFlags.limit = 2
+	commentsFlags.page = 1
+
+	if err := runGistComments(commentsCmd, []string{"abc123def"}); err != nil {
+		t.Fatalf("runGistComments failed: %v", err)
+	}
+}
+
 // TestGistCommentArgsBypassWithAgentHelp verifies the wrapper on
 // cobra.ExactArgs(1) for `gitee gist comment --agent-help`.
 func TestGistCommentArgsBypassWithAgentHelp(t *testing.T) {
