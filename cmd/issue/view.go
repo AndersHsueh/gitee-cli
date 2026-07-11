@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"gitee-cli/cmd"
+	"gitee-cli/internal/api"
 	"gitee-cli/pkg/types"
 
 	"github.com/fatih/color"
@@ -40,7 +41,7 @@ func runView(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	path := fmt.Sprintf("/repos/%s/%s/issues/%s", owner, repoName, number)
+	path := api.IssuesGet(owner, repoName, number)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
 	defer cancel()

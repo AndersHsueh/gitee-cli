@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"gitee-cli/cmd"
+	"gitee-cli/internal/api"
 	"gitee-cli/pkg/types"
 
 	"github.com/fatih/color"
@@ -95,7 +96,7 @@ func runCreate(cobraCmd *cobra.Command, args []string) error {
 
 	var issue types.Issue
 	// Gitee v5: POST /repos/{owner}/issues (NOT /repos/{owner}/{repo}/issues)
-	path := fmt.Sprintf("/repos/%s/issues", owner)
+	path := api.IssuesCreate(owner)
 
 	fmt.Printf("Creating issue in %s/%s...\n", owner, repoName)
 
