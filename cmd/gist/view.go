@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"time"
 
 	"gitee-cli/cmd"
@@ -15,7 +16,7 @@ import (
 )
 
 var viewFlags struct {
-	stdin bool
+	raw bool
 }
 
 var viewCmd = &cobra.Command{
@@ -34,7 +35,7 @@ var viewCmd = &cobra.Command{
 }
 
 func init() {
-	viewCmd.Flags().BoolVar(&viewFlags.stdin, "raw", false, "Output raw file content")
+	viewCmd.Flags().BoolVar(&viewFlags.raw, "raw", false, "Output raw file content")
 }
 
 func runView(cobraCmd *cobra.Command, args []string) error {
@@ -68,11 +69,13 @@ func runView(cobraCmd *cobra.Command, args []string) error {
 
 	for name, file := range gist.Files {
 		fmt.Printf("\n--- %s (%s, %d bytes) ---\n", name, file.Language, file.Size)
-		if viewFlags.stdin {
+		if viewFlags.raw {
 			// Get raw content from raw_url
 			if file.RawURL != "" {
 				rawResp, _, err := client.GetRaw(ctx, file.RawURL)
-				if err == nil {
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "warning: fetching raw content for %s: %v\n", name, err)
+				} else {
 					fmt.Print(string(rawResp))
 				}
 			}
@@ -81,7 +84,9 @@ func runView(cobraCmd *cobra.Command, args []string) error {
 			content := file.Content
 			if content == "" && file.RawURL != "" {
 				rawResp, _, err := client.GetRaw(ctx, file.RawURL)
-				if err == nil {
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "warning: fetching raw content for %s: %v\n", name, err)
+				} else {
 					content = string(rawResp)
 				}
 			}
