@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"text/tabwriter"
 	"time"
@@ -44,7 +45,16 @@ func runList(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	path := fmt.Sprintf("%s?per_page=%d", api.OrgsList(), listFlags.limit)
+	perPage := listFlags.limit
+	if perPage < 1 {
+		perPage = 30
+	}
+	if perPage > 100 {
+		perPage = 100
+	}
+	qv := url.Values{}
+	qv.Set("per_page", fmt.Sprintf("%d", perPage))
+	path := api.OrgsList() + "?" + qv.Encode()
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
 	defer cancel()
 
