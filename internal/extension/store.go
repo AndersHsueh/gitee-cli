@@ -19,6 +19,9 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"gitee-cli/internal/atomicfile"
+	"gitee-cli/internal/utils"
 )
 
 // ExtDirOverride lets tests redirect ExtDir() to a temp directory
@@ -74,7 +77,7 @@ type Manifest struct {
 // Returns os.ErrNotExist-compatible errors (wrapped) if the file
 // or its parent directory is missing.
 func ReadManifest(name string) (*Manifest, error) {
-	if err := validateName(name); err != nil {
+	if err := utils.ValidateName("extension", name); err != nil {
 		return nil, err
 	}
 	data, err := os.ReadFile(manifestPath(name))
@@ -91,7 +94,7 @@ func ReadManifest(name string) (*Manifest, error) {
 // WriteManifest atomically writes m to <ext-dir>/<name>/manifest.json.
 // Atomic via temp + rename in the same directory (POSIX & Windows).
 func WriteManifest(m *Manifest) error {
-	if err := validateName(m.Name); err != nil {
+	if err := utils.ValidateName("extension", m.Name); err != nil {
 		return err
 	}
 	dir := ExtPath(m.Name)
@@ -103,31 +106,7 @@ func WriteManifest(m *Manifest) error {
 	if err != nil {
 		return err
 	}
-	tmp, err := os.CreateTemp(dir, ".manifest-*.tmp")
-	if err != nil {
-		return err
-	}
-	tmpPath := tmp.Name()
-	cleanup := func() { _ = os.Remove(tmpPath) }
-	if _, err := tmp.Write(data); err != nil {
-		_ = tmp.Close()
-		cleanup()
-		return err
-	}
-	if err := tmp.Chmod(0600); err != nil {
-		_ = tmp.Close()
-		cleanup()
-		return err
-	}
-	if err := tmp.Close(); err != nil {
-		cleanup()
-		return err
-	}
-	if err := os.Rename(tmpPath, final); err != nil {
-		cleanup()
-		return err
-	}
-	return nil
+	return atomicfile.Write(final, data, 0600)
 }
 
 // ListInstalled scans ExtDir for extension subdirectories and returns
@@ -175,7 +154,7 @@ func ListInstalled() ([]*Manifest, error) {
 // Returns os.ErrNotExist-compatible errors (wrapped) if the extension
 // is not installed.
 func Remove(name string) error {
-	if err := validateName(name); err != nil {
+	if err := utils.ValidateName("extension", name); err != nil {
 		return err
 	}
 	dir := ExtPath(name)
@@ -197,41 +176,16 @@ func Remove(name string) error {
 // Exported as ResolveName so the install verb can normalise the
 // user-supplied --name override without duplicating the prefix logic.
 func ResolveName(raw string) (string, error) {
-	if err := validateName(raw); err != nil {
+	if err := utils.ValidateName("extension", raw); err != nil {
 		return "", err
 	}
 	n := raw
 	n = strings.TrimPrefix(n, "gitee-")
 	n = strings.TrimPrefix(n, "gh-") // tolerate cross-pollination
-	if err := validateName(n); err != nil {
+	if err := utils.ValidateName("extension", n); err != nil {
 		return "", err
 	}
 	return n, nil
-}
-
-// validateName rejects names that could escape ExtDir or collide with
-// built-in cobra commands. Conservative: only [a-z0-9_-], 1-40 chars,
-// must not start with a dot or dash.
-func validateName(name string) error {
-	if name == "" {
-		return fmt.Errorf("extension name is empty")
-	}
-	if len(name) > 40 {
-		return fmt.Errorf("extension name %q too long (max 40 chars)", name)
-	}
-	if name[0] == '.' || name[0] == '-' {
-		return fmt.Errorf("extension name %q must not start with '.' or '-'", name)
-	}
-	for _, r := range name {
-		switch {
-		case r >= 'a' && r <= 'z':
-		case r >= '0' && r <= '9':
-		case r == '-' || r == '_':
-		default:
-			return fmt.Errorf("extension name %q contains invalid character %q (allowed: a-z, 0-9, -, _)", name, r)
-		}
-	}
-	return nil
 }
 
 // manifestPath is the on-disk location of an extension's manifest.

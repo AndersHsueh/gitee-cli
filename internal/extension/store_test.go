@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"gitee-cli/internal/utils"
 )
 
 // withTempExtDir points ExtDirOverride at a fresh temp dir for the
@@ -195,13 +197,13 @@ func TestRemove(t *testing.T) {
 
 func TestValidateNameRejectsReserved(t *testing.T) {
 	// Reserved names that would conflict with built-in cobra commands.
-	// We don't hard-fail on these in validateName (too brittle — list
+	// We don't hard-fail on these in utils.ValidateName (too brittle — list
 	// could drift), but resolveName + the loader check the live
 	// cobra command set. This test just documents the current policy
-	// for validateName: it allows these (loader catches them).
+	// for utils.ValidateName: it allows these (loader catches them).
 	for _, n := range []string{"auth", "issue", "pr", "repo", "extension"} {
-		if err := validateName(n); err != nil {
-			t.Errorf("validateName(%q) unexpectedly rejected: %v", n, err)
+		if err := utils.ValidateName("extension", n); err != nil {
+			t.Errorf("utils.ValidateName(%q) unexpectedly rejected: %v", n, err)
 		}
 	}
 }
