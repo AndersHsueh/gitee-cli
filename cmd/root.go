@@ -113,7 +113,7 @@ func RegisterDynamicCommands(loaders ...func() ([]*cobra.Command, error)) {
 	if GlobalNoExtensions {
 		return
 	}
-	reserved := reservedNames()
+	reserved := builtInCommandNames()
 	for _, load := range loaders {
 		cmds, err := load()
 		if err != nil {
@@ -128,18 +128,6 @@ func RegisterDynamicCommands(loaders ...func() ([]*cobra.Command, error)) {
 			rootCmd.AddCommand(c)
 		}
 	}
-}
-
-// reservedNames returns the set of command names already on rootCmd.
-// Used by RegisterDynamicCommands to filter out extension name
-// collisions with built-ins (we'd rather keep the built-in than let
-// a user-installed extension shadow e.g. `gitee auth`).
-func reservedNames() map[string]bool {
-	out := make(map[string]bool, len(rootCmd.Commands()))
-	for _, c := range rootCmd.Commands() {
-		out[c.Name()] = true
-	}
-	return out
 }
 
 func Execute() {
@@ -191,17 +179,36 @@ func init() {
 }
 
 // ResolveHostname returns the effective Gitee hostname.
-// Priority: --hostname flag (if explicitly set) > config active_host > "gitee.com".
-// This is what makes `gitee auth switch` actually take effect — without it the
-// field was write-only. (v0.10.0)
+// Priority: --hostname flag (if explicitly set, even to "gitee.com") > config
+// active_host > "gitee.com".
+//
+// We use PersistentFlags().Changed("hostname") rather than comparing the value
+// to "gitee.com": the flag's default IS "gitee.com", so a value comparison
+// cannot distinguish "user did not pass --hostname" from "user explicitly
+// passed --hostname gitee.com to force-switch back from an enterprise host".
+// The Changed() check makes an explicit --hostname gitee.com win over a
+// previously-switched active_host, which is the intuitive behavior.
+// (v0.10.0; Changed() fix landed with the simplify batch.)
 func ResolveHostname() string {
-	if GlobalHostname != "gitee.com" {
-		return GlobalHostname // user explicitly set --hostname to something else
+	if rootCmd.PersistentFlags().Changed("hostname") {
+		return GlobalHostname
 	}
 	if active := config.GetActiveHost(); active != "" {
 		return active
 	}
 	return "gitee.com"
+}
+
+// ResolveAPIBaseURL returns the API base URL for a given hostname, honoring
+// an explicit --api-url override when set. This is the single source of
+// truth for "hostname → https://<host>/api/v5" so that NewAPIClient and
+// auth login (which needs a client to verify a token before persisting it)
+// cannot drift apart. (extracted from NewAPIClient + auth.apiBaseURL)
+func ResolveAPIBaseURL(hostname string) string {
+	if GlobalAPIURL != "" {
+		return GlobalAPIURL
+	}
+	return fmt.Sprintf("https://%s/api/v5", hostname)
 }
 
 // NewAPIClient builds an authenticated API client using the resolved token.
@@ -216,12 +223,7 @@ func NewAPIClient() (*api.Client, error) {
 		return nil, fmt.Errorf("not authenticated. Set GITEE_TOKEN or run 'gitee auth login'")
 	}
 
-	baseURL := GlobalAPIURL
-	if baseURL == "" {
-		baseURL = fmt.Sprintf("https://%s/api/v5", hostname)
-	}
-
-	return api.NewClient(token, baseURL, GlobalVerbose, GlobalTimeout), nil
+	return api.NewClient(token, ResolveAPIBaseURL(hostname), GlobalVerbose, GlobalTimeout), nil
 }
 
 // ResolveCurrentUsername returns the authenticated username, trying config
