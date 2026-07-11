@@ -7,7 +7,9 @@ import (
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
+	"gitee-cli/internal/utils"
 
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )
 
@@ -47,10 +49,14 @@ func runDelete(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	if !deleteFlags.yes {
-		fmt.Printf("Are you sure you want to delete repository %s/%s? [y/N] ", owner, repoName)
-		var confirm string
-		fmt.Scanln(&confirm)
-		if confirm != "y" && confirm != "Y" {
+		yes, err := utils.ConfirmYN(
+			fmt.Sprintf("%s Delete repository %s/%s?", color.YellowString("?"), owner, repoName),
+			false,
+		)
+		if err != nil {
+			return err
+		}
+		if !yes {
 			fmt.Println("Cancelled")
 			return nil
 		}
@@ -89,8 +95,8 @@ deletion.
     - positional argument:        ` + "`" + `gitee repo delete owner/repo` + "`" + `
     - --repo / -R flag:           ` + "`" + `--repo owner/repo` + "`" + `
     - split --owner + --repo:     ` + "`" + `--owner owner --repo name` + "`" + `
-- For interactive runs (no --yes): the user must type ` + "`" + `y` + "`" + ` or ` + "`" + `Y` + "`" + `
-  at the prompt. Anything else (including EOF) cancels.
+- For interactive runs (no --yes): the user must type ` + "`" + `y` + "`" + `, ` + "`" + `Y` + "`" + `, or ` + "`" + `yes` + "`" + `
+  at the prompt. Anything else (including EOF / non-TTY) cancels.
 - For automation, pass ` + "`" + `--yes` + "`" + ` to skip the prompt.
 
 ## Optional flags
