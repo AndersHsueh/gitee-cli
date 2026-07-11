@@ -2,12 +2,16 @@ package notification
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
+	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
+	"gitee-cli/internal/handler"
 	"gitee-cli/pkg/types"
 
 	"github.com/stretchr/testify/assert"
@@ -328,4 +332,104 @@ func TestNotificationFlagsCoveredInAgentHelp(t *testing.T) {
 			t.Errorf("flag %q must be mentioned in agent help", c.flag)
 		}
 	}
+}
+
+// withAPIClientGlobals sets cmd.GlobalAPIURL / GlobalToken / GlobalTimeout
+// to point at a test server and returns a restore func. Used by the
+// NotificationRead behavior tests below.
+func withAPIClientGlobals(t *testing.T, serverURL string) func() {
+	t.Helper()
+	origAPIURL := cmd.GlobalAPIURL
+	origToken := cmd.GlobalToken
+	origTimeout := cmd.GlobalTimeout
+	cmd.GlobalAPIURL = serverURL
+	cmd.GlobalToken = "test-token"
+	cmd.GlobalTimeout = 30
+	return func() {
+		cmd.GlobalAPIURL = origAPIURL
+		cmd.GlobalToken = origToken
+		cmd.GlobalTimeout = origTimeout
+	}
+}
+
+// captureStdout temporarily redirects os.Stdout to a pipe and returns a
+// restore func plus a drain func that yields the captured text. The
+// caller must call drain() after the code under test has finished.
+func captureStdout(t *testing.T) (restore func(), drain func() string) {
+	t.Helper()
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+	restore = func() { os.Stdout = old }
+	drain = func() string {
+		_ = w.Close()
+		b, _ := io.ReadAll(r)
+		return string(b)
+	}
+	return restore, drain
+}
+
+// TestNotificationReadUnreadDirectionOutput verifies the --unread flag
+// drives the SUCCESS output direction: a single-thread mark-read with
+// markUnread=true must print "marked as UNREAD" (not "as read"). This
+// is the post-confirmation mirror of the prompt-direction fix and
+// locks the direction variable used in both the prompt and the output.
+func TestNotificationReadUnreadDirectionOutput(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer ts.Close()
+
+	restore := withAPIClientGlobals(t, ts.URL)
+	defer restore()
+
+	restoreOut, drain := captureStdout(t)
+	err := handler.NotificationRead("1234", false, true /*markUnread*/, true /*force*/)
+	out := drain()
+	restoreOut()
+
+	require.NoError(t, err)
+	assert.Contains(t, out, "Notification 1234 marked as UNREAD")
+	assert.NotContains(t, out, "marked as read")
+}
+
+// TestNotificationReadDefaultDirectionOutput verifies the default
+// (markUnread=false) direction prints "marked as read".
+func TestNotificationReadDefaultDirectionOutput(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer ts.Close()
+
+	restore := withAPIClientGlobals(t, ts.URL)
+	defer restore()
+
+	restoreOut, drain := captureStdout(t)
+	err := handler.NotificationRead("1234", false, false /*markUnread*/, true /*force*/)
+	out := drain()
+	restoreOut()
+
+	require.NoError(t, err)
+	assert.Contains(t, out, "Notification 1234 marked as read")
+}
+
+// TestNotificationReadAllUnreadDirectionOutput verifies the bulk (--all)
+// path also reflects the --unread direction in its output.
+func TestNotificationReadAllUnreadDirectionOutput(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer ts.Close()
+
+	restore := withAPIClientGlobals(t, ts.URL)
+	defer restore()
+
+	restoreOut, drain := captureStdout(t)
+	err := handler.NotificationRead("", true /*all*/, true /*markUnread*/, true /*force*/)
+	out := drain()
+	restoreOut()
+
+	require.NoError(t, err)
+	assert.Contains(t, out, "All notifications marked as UNREAD")
+	assert.NotContains(t, out, "marked as read")
 }

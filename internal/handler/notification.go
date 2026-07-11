@@ -139,8 +139,12 @@ func NotificationRead(threadID string, all bool, markUnread bool, force bool) er
 	}
 
 	if !force && !all {
+		direction := "read"
+		if markUnread {
+			direction = "UNREAD"
+		}
 		yes, err := utils.ConfirmYN(
-			fmt.Sprintf("%s Mark notification %s as read?", color.YellowString("?"), threadID),
+			fmt.Sprintf("%s Mark notification %s as %s?", color.YellowString("?"), threadID, direction),
 			false,
 		)
 		if err != nil {
@@ -151,8 +155,12 @@ func NotificationRead(threadID string, all bool, markUnread bool, force bool) er
 			return nil
 		}
 	} else if !force && all {
+		direction := "read"
+		if markUnread {
+			direction = "UNREAD"
+		}
 		yes, err := utils.ConfirmYN(
-			fmt.Sprintf("%s Mark ALL notifications as read?", color.YellowString("?")),
+			fmt.Sprintf("%s Mark ALL notifications as %s?", color.YellowString("?"), direction),
 			false,
 		)
 		if err != nil {
