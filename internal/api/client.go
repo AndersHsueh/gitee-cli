@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"time"
 
 	"github.com/go-resty/resty/v2"
@@ -91,38 +90,12 @@ func (c *Client) Get(ctx context.Context, path string, result interface{}) error
 
 // Post issues a POST request with a JSON body and decodes the response.
 func (c *Client) Post(ctx context.Context, path string, body, result interface{}) error {
-	req := c.r.R().
-		SetContext(ctx).
-		SetHeader("Content-Type", "application/json")
-	if body != nil {
-		req = req.SetBody(body)
-	}
-	if result != nil {
-		req = req.SetResult(result)
-	}
-	resp, err := req.Post(path)
-	if err != nil {
-		return err
-	}
-	return checkStatus(resp)
+	return c.do(ctx, resty.MethodPost, path, body, result)
 }
 
 // Patch issues a PATCH request.
 func (c *Client) Patch(ctx context.Context, path string, body, result interface{}) error {
-	req := c.r.R().
-		SetContext(ctx).
-		SetHeader("Content-Type", "application/json")
-	if body != nil {
-		req = req.SetBody(body)
-	}
-	if result != nil {
-		req = req.SetResult(result)
-	}
-	resp, err := req.Patch(path)
-	if err != nil {
-		return err
-	}
-	return checkStatus(resp)
+	return c.do(ctx, resty.MethodPatch, path, body, result)
 }
 
 // Delete issues a DELETE request.
@@ -155,16 +128,21 @@ func (c *Client) DeleteWithBody(ctx context.Context, path string, body interface
 
 // Put issues a PUT request with a JSON body and decodes the response.
 func (c *Client) Put(ctx context.Context, path string, body, result interface{}) error {
-	req := c.r.R().
-		SetContext(ctx).
-		SetHeader("Content-Type", "application/json")
+	return c.do(ctx, resty.MethodPut, path, body, result)
+}
+
+// do issues a JSON request with the given verb, optionally setting body and
+// result, and checks the response status. It is the shared implementation
+// behind Post/Patch/Put.
+func (c *Client) do(ctx context.Context, verb, path string, body, result interface{}) error {
+	req := c.r.R().SetContext(ctx).SetHeader("Content-Type", "application/json")
 	if body != nil {
 		req = req.SetBody(body)
 	}
 	if result != nil {
 		req = req.SetResult(result)
 	}
-	resp, err := req.Put(path)
+	resp, err := req.Execute(verb, path)
 	if err != nil {
 		return err
 	}
@@ -185,8 +163,8 @@ func (c *Client) UploadFile(ctx context.Context, path, fileField, filePath strin
 	if filePath != "" {
 		req = req.SetFile(fileField, filePath)
 	}
-	for k, v := range extraParams {
-		req = req.SetFormData(map[string]string{k: v})
+	if len(extraParams) > 0 {
+		req = req.SetFormData(extraParams)
 	}
 	if result != nil {
 		req = req.SetResult(result)
@@ -199,14 +177,13 @@ func (c *Client) UploadFile(ctx context.Context, path, fileField, filePath strin
 }
 
 // GetRaw returns the raw response body for a GET request.
-func (c *Client) GetRaw(ctx context.Context, path string) ([]byte, *http.Header, error) {
+func (c *Client) GetRaw(ctx context.Context, path string) ([]byte, error) {
 	resp, err := c.r.R().SetContext(ctx).Get(path)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	if err := checkStatus(resp); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	h := resp.Header()
-	return resp.Body(), &h, nil
+	return resp.Body(), nil
 }

@@ -186,7 +186,7 @@ func TestRepoContentsGetEndpoint(t *testing.T) {
 	defer ts.Close()
 
 	client := api.NewClient("test-token", ts.URL, false, 30)
-	body, _, err := client.GetRaw(t.Context(), api.RepoContentsGet("o", "r", "README.md"))
+	body, err := client.GetRaw(t.Context(), api.RepoContentsGet("o", "r", "README.md"))
 	require.NoError(t, err)
 	assert.Equal(t, http.MethodGet, gotMethod)
 	assert.Equal(t, "/repos/o/r/contents/README.md", gotPath)
@@ -216,7 +216,7 @@ func TestRepoContentsListEndpoint(t *testing.T) {
 	defer ts.Close()
 
 	client := api.NewClient("test-token", ts.URL, false, 30)
-	body, _, err := client.GetRaw(t.Context(), api.RepoContentsGet("o", "r", "docs"))
+	body, err := client.GetRaw(t.Context(), api.RepoContentsGet("o", "r", "docs"))
 	require.NoError(t, err)
 	assert.Equal(t, "/repos/o/r/contents/docs", gotPath)
 
@@ -368,7 +368,7 @@ func TestIsNotFoundRecognizes404(t *testing.T) {
 	defer ts.Close()
 
 	client := api.NewClient("test-token", ts.URL, false, 30)
-	_, _, err := client.GetRaw(t.Context(), api.RepoContentsGet("o", "r", "missing.md"))
+	_, err := client.GetRaw(t.Context(), api.RepoContentsGet("o", "r", "missing.md"))
 	require.Error(t, err)
 	assert.True(t, api.IsNotFound(err), "api.IsNotFound must recognize a 404 as a not-found error")
 }

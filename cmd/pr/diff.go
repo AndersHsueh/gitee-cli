@@ -71,7 +71,7 @@ func runDiff(cobraCmd *cobra.Command, args []string) error {
 		return fmt.Errorf("PR #%d has no diff_url", prNum)
 	}
 
-	body, _, err := client.GetRaw(ctx, pr.DiffURL)
+	body, err := client.GetRaw(ctx, pr.DiffURL)
 	if err != nil {
 		return fmt.Errorf("fetching diff: %w", err)
 	}

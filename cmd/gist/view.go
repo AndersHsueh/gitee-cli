@@ -72,7 +72,7 @@ func runView(cobraCmd *cobra.Command, args []string) error {
 		if viewFlags.raw {
 			// Get raw content from raw_url
 			if file.RawURL != "" {
-				rawResp, _, err := client.GetRaw(ctx, file.RawURL)
+				rawResp, err := client.GetRaw(ctx, file.RawURL)
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "warning: fetching raw content for %s: %v\n", name, err)
 				} else {
@@ -83,7 +83,7 @@ func runView(cobraCmd *cobra.Command, args []string) error {
 			// Show truncated content
 			content := file.Content
 			if content == "" && file.RawURL != "" {
-				rawResp, _, err := client.GetRaw(ctx, file.RawURL)
+				rawResp, err := client.GetRaw(ctx, file.RawURL)
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "warning: fetching raw content for %s: %v\n", name, err)
 				} else {

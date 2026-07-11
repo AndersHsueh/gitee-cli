@@ -189,11 +189,10 @@ func TestClient_GetRaw(t *testing.T) {
 	client, ts := newTestClient(t, handler)
 	defer ts.Close()
 
-	body, header, err := client.GetRaw(context.Background(), "/some/path")
+	body, err := client.GetRaw(context.Background(), "/some/path")
 
 	require.NoError(t, err)
 	assert.Equal(t, "raw content here", string(body))
-	assert.Equal(t, "100", header.Get("X-Total-Count"))
 }
 
 func TestCheckStatus_Success(t *testing.T) {

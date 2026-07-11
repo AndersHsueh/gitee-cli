@@ -120,7 +120,7 @@ func downloadGistFiles(client *api.Client, gist *types.Gist, dir string) error {
 			continue
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
-		body, _, err := client.GetRaw(ctx, file.RawURL)
+		body, err := client.GetRaw(ctx, file.RawURL)
 		cancel()
 		if err != nil {
 			return fmt.Errorf("downloading %s: %w", filename, err)

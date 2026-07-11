@@ -175,7 +175,7 @@ func runFileView(cobraCmd *cobra.Command, args []string) error {
 	// Gitee v5 returns either a JSON object (file) or array (directory)
 	// from the same path. Probe the first byte to disambiguate, then
 	// unmarshal into the appropriate shape.
-	body, _, err := client.GetRaw(ctx, path)
+	body, err := client.GetRaw(ctx, path)
 	if err != nil {
 		return fmt.Errorf("fetching contents: %w", err)
 	}
@@ -356,7 +356,7 @@ func runFilePush(cobraCmd *cobra.Command, args []string) error {
 //   - ("",   false, nil)  if the path does not exist (404)
 //   - ("",   false, err)  on other transport errors
 func probeFileSHA(ctx context.Context, client *api.Client, owner, repoName, path string) (string, bool, error) {
-	probe, _, err := client.GetRaw(ctx, api.RepoContentsGet(owner, repoName, path))
+	probe, err := client.GetRaw(ctx, api.RepoContentsGet(owner, repoName, path))
 	if err != nil {
 		// The API client wraps 404 as a *api.APIError; treat that as the
 		// "create" case. Any other error is a real failure.
@@ -413,15 +413,19 @@ func runFileDelete(cobraCmd *cobra.Command, args []string) error {
 		}
 	}
 
+	// A single client + ctx serves both the optional auto-fetch of the
+	// blob SHA and the actual DELETE. Previously each branch built its
+	// own client, duplicating NewAPIClient (which re-reads token/config).
+	client, err := cmd.NewAPIClient()
+	if err != nil {
+		return err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	defer cancel()
+
 	sha := fileFlags.sha
 	if sha == "" {
 		// Auto-fetch the SHA so the user doesn't have to copy-paste it.
-		client, err := cmd.NewAPIClient()
-		if err != nil {
-			return err
-		}
-		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
-		defer cancel()
 		sha, _, err = probeFileSHA(ctx, client, owner, repoName, cleanRemote)
 		if err != nil {
 			return err
@@ -430,14 +434,6 @@ func runFileDelete(cobraCmd *cobra.Command, args []string) error {
 			return fmt.Errorf("file %q does not exist in %s/%s; nothing to delete", cleanRemote, owner, repoName)
 		}
 	}
-
-	client, err := cmd.NewAPIClient()
-	if err != nil {
-		return err
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
-	defer cancel()
 
 	req := types.ContentDeleteRequest{
 		SHA:     sha,
