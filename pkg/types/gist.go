@@ -46,13 +46,18 @@ type GistFileContent struct {
 	Content string `json:"content"`
 }
 
+// GistEditFile is the value type for GistEditRequest.Files. The
+// Filename field (when non-empty) renames the gist file keyed by the
+// map key; Content replaces the file's content.
+type GistEditFile struct {
+	Content  string `json:"content,omitempty"`
+	Filename string `json:"filename,omitempty"`
+}
+
 // GistEditRequest is used when editing a gist.
 type GistEditRequest struct {
 	Description string `json:"description,omitempty"`
-	Files       map[string]struct {
-		Content  string `json:"content,omitempty"`
-		Filename string `json:"filename,omitempty"`
-	} `json:"files,omitempty"`
+	Files       map[string]GistEditFile `json:"files,omitempty"`
 }
 
 // GistComment represents a comment on a gist. Returned by

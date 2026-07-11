@@ -56,20 +56,14 @@ func runEdit(cobraCmd *cobra.Command, args []string) error {
 
 	// Parse files
 	if len(editFlags.files) > 0 {
-		req.Files = make(map[string]struct {
-			Content  string `json:"content,omitempty"`
-			Filename string `json:"filename,omitempty"`
-		})
+		req.Files = make(map[string]types.GistEditFile)
 
 		for _, fileFlag := range editFlags.files {
 			filename, content, err := utils.ParseGistFileFlag(fileFlag)
 			if err != nil {
 				return err
 			}
-			req.Files[filename] = struct {
-				Content  string `json:"content,omitempty"`
-				Filename string `json:"filename,omitempty"`
-			}{
+			req.Files[filename] = types.GistEditFile{
 				Content: content,
 			}
 		}

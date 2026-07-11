@@ -133,10 +133,6 @@ func runCreate(cobraCmd *cobra.Command, args []string) error {
 			}
 			files[filename] = types.GistFileContent{Content: string(content)}
 		}
-
-		if len(files) == 0 {
-			return fmt.Errorf("no files provided. Use positional arguments, --file flag, --interactive, or stdin")
-		}
 	}
 
 	req := types.GistCreateRequest{
