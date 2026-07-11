@@ -41,6 +41,10 @@ type prStatusItem struct {
 	Author string `json:"author"`
 }
 
+var prStatusFlags struct {
+	limit int
+}
+
 var prStatusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "Show cross-repo PR status for the current user",
@@ -63,6 +67,9 @@ repos to inspect.`,
 }
 
 func init() {
+	f := prStatusCmd.Flags()
+	f.IntVarP(&prStatusFlags.limit, "limit", "L", 50, "Max repos to scan (0 for unlimited)")
+
 	PRCmd.AddCommand(prStatusCmd)
 }
 
@@ -82,7 +89,9 @@ func runPRStatus(cobraCmd *cobra.Command, args []string) error {
 		return fmt.Errorf("could not determine current user")
 	}
 
-	// Fetch up to 50 recently pushed repos the user owns.
+	// Fetch up to --limit recently pushed repos the user owns.
+	// limit=0 means "no cap" (FetchAllPages semantics).
+	repoLimit := prStatusFlags.limit
 	qv := url.Values{}
 	qv.Set("sort", "pushed")
 	qv.Set("direction", "desc")
@@ -91,7 +100,7 @@ func runPRStatus(cobraCmd *cobra.Command, args []string) error {
 	reposPath := api.ReposList("") + "?" + qv.Encode()
 
 	var repos []types.Repository
-	if err := api.FetchAllPages(ctx, client, reposPath, 100, 50, &repos); err != nil {
+	if err := api.FetchAllPages(ctx, client, reposPath, 100, repoLimit, &repos); err != nil {
 		return fmt.Errorf("listing repos: %w", err)
 	}
 
