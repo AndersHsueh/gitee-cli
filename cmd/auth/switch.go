@@ -28,10 +28,6 @@ as the default when --hostname is not explicitly provided.`,
 	RunE:    runSwitch,
 }
 
-func init() {
-	AuthCmd.AddCommand(switchCmd)
-}
-
 func runSwitch(cobraCmd *cobra.Command, args []string) error {
 	// If a hostname was passed as positional arg, switch directly.
 	if len(args) >= 1 {

@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -95,10 +96,14 @@ func runStatus(cobraCmd *cobra.Command, args []string) error {
 		fmt.Printf("  Hint:     Use --show-token to display full token\n")
 	}
 
-	// Token source
+	// Token source: GlobalToken is bound only to the --token flag, never to
+	// os.Getenv. Check the flag first (flag > env > config precedence), then
+	// the env var; config file is the fallback.
 	tokenSource := "config file"
 	if cmd.GlobalToken != "" {
-		tokenSource = "GITEE_TOKEN environment variable or --token flag"
+		tokenSource = "--token flag"
+	} else if os.Getenv("GITEE_TOKEN") != "" {
+		tokenSource = "GITEE_TOKEN environment variable"
 	}
 	fmt.Printf("  Source:   %s\n", tokenSource)
 

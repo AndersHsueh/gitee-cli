@@ -82,10 +82,7 @@ func runLogin(cobraCmd *cobra.Command, args []string) error {
 }
 
 func apiBaseURL(hostname string) string {
-	if cmd.GlobalAPIURL != "" {
-		return cmd.GlobalAPIURL
-	}
-	return fmt.Sprintf("https://%s/api/v5", hostname)
+	return cmd.ResolveAPIBaseURL(hostname)
 }
 
 // persistToken writes a fresh token + username into ~/.gitee-cli/settings.json
