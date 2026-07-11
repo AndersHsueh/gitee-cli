@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"strings"
 	"time"
 
@@ -133,11 +132,21 @@ func runAPI(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	if rawFlags.raw {
-		io.WriteString(cobraCmd.OutOrStdout(), string(result))
-	} else {
-		var out bytes.Buffer
-		json.Indent(&out, result, "", "  ")
-		out.WriteTo(cobraCmd.OutOrStdout())
+		if len(result) == 0 {
+			return fmt.Errorf("empty response body")
+		}
+		if _, err := cobraCmd.OutOrStdout().Write(result); err != nil {
+			return fmt.Errorf("writing response: %w", err)
+		}
+		return nil
+	}
+
+	var out bytes.Buffer
+	if err := json.Indent(&out, result, "", "  "); err != nil {
+		return fmt.Errorf("formatting JSON response: %w", err)
+	}
+	if _, err := out.WriteTo(cobraCmd.OutOrStdout()); err != nil {
+		return fmt.Errorf("writing JSON: %w", err)
 	}
 	return nil
 }
@@ -177,8 +186,12 @@ func runPaginatedGet(client *api.Client, ctx context.Context, path string, cobra
 		if err := json.Unmarshal(result, &items); err != nil {
 			// Not an array, just output as-is
 			var out bytes.Buffer
-			json.Indent(&out, result, "", "  ")
-			out.WriteTo(cobraCmd.OutOrStdout())
+			if err := json.Indent(&out, result, "", "  "); err != nil {
+				return fmt.Errorf("formatting JSON response: %w", err)
+			}
+			if _, err := out.WriteTo(cobraCmd.OutOrStdout()); err != nil {
+				return fmt.Errorf("writing JSON: %w", err)
+			}
 			return nil
 		}
 
@@ -207,7 +220,9 @@ func runPaginatedGet(client *api.Client, ctx context.Context, path string, cobra
 	if err != nil {
 		return err
 	}
-	cobraCmd.OutOrStdout().Write(out)
+	if _, err := cobraCmd.OutOrStdout().Write(out); err != nil {
+		return fmt.Errorf("writing response: %w", err)
+	}
 	return nil
 }
 
