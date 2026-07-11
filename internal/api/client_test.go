@@ -128,6 +128,57 @@ func TestClient_Put(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestClient_PostNotRetriedOn5xx(t *testing.T) {
+	// A POST that receives a 5xx must NOT be retried — otherwise the
+	// server may have already applied the write and we'd create a
+	// duplicate resource. We count how many times the handler fires;
+	// it must be exactly 1.
+	var calls int
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`{"message":"internal server error"}`))
+	}
+
+	ts := httptest.NewServer(http.HandlerFunc(handler))
+	defer ts.Close()
+
+	client := NewClient("test-token", ts.URL, false, 30)
+	var result map[string]interface{}
+	err := client.Post(context.Background(), "/user/repos", map[string]string{"name": "test"}, &result)
+
+	require.Error(t, err, "POST 500 should return an error")
+	assert.Equal(t, 1, calls, "POST should not be retried on 5xx")
+}
+
+func TestClient_GetRetriedOn5xx(t *testing.T) {
+	// A GET that receives a 5xx SHOULD be retried. We make the first
+	// call fail with 500 and the second succeed, then assert 2 total
+	// calls (1 initial + 1 retry). Keeping it to one retry keeps the
+	// test fast (resty's first retry wait is ~2s).
+	var calls int
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		if calls == 1 {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(`{"message":"internal server error"}`))
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode([]types.Repository{{ID: 1, Name: "test-repo"}})
+	}
+
+	ts := httptest.NewServer(http.HandlerFunc(handler))
+	defer ts.Close()
+
+	client := NewClient("test-token", ts.URL, false, 30)
+	var repos []types.Repository
+	err := client.Get(context.Background(), "/user/repos", &repos)
+
+	require.NoError(t, err, "GET should succeed after a retry")
+	assert.Equal(t, 2, calls, "GET 500 should be retried at least once")
+}
+
 func TestClient_GetRaw(t *testing.T) {
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "GET", r.Method)

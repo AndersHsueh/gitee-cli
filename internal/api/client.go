@@ -34,7 +34,24 @@ func NewClient(token, baseURL string, verbose bool, timeout int) *Client {
 		SetRetryCount(3).
 		SetRetryWaitTime(2 * time.Second).
 		SetRetryMaxWaitTime(8 * time.Second).
+		// Only retry GET requests. A write (POST/PUT/PATCH/DELETE) that
+		// returns 5xx — or fails with a network error — may already have
+		// taken effect on the server (Gitee does not guarantee the
+		// request was not applied on a 5xx/timeout). Retrying such a
+		// call would re-issue the write and risk creating duplicate
+		// resources (duplicate issues, PRs, releases, keys, ...).
+		// resty's condition func receives the response; for a network
+		// error err != nil and resp may still carry the original
+		// Request, so resp.Request.Method lets us distinguish the verb
+		// in both the 5xx and the err!=nil branches.
 		AddRetryCondition(func(resp *resty.Response, err error) bool {
+			method := ""
+			if resp != nil && resp.Request != nil {
+				method = resp.Request.Method
+			}
+			if method != "GET" {
+				return false
+			}
 			return err != nil || resp.StatusCode() >= 500
 		})
 
