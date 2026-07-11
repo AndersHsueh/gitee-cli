@@ -15,6 +15,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var viewFlags struct {
+	owner string
+	repo  string
+}
+
 var viewCmd = &cobra.Command{
 	Use:     "view <number>",
 	Short:   "View details of an issue",
@@ -29,8 +34,14 @@ var viewCmd = &cobra.Command{
 	RunE: runView,
 }
 
+func init() {
+	f := viewCmd.Flags()
+	f.StringVar(&viewFlags.owner, "owner", "", "Repository owner")
+	f.StringVarP(&viewFlags.repo, "repo", "R", "", "Repository name or owner/repo")
+}
+
 func runView(cobraCmd *cobra.Command, args []string) error {
-	owner, repoName, err := resolveRepo("", cmd.GlobalRepo)
+	owner, repoName, err := resolveRepo(viewFlags.owner, viewFlags.repo)
 	if err != nil {
 		return err
 	}
