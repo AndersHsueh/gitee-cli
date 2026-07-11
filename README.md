@@ -6,7 +6,7 @@
 [![Go Version](https://img.shields.io/badge/go-1.25+-blue.svg)](https://golang.org)
 [![License](https://img.shields.io/badge/license-MulanPSL--2.0-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey.svg)]()
-[![Version](https://img.shields.io/badge/version-v0.12.1-orange.svg)](https://gitee.com/andershsueh/gitee-cli/releases/latest)
+[![Version](https://img.shields.io/badge/version-v0.12.2-orange.svg)](https://gitee.com/andershsueh/gitee-cli/releases/latest)
 [![Agent Help](https://img.shields.io/badge/--agent--help-131%20verbs-8A2BE2.svg)](docs/philosophy.md)
 
 ```bash
@@ -220,6 +220,45 @@ golangci-lint run ./...           # Lint
 ---
 
 ## 更新日志
+
+### v0.12.2 (2026-07-11) — 正确性与简化批次
+
+> 对全项目做了一轮四维度 code review（76 条原始发现 → 67 条确认），本批次修复全部 4 个 high bug 与 26 个 medium，37 个 low 留后续。
+
+**🔧 正确性修复（high）**
+
+- `api` 客户端 retry 只对 GET 生效——写操作（POST/PUT/PATCH/DELETE）收到 5xx 或网络错误时不再重试，避免服务端已生效但响应失败时**创建重复 issue/PR/release/gist**
+- `auth status` / `auth token` / `auth logout` 改用 `ResolveHostname()`——`gitee auth switch` 后这些子命令终于查对 host（之前 switch 对它们完全失效）
+- `gitee api POST /user/repos --field name=x` 现在可用——`--field`/`--raw` 此前只注册在 `api raw` 子命令，canonical 入口 `gitee api` 报 unknown flag
+- `gitee ssh-key list --limit --page` 现在真正下发 `per_page`/`page` 查询参数——此前 flag 注册了但被忽略
+
+**🔧 正确性修复（medium）**
+
+- `pr checkout`/`pr view` 增加 `Head`/`Base` nil 守卫，API 返回缺字段时不再 panic
+- `pr edit` 补注册 `--id/-i` flag（此前文档化了但未注册，传 `--id` 报 unknown flag）
+- `pr status` 补注册 `--limit/-L` 并接入分页
+- `gist comments --page` 下发查询参数；`gist view` 不再静默吞掉 raw_url 拉取错误
+- `release download` 检查 `Close` 错误并在 `io.Copy` 失败时清理半截文件
+- `repo sync` 用 typed `IsUnprocessable` 替代 `strings.Contains(err,"422")` 字符串匹配
+- `repo delete` 用 `utils.ConfirmYN` 替代裸 `fmt.Scanln`（补齐非-TTY/EOF 处理）
+- `notification read` 确认提示文案随 `--unread` 方向切换
+
+**♻️ 简化与一致性**
+
+- `issue`/`pr`/`repo commits` list 统一改用 `api.FetchListOrAll`，删除 3 份重复的 `addPageParams` + 内联 perPage clamp，并修复 `issue list` 单页路径不处理 404 的行为不一致
+- `issue create/list/view` 改用 `api` 端点 builder，不再在 cmd 层手拼 URL
+- `org list/repo/member` 查询串改用 `url.Values` + perPage clamp
+- 29 处表格输出统一改用 `output.NewTableWriter()`
+- `extension` 复用 `utils.ValidateName` 与 `atomicfile.Write`（删除逐字节重复的本地副本）
+- 抽取 `utils.ParseGistFileFlag`，消除 `gist create`/`edit` 重复的 `--file` 解析
+- 提取共享 `cmd.AgentHelpNA` helper，消除 auth 6 个子命令 + config 的内联 n/a 闭包
+- `alias --agent-help --output json` 恢复产出结构化 JSON（此前绕过了 `PrintAgentHelp`）
+- 删除死 flag `auth login --scopes`/`--web`、死函数 `colorAttr`/`urlEncodeRef`、死分支若干
+- 修正 agent-help 中不存在的 `--reason completed` 文档、过时版本号（v0.10.0/v0.11.0/v0.9.x → v0.12.1）
+
+**📖 文档**
+
+- 本仓库的开发指引文档修正：项目结构与技术栈对齐实际（移除不存在的 `internal/auth`/`printer`/`i18n`、未引入的 Viper/oauth2，凭证路径更正为 `~/.gitee-cli/settings.json`，端点 builder 与 `FetchListOrAll` 等开发约定补入）
 
 ### v0.12.1 (2026-07-04) — Agent Surface 可达性
 

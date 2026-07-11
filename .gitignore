@@ -54,6 +54,8 @@ conversation-*.md
 todo-*.md
 xiaohongshu-*.md
 gh-command-list.md
+v*-修复指引.md
+需要补充的内容指引.md
 
 # MCP / editor artifacts
 .playwright-mcp/
