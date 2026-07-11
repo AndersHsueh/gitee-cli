@@ -40,8 +40,6 @@ without re-authenticating.`,
 func init() {
 	f := loginCmd.Flags()
 	f.StringP("token", "t", "", "Use a specific token for authentication; saved to settings.json on success")
-	f.StringSlice("scopes", nil, "Additional OAuth scopes to request")
-	f.Bool("web", false, "Open a browser to authenticate (not yet supported)")
 }
 
 func runLogin(cobraCmd *cobra.Command, args []string) error {

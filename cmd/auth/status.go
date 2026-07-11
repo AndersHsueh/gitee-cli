@@ -109,14 +109,6 @@ func runStatus(cobraCmd *cobra.Command, args []string) error {
 	}
 	fmt.Printf("  Source:   %s\n", tokenSource)
 
-	// Scope info (if available in config)
-	if scopes := config.GetScopes(hostname); len(scopes) > 0 {
-		fmt.Printf("\n%s\n", bold("Scopes:"))
-		for _, scope := range scopes {
-			fmt.Printf("  - %s\n", scope)
-		}
-	}
-
 	fmt.Printf("\n")
 	return nil
 }
