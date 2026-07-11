@@ -140,10 +140,25 @@ func downloadTo(rawURL, destPath string) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
 
-	if _, err := io.Copy(f, resp.Body); err != nil {
-		return err
+	// Copy first; on failure Close and remove the partial file so a
+	// later run (or script) doesn't mistake a truncated body for the
+	// full asset. On success an explicit Close flushes write buffers —
+	// a deferred Close would discard any delayed write error.
+	_, copyErr := io.Copy(f, resp.Body)
+	if closeErr := f.Close(); closeErr != nil {
+		// Close error takes precedence: even a "successful" copy is
+		// suspect if the file couldn't be flushed to disk.
+		if copyErr == nil {
+			_ = os.Remove(destPath)
+			return fmt.Errorf("closing %s: %w", destPath, closeErr)
+		}
+		_ = os.Remove(destPath)
+		return fmt.Errorf("writing %s: copy=%v close=%w", destPath, copyErr, closeErr)
+	}
+	if copyErr != nil {
+		_ = os.Remove(destPath)
+		return fmt.Errorf("downloading %s: %w", destPath, copyErr)
 	}
 	return nil
 }
