@@ -54,6 +54,7 @@ func init() {
 	f := editCmd.Flags()
 	f.StringVar(&editFlags.owner, "owner", "", "Repository owner")
 	f.StringVarP(&editFlags.repo, "repo", "R", "", "Repository name or owner/repo")
+	f.Int64VarP(&editFlags.id, "id", "i", 0, "PR number (alternative to positional)")
 	f.StringVarP(&editFlags.title, "title", "t", "", "New title (empty = leave unchanged)")
 	f.StringVarP(&editFlags.body, "body", "b", "", "New body (empty = leave unchanged)")
 	f.StringVarP(&editFlags.state, "state", "s", "", "New state: 'open' or 'closed' (empty = leave unchanged)")
