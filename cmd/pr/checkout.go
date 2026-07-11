@@ -141,7 +141,7 @@ func runCheckout(cobraCmd *cobra.Command, args []string) error {
 	if pr.HTMLURL != "" {
 		fmt.Printf("  URL:  %s\n", cyan(pr.HTMLURL))
 	}
-	if pr.Head.Ref != "" {
+	if pr.Head != nil && pr.Head.Ref != "" {
 		fmt.Printf("  Head: %s (from %s)\n", pr.Head.Ref, pr.Head.Repo.FullName)
 	}
 	return nil

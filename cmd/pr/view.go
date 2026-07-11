@@ -86,8 +86,16 @@ func runView(cobraCmd *cobra.Command, args []string) error {
 	fmt.Fprintf(w, "Title:\t%s\n", pr.Title)
 	fmt.Fprintf(w, "State:\t%s\n", state)
 	fmt.Fprintf(w, "Author:\t%s\n", pr.User.Login)
-	fmt.Fprintf(w, "Base:\t%s\n", pr.Base.Ref)
-	fmt.Fprintf(w, "Head:\t%s\n", pr.Head.Ref)
+	baseRef := "-"
+	if pr.Base != nil {
+		baseRef = pr.Base.Ref
+	}
+	headRef := "-"
+	if pr.Head != nil {
+		headRef = pr.Head.Ref
+	}
+	fmt.Fprintf(w, "Base:\t%s\n", baseRef)
+	fmt.Fprintf(w, "Head:\t%s\n", headRef)
 	fmt.Fprintf(w, "URL:\t%s\n", pr.HTMLURL)
 	if pr.Body != "" {
 		fmt.Fprintf(w, "\n%s\n", pr.Body)
