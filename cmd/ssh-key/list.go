@@ -47,7 +47,18 @@ func runList(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	path := api.SSHKeysList()
+	// Clamp perPage to Gitee v5's 1-100 range before sending it.
+	perPage := listFlags.limit
+	if perPage < 1 {
+		perPage = 30
+	}
+	if perPage > 100 {
+		perPage = 100
+	}
+	path, err := api.WithPageParams(api.SSHKeysList(), listFlags.page, perPage)
+	if err != nil {
+		return fmt.Errorf("listing SSH keys: %w", err)
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
 	defer cancel()
 
