@@ -11,8 +11,7 @@ import (
 // APIError represents an error returned by the Gitee API.
 type APIError struct {
 	StatusCode int
-	Message    string      `json:"message"`
-	Errors     interface{} `json:"errors"`
+	Message    string `json:"message"`
 }
 
 func (e *APIError) Error() string {
@@ -26,11 +25,6 @@ func (e *APIError) Is(target error) bool {
 		return e.StatusCode == t.StatusCode
 	}
 	return false
-}
-
-// Unwrap 返回底层错误，支持错误链提取。
-func (e *APIError) Unwrap() error {
-	return fmt.Errorf("gitee api error: status=%d message=%s", e.StatusCode, e.Message)
 }
 
 func checkStatus(resp *resty.Response) error {

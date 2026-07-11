@@ -27,13 +27,6 @@ func TestAPIError_Is(t *testing.T) {
 	assert.False(t, e404.Is(e401))
 }
 
-func TestAPIError_Unwrap(t *testing.T) {
-	e := &APIError{StatusCode: 500, Message: "server error"}
-	unwrapped := e.Unwrap()
-	assert.Error(t, unwrapped)
-	assert.Contains(t, unwrapped.Error(), "500")
-}
-
 func TestIsNotFound(t *testing.T) {
 	assert.False(t, IsNotFound(nil))
 	assert.False(t, IsNotFound(errors.New("random error")))
