@@ -69,7 +69,7 @@ func runSetDefault(cobraCmd *cobra.Command, args []string) error {
 	// Write mode
 	value := fmt.Sprintf("%s/%s", targetOwner, targetRepo)
 	if err := utils.GitConfigSet("gitee.default_repo", value); err != nil {
-		return fmt.Errorf("setting default repo: %w (not inside a git repo?)\n", err)
+		return fmt.Errorf("setting default repo: %w (not inside a git repo?)", err)
 	}
 
 	green := color.New(color.FgGreen).SprintFunc()

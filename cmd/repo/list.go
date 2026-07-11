@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"time"
 
 	"gitee-cli/cmd"
@@ -22,6 +23,12 @@ var listFlags struct {
 	sort       string
 	direction  string
 }
+
+// validRepoVisibilities / validRepoSorts constrain the --visibility and
+// --sort flags so a typo (or a value containing "&"/"#") cannot inject
+// extra query parameters or silently request an unsupported sort key.
+var validRepoVisibilities = map[string]bool{"public": true, "private": true, "internal": true, "all": true}
+var validRepoSorts = map[string]bool{"created": true, "updated": true, "pushed": true, "full_name": true, "stars": true}
 
 var listCmd = &cobra.Command{
 	Use:   "list",
@@ -50,19 +57,30 @@ func init() {
 func runList(cobraCmd *cobra.Command, args []string) error {
 	// --agent-help handling is in PreRunE (runs before required-flag validation).
 
+	if !validRepoVisibilities[listFlags.visibility] {
+		return fmt.Errorf("invalid --visibility %q: use one of public|private|internal|all", listFlags.visibility)
+	}
+	if !validRepoSorts[listFlags.sort] {
+		return fmt.Errorf("invalid --sort %q: use one of created|updated|pushed|full_name|stars", listFlags.sort)
+	}
+	if listFlags.direction != "asc" && listFlags.direction != "desc" {
+		return fmt.Errorf("invalid --direction %q: use asc or desc", listFlags.direction)
+	}
+
 	client, err := cmd.NewAPIClient()
 	if err != nil {
 		return err
 	}
 
-	var path string
-	if listFlags.owner != "" {
-		path = api.ReposList(listFlags.owner)
-	} else {
-		path = api.ReposList("")
-	}
-	path += fmt.Sprintf("?visibility=%s&sort=%s&direction=%s&per_page=%d",
-		listFlags.visibility, listFlags.sort, listFlags.direction, listFlags.limit)
+	// api.ReposList already branches on owner=="" internally, so the
+	// former if/else that called it twice was redundant.
+	path := api.ReposList(listFlags.owner)
+	q := url.Values{}
+	q.Set("visibility", listFlags.visibility)
+	q.Set("sort", listFlags.sort)
+	q.Set("direction", listFlags.direction)
+	q.Set("per_page", fmt.Sprintf("%d", listFlags.limit))
+	path += "?" + q.Encode()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
 	defer cancel()

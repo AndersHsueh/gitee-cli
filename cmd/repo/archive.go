@@ -79,7 +79,7 @@ func runArchive(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	req := types.RepositoryEditRequest{
-		Archived: utils.BoolPtr(archiveFlags.unarchive == false), // true for archive, false for unarchive
+		Archived: utils.BoolPtr(!archiveFlags.unarchive), // true for archive, false for unarchive
 	}
 
 	path := api.ReposArchive(owner, repoName)

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/url"
 	"strings"
 	"time"
 
@@ -226,15 +225,6 @@ func printCompareFiles(files []types.CommitFile) {
 		fmt.Fprintf(w, "    %s\t+%d\t-%d\t%s\n", status, f.Additions, f.Deletions, name)
 	}
 	_ = w.Flush()
-}
-
-// urlEncodeRef is a helper retained for potential future filter usage
-// (the current compare endpoint does not accept query params, but the
-// surrounding pattern is shared with commits list). The value is the
-// same one api.ReposCompare builds into the path, so callers should
-// prefer the api builder.
-func urlEncodeRef(ref string) string {
-	return url.QueryEscape(ref)
 }
 
 const repoCompareAgentHelp = `# gitee repo compare — Agent Help
