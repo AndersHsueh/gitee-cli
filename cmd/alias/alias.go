@@ -4,9 +4,6 @@
 package alias
 
 import (
-	"fmt"
-	"os"
-
 	"gitee-cli/cmd"
 
 	"github.com/spf13/cobra"
@@ -33,14 +30,15 @@ func init() {
 	AliasCmd.AddCommand(deleteCmd)
 }
 
-// preRunAgentHelp returns a PreRunE that prints helpText and exits
-// 0 when --agent-help is set, otherwise returns nil. Each verb in
-// this package supplies its own agent-help const.
+// preRunAgentHelp returns a PreRunE that delegates to cmd.PrintAgentHelp
+// when --agent-help is set, otherwise returns nil. Each verb in this
+// package supplies its own agent-help const. Using cmd.PrintAgentHelp
+// (instead of raw fmt.Print+os.Exit) ensures --agent-help --output json
+// produces structured JSON like every other command.
 func preRunAgentHelp(helpText string) func(*cobra.Command, []string) error {
 	return func(c *cobra.Command, _ []string) error {
 		if cmd.GlobalAgentHelp {
-			fmt.Print(helpText)
-			os.Exit(0)
+			cmd.PrintAgentHelp(helpText)
 		}
 		return nil
 	}
