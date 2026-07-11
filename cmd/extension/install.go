@@ -270,16 +270,6 @@ func baseNameOfSource(src string) string {
 
 // colour helpers. Kept local to this file so we don't pull
 // fatih/color into every verb.
-func colorAttr(attr string) func(...any) string {
-	switch attr {
-	case "green":
-		return color.New(color.FgGreen).SprintFunc()
-	case "bold":
-		return color.New(color.Bold).SprintFunc()
-	}
-	return func(a ...any) string { return fmt.Sprint(a...) }
-}
-
 func colorGreen() func(...any) string { return color.New(color.FgGreen).SprintFunc() }
 func colorBold() func(...any) string  { return color.New(color.Bold).SprintFunc() }
 
