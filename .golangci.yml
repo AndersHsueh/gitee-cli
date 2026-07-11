@@ -1,39 +1,22 @@
 # golangci-lint v2 configuration
 # Docs: https://golangci-lint.run/usage/configuration/
-#
-# Schema version (v2). Required by golangci-lint v2.x.
 version: "2"
 
 linters:
-  # Default linter set: the linters golangci-lint ships enabled by
-  # default (errcheck, govet, ineffassign, staticcheck, unused, ...).
-  # We do not enable `all` — the default set is what gh/glab-class CLIs
-  # typically run, and turning on every linter would generate a large
-  # amount of style noise unrelated to correctness.
+  # Default linter set (errcheck, govet, ineffassign, staticcheck, unused, ...).
+  # `all` would enable style linters that generate noise unrelated to correctness.
   default: standard
 
-  # NOTE: staticcheck runs with its DEFAULT check set (the SA/QF quick-fixes
-  # plus S1xxx simplification checks that gh/glab-class CLIs already follow).
-  # We deliberately do NOT set `staticcheck.checks: all` — enabling the ST1xxx
-  # style checks (ST1000 missing-package-comment ×139, ST1020 comment-form ×25,
-  # ST1003 naming ×7) would surface ~170 style nits across every file that are
-  # unrelated to correctness and were never part of this project's lint
-  # baseline. The 4 real staticcheck findings (S1017, S1002, QF1001, ST1005)
-  # are all in the default set and are fixed in-code.
-
+  # staticcheck runs with its default check set. We do NOT set
+  # `staticcheck.checks: all` — the ST1xxx style checks (missing package
+  # comments, comment form, naming) are intentionally not enabled.
   settings:
     errcheck:
-      # Exclude fmt.Fprint* from errcheck. In this project EVERY call to
-      # fmt.Fprint / fmt.Fprintf / fmt.Fprintln writes to one of:
-      #   - a tabwriter.Writer (in-memory buffer, cannot fail)
-      #   - os.Stdout / os.Stderr (terminal; a write failure is not actionable)
-      #   - cobra's OutOrStderr() (same)
-      # There are zero fmt.Fprint* calls that write to a file, socket, or
-      # pipe where a dropped error would mask real data loss. Excluding
-      # these three functions removes ~120 mechanical `_, _ = fmt.Fprintf(...)`
-      # annotations that would carry no signal, while errcheck STILL checks
+      # fmt.Fprint* are excluded because every call in this project writes to
+      # a tabwriter buffer or os.Stdout/os.Stderr — never a file/socket/pipe —
+      # so the unchecked return values carry no signal. errcheck still checks
       # every other unchecked error (resp.Body.Close, os.Remove, json.Indent,
-      # io.Copy, ...) which is where real bugs hide.
+      # io.Copy, ...), which is where real bugs hide.
       exclude-functions:
         - fmt.Fprint
         - fmt.Fprintf
@@ -41,25 +24,17 @@ linters:
 
   exclusions:
     rules:
-      # Test files: errcheck noise from (json.Encode|w.Write|w.Close|
-      # ParseFlags|fmt.Sscanf) is pervasive in test helpers and accepted by
-      # the Go community — test failures surface the problem, the ignored
-      # write return values add no signal. This mirrors how gh/glab and
-      # the standard library tests are written. (fmt.Fprint* are already
-      # excluded globally via errcheck.exclude-functions above.)
+      # Test files: unchecked (json.Encode|w.Write|w.Close|ParseFlags|fmt.Sscanf)
+      # return values are standard in test helpers — test failures surface the
+      # problem. fmt.Fprint* are already excluded globally above.
       - path: '(.+)_test\.go$'
         linters:
           - errcheck
 
 issues:
-  # Show every issue — do not cap output or suppress "known" classes.
+  # Do not cap or collapse output — show every issue.
   max-issues-per-linter: 0
   max-same-issues: 0
-  # Do not auto-exclude common false-positive patterns (e.g. "err
-  # should be the last parameter"); we want to see everything and fix
-  # at the source.
-  exclude-use-default: true
 
 run:
-  # New tests must not be skipped; existing tests are already green.
   tests: true
