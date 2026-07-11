@@ -3,7 +3,6 @@ package repo
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"gitee-cli/cmd"
@@ -83,7 +82,7 @@ func runSync(cobraCmd *cobra.Command, args []string) error {
 	if err := client.Post(ctx, path, nil, nil); err != nil {
 		// Gitee returns 422 if there's nothing to sync (fork already up to date).
 		// Don't treat that as a fatal error.
-		if strings.Contains(err.Error(), "422") {
+		if api.IsUnprocessable(err) {
 			fmt.Println("Fork is already up to date with upstream")
 			return nil
 		}

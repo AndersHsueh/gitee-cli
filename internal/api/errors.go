@@ -99,3 +99,16 @@ func IsForbidden(err error) bool {
 	}
 	return false
 }
+
+// IsUnprocessable reports whether err indicates an HTTP 422 response
+// (validation failed / unprocessable entity). Use this instead of
+// strings.Contains(err.Error(), "422"), which would false-positive on
+// any error message that happens to contain the substring "422"
+// (e.g. a commit SHA or URL).
+func IsUnprocessable(err error) bool {
+	var apiErr *APIError
+	if errors.As(err, &apiErr) {
+		return apiErr.StatusCode == 422
+	}
+	return false
+}

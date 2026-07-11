@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -57,6 +58,25 @@ func TestIsForbidden(t *testing.T) {
 	assert.False(t, IsForbidden(nil))
 	assert.True(t, IsForbidden(&APIError{StatusCode: 403}))
 	assert.False(t, IsForbidden(&APIError{StatusCode: 401}))
+}
+
+func TestIsUnprocessable(t *testing.T) {
+	assert.False(t, IsUnprocessable(nil))
+	assert.False(t, IsUnprocessable(errors.New("random error")))
+
+	assert.True(t, IsUnprocessable(&APIError{StatusCode: 422, Message: "validation failed"}))
+	assert.False(t, IsUnprocessable(&APIError{StatusCode: 404}))
+	assert.False(t, IsUnprocessable(&APIError{StatusCode: 500}))
+
+	// A wrapped 422 must still be detected (errors.As walks the chain),
+	// and a non-422 error whose message happens to contain "422" (e.g.
+	// a commit SHA) must NOT be mistaken for a 422 — the whole point of
+	// using a typed check instead of strings.Contains.
+	wrapped422 := fmt.Errorf("syncing ref 422abc123: %w", &APIError{StatusCode: 422})
+	assert.True(t, IsUnprocessable(wrapped422))
+
+	shaLike := fmt.Errorf("ref 422deadbeef not found: %w", &APIError{StatusCode: 404})
+	assert.False(t, IsUnprocessable(shaLike))
 }
 
 func TestCheckStatus_Success_200(t *testing.T) {
