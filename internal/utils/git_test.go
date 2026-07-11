@@ -167,13 +167,3 @@ func TestIsInsideWorkTree(t *testing.T) {
 		}
 	}
 }
-
-// contains is a small helper to keep test file stdlib-free of strings.Contains
-// in the failure path (and to give better error messages than assert.Contains).
-func contains(s, substr string) bool {
-	return strings.Contains(s, substr)
-}
-
-func indexOf(s, substr string) int {
-	return strings.Index(s, substr)
-}
