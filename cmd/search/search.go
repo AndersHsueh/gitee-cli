@@ -25,13 +25,17 @@ var SearchCmd = &cobra.Command{
   gitee search users johndoe`,
 }
 
-// newSearchClient creates a client; token is optional for public search endpoints
+// newSearchClient creates a client; token is optional for public search endpoints.
+// Uses ResolveAPIBaseURL so an enterprise host (via --hostname or auth switch)
+// resolves to the right API base, rather than falling back to the hardcoded
+// gitee.com default inside api.NewClient.
 func newSearchClient() *api.Client {
+	hostname := cmd.ResolveHostname()
 	token := cmd.GlobalToken
 	if token == "" {
-		token = config.GetToken(cmd.GlobalHostname)
+		token = config.GetToken(hostname)
 	}
-	return api.NewClient(token, cmd.GlobalAPIURL, cmd.GlobalVerbose, cmd.GlobalTimeout)
+	return api.NewClient(token, cmd.ResolveAPIBaseURL(hostname), cmd.GlobalVerbose, cmd.GlobalTimeout)
 }
 
 // ----- repos -----

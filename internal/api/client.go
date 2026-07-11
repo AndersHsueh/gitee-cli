@@ -100,30 +100,15 @@ func (c *Client) Patch(ctx context.Context, path string, body, result interface{
 
 // Delete issues a DELETE request.
 func (c *Client) Delete(ctx context.Context, path string) error {
-	resp, err := c.r.R().SetContext(ctx).Delete(path)
-	if err != nil {
-		return err
-	}
-	return checkStatus(resp)
+	return c.do(ctx, resty.MethodDelete, path, nil, nil)
 }
 
 // DeleteWithBody issues a DELETE request with a JSON body. Some Gitee v5
 // endpoints (notably .../contents/{path} for file removal) require
 // parameters in the request body even though the verb is DELETE; resty's
-// SetBody + Delete combination handles this transparently. If `result`
-// is non-nil, the response body is decoded into it.
+// SetBody + Execute combination handles this transparently.
 func (c *Client) DeleteWithBody(ctx context.Context, path string, body interface{}) error {
-	req := c.r.R().
-		SetContext(ctx).
-		SetHeader("Content-Type", "application/json")
-	if body != nil {
-		req = req.SetBody(body)
-	}
-	resp, err := req.Delete(path)
-	if err != nil {
-		return err
-	}
-	return checkStatus(resp)
+	return c.do(ctx, resty.MethodDelete, path, body, nil)
 }
 
 // Put issues a PUT request with a JSON body and decodes the response.
@@ -133,7 +118,7 @@ func (c *Client) Put(ctx context.Context, path string, body, result interface{})
 
 // do issues a JSON request with the given verb, optionally setting body and
 // result, and checks the response status. It is the shared implementation
-// behind Post/Patch/Put.
+// behind Post/Patch/Put/Delete/DeleteWithBody.
 func (c *Client) do(ctx context.Context, verb, path string, body, result interface{}) error {
 	req := c.r.R().SetContext(ctx).SetHeader("Content-Type", "application/json")
 	if body != nil {

@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
@@ -141,14 +142,7 @@ func runAPI(cobraCmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	var out bytes.Buffer
-	if err := json.Indent(&out, result, "", "  "); err != nil {
-		return fmt.Errorf("formatting JSON response: %w", err)
-	}
-	if _, err := out.WriteTo(cobraCmd.OutOrStdout()); err != nil {
-		return fmt.Errorf("writing JSON: %w", err)
-	}
-	return nil
+	return writeIndentedJSON(cobraCmd.OutOrStdout(), result)
 }
 
 func runPaginatedGet(client *api.Client, ctx context.Context, path string, cobraCmd *cobra.Command) error {
@@ -185,14 +179,7 @@ func runPaginatedGet(client *api.Client, ctx context.Context, path string, cobra
 		var items []interface{}
 		if err := json.Unmarshal(result, &items); err != nil {
 			// Not an array, just output as-is
-			var out bytes.Buffer
-			if err := json.Indent(&out, result, "", "  "); err != nil {
-				return fmt.Errorf("formatting JSON response: %w", err)
-			}
-			if _, err := out.WriteTo(cobraCmd.OutOrStdout()); err != nil {
-				return fmt.Errorf("writing JSON: %w", err)
-			}
-			return nil
+			return writeIndentedJSON(cobraCmd.OutOrStdout(), result)
 		}
 
 		if len(items) == 0 {
@@ -222,6 +209,21 @@ func runPaginatedGet(client *api.Client, ctx context.Context, path string, cobra
 	}
 	if _, err := cobraCmd.OutOrStdout().Write(out); err != nil {
 		return fmt.Errorf("writing response: %w", err)
+	}
+	return nil
+}
+
+// writeIndentedJSON pretty-prints a JSON byte slice with 2-space indent and
+// writes it to w. Shared by runAPI and runPaginatedGet for their non-raw,
+// non-array output paths. Returns a wrapped error on either the indent or
+// the write step.
+func writeIndentedJSON(w io.Writer, data []byte) error {
+	var buf bytes.Buffer
+	if err := json.Indent(&buf, data, "", "  "); err != nil {
+		return fmt.Errorf("formatting JSON response: %w", err)
+	}
+	if _, err := buf.WriteTo(w); err != nil {
+		return fmt.Errorf("writing JSON: %w", err)
 	}
 	return nil
 }

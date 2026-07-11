@@ -72,22 +72,25 @@ func runList(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// api.ReposList already branches on owner=="" internally, so the
-	// former if/else that called it twice was redundant.
+	// Build the base query (visibility/sort/direction). page/per_page are
+	// handled by FetchListOrAll, which also clamps per_page to 1-100,
+	// dispatches on --paginate, honors --page, and treats a 404 as an empty
+	// result — the shared pagination contract every other list command uses.
 	path := api.ReposList(listFlags.owner)
 	q := url.Values{}
 	q.Set("visibility", listFlags.visibility)
 	q.Set("sort", listFlags.sort)
 	q.Set("direction", listFlags.direction)
-	q.Set("per_page", fmt.Sprintf("%d", listFlags.limit))
 	path += "?" + q.Encode()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
 	defer cancel()
 
-	var repos []types.Repository
-	if err := client.Get(ctx, path, &repos); err != nil {
-		return fmt.Errorf("listing repositories: %w", err)
+	repos, err := api.FetchListOrAll[types.Repository](ctx, client, path,
+		cmd.GlobalPaginate, cmd.GlobalPerPage, listFlags.limit, cmd.GlobalPage,
+		"listing repositories")
+	if err != nil {
+		return err
 	}
 
 	if cmd.GlobalOutput == "json" {
