@@ -123,6 +123,7 @@ Atomic. Either the key is gone, or no change.
 - 404 Not Found: id doesn't exist
 - 401 Unauthorized: token missing or expired
 - 403 Forbidden: token lacks write scope
+- Non-interactive (no TTY): without --force the prompt is auto-cancelled and the key is NOT deleted (exit 0). In scripts/agents always pass --force.
 
 ## OAuth scope required
 user_info (write)
