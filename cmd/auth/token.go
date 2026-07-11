@@ -23,7 +23,7 @@ var tokenCmd = &cobra.Command{
 	RunE: func(cobraCmd *cobra.Command, args []string) error {
 		token := cmd.GlobalToken
 		if token == "" {
-			token = config.GetToken(cmd.GlobalHostname)
+			token = config.GetToken(cmd.ResolveHostname())
 		}
 		if token == "" {
 			return fmt.Errorf("not authenticated")
@@ -50,7 +50,7 @@ var logoutCmd = &cobra.Command{
 			fmt.Printf("Logged out (no credentials found)\n")
 			return nil
 		}
-		hostname := cmd.GlobalHostname
+		hostname := cmd.ResolveHostname()
 		if _, ok := s.Hosts[hostname]; !ok {
 			fmt.Printf("Not logged in to %s\n", hostname)
 			return nil

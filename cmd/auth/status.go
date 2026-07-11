@@ -35,7 +35,7 @@ func init() {
 }
 
 func runStatus(cobraCmd *cobra.Command, args []string) error {
-	hostname := cmd.GlobalHostname
+	hostname := cmd.ResolveHostname()
 	token := cmd.GlobalToken
 	showToken, _ := cobraCmd.Flags().GetBool("show-token")
 

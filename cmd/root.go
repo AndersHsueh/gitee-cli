@@ -228,7 +228,7 @@ func NewAPIClient() (*api.Client, error) {
 // cache first then falling back to a /user API call. This is the canonical
 // implementation shared by status, pr status, and issue status. (v0.10.0)
 func ResolveCurrentUsername(ctx context.Context, client *api.Client) (string, error) {
-	if u := config.GetUsername(GlobalHostname); u != "" {
+	if u := config.GetUsername(ResolveHostname()); u != "" {
 		return u, nil
 	}
 	var u types.User
