@@ -1,6 +1,9 @@
 package api
 
 import (
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -113,6 +116,132 @@ func TestAPIRawAgentHelpIsServedBeforeAuth(t *testing.T) {
 	}
 	if apiCmd.PreRunE == nil {
 		t.Fatal("apiCmd.PreRunE is nil; --agent-help short-circuit missing")
+	}
+}
+
+// TestAPICmdHasFieldAndRawFlags verifies the fix for the bug where
+// `gitee api POST /user/repos --field name=x` failed with "unknown
+// flag: --field". Before the fix --field/--raw were only registered
+// on rawCmd (the legacy subcommand), not on apiCmd (the canonical
+// entry point documented in apiCmd.Example). cobra does not inherit
+// a parent's local Flags() to subcommands, so both commands must
+// register the flags explicitly.
+func TestAPICmdHasFieldAndRawFlags(t *testing.T) {
+	if apiCmd.Flags().Lookup("field") == nil {
+		t.Error("apiCmd is missing --field flag (gitee api POST /path --field x would fail)")
+	}
+	if apiCmd.Flags().Lookup("raw") == nil {
+		t.Error("apiCmd is missing --raw flag")
+	}
+	// rawCmd must still have them for backwards compatibility.
+	if rawCmd.Flags().Lookup("field") == nil {
+		t.Error("rawCmd lost --field flag")
+	}
+	if rawCmd.Flags().Lookup("raw") == nil {
+		t.Error("rawCmd lost --raw flag")
+	}
+}
+
+// TestRunAPIWithFieldFlag exercises the canonical entry point end-to-end:
+// `gitee api POST /user/repos --field name=my-repo --field private=true`
+// must reach the server as a POST with the fields in the JSON body. This
+// is the exact invocation promised by apiCmd.Example.
+func TestRunAPIWithFieldFlag(t *testing.T) {
+	var (
+		gotMethod string
+		gotPath   string
+		gotBody   map[string]interface{}
+	)
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotMethod = r.Method
+		gotPath = r.URL.Path
+		var b map[string]interface{}
+		_ = json.NewDecoder(r.Body).Decode(&b)
+		gotBody = b
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"id":1,"name":"my-repo"}`))
+	}))
+	defer ts.Close()
+
+	// Point NewAPIClient at the test server and supply a token so it
+	// doesn't error out on "not authenticated".
+	origAPIURL := cmd.GlobalAPIURL
+	origToken := cmd.GlobalToken
+	origTimeout := cmd.GlobalTimeout
+	origFields := rawFlags.fields
+	origRaw := rawFlags.raw
+	defer func() {
+		cmd.GlobalAPIURL = origAPIURL
+		cmd.GlobalToken = origToken
+		cmd.GlobalTimeout = origTimeout
+		rawFlags.fields = origFields
+		rawFlags.raw = origRaw
+	}()
+	cmd.GlobalAPIURL = ts.URL
+	cmd.GlobalToken = "test-token"
+	cmd.GlobalTimeout = 30
+	rawFlags.fields = []string{"name=my-repo", "private=true"}
+	rawFlags.raw = false
+
+	// runAPI reads the paginate flag off the cobra command; parse the
+	// apiCmd flags so GetBool("paginate") returns its default (false).
+	_ = apiCmd.Flags().Parse([]string{"POST", "/user/repos"})
+
+	var out strings.Builder
+	apiCmd.SetOut(&out)
+	if err := runAPI(apiCmd, []string{"POST", "/user/repos"}); err != nil {
+		t.Fatalf("runAPI with --field failed: %v", err)
+	}
+	if gotMethod != "POST" {
+		t.Errorf("expected POST, got %s", gotMethod)
+	}
+	if gotPath != "/user/repos" {
+		t.Errorf("expected /user/repos, got %s", gotPath)
+	}
+	if gotBody["name"] != "my-repo" {
+		t.Errorf("expected body name=my-repo, got %v", gotBody["name"])
+	}
+	if gotBody["private"] != "true" {
+		t.Errorf("expected body private=true, got %v", gotBody["private"])
+	}
+}
+
+// TestRunAPIRawFlagOnAPICmd verifies --raw registered on apiCmd is
+// honored: the response body is written without JSON indent.
+func TestRunAPIRawFlagOnAPICmd(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"hello":"world"}`))
+	}))
+	defer ts.Close()
+
+	origAPIURL := cmd.GlobalAPIURL
+	origToken := cmd.GlobalToken
+	origTimeout := cmd.GlobalTimeout
+	origFields := rawFlags.fields
+	origRaw := rawFlags.raw
+	defer func() {
+		cmd.GlobalAPIURL = origAPIURL
+		cmd.GlobalToken = origToken
+		cmd.GlobalTimeout = origTimeout
+		rawFlags.fields = origFields
+		rawFlags.raw = origRaw
+	}()
+	cmd.GlobalAPIURL = ts.URL
+	cmd.GlobalToken = "test-token"
+	cmd.GlobalTimeout = 30
+	rawFlags.fields = nil
+	rawFlags.raw = true
+
+	_ = apiCmd.Flags().Parse([]string{"GET", "/user"})
+
+	var out strings.Builder
+	apiCmd.SetOut(&out)
+	if err := runAPI(apiCmd, []string{"GET", "/user"}); err != nil {
+		t.Fatalf("runAPI with --raw failed: %v", err)
+	}
+	if out.String() != `{"hello":"world"}` {
+		t.Errorf("expected raw output %q, got %q", `{"hello":"world"}`, out.String())
 	}
 }
 

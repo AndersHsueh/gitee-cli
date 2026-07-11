@@ -55,6 +55,15 @@ Useful for testing or accessing endpoints not yet covered by dedicated commands.
 }
 
 func init() {
+	// --field and --raw are registered on BOTH apiCmd and rawCmd.
+	// cobra does NOT inherit a parent's local flags (Flags()) to its
+	// subcommands — only PersistentFlags() propagate down. We want:
+	//   gitee api POST /user/repos --field name=x   (apiCmd, canonical)
+	//   gitee api raw POST /user/repos --field name=x (rawCmd, legacy)
+	// to both work. Both bind to the same package-level rawFlags vars,
+	// so runAPI reads them regardless of which command was invoked.
+	apiCmd.Flags().StringArrayVar(&rawFlags.fields, "field", []string{}, "Form field (key=value)")
+	apiCmd.Flags().BoolVar(&rawFlags.raw, "raw", false, "Output raw response body")
 	rawCmd.Flags().StringArrayVar(&rawFlags.fields, "field", []string{}, "Form field (key=value)")
 	rawCmd.Flags().BoolVar(&rawFlags.raw, "raw", false, "Output raw response body")
 
