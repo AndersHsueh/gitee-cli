@@ -23,6 +23,7 @@ var viewCmd = &cobra.Command{
 	Short: "View a gist",
 	Example: `  gitee gist view abc123def
   gitee gist view abc123def --raw`,
+	Args:    cmd.AgentHelpAwareArgs(cobra.ExactArgs(1)),
 	PreRunE: func(c *cobra.Command, args []string) error {
 		if cmd.GlobalAgentHelp {
 			cmd.PrintAgentHelp(gistViewAgentHelp)
@@ -37,9 +38,6 @@ func init() {
 }
 
 func runView(cobraCmd *cobra.Command, args []string) error {
-	if len(args) < 1 {
-		return fmt.Errorf("gist ID is required")
-	}
 	gistID := args[0]
 
 	client, err := cmd.NewAPIClient()

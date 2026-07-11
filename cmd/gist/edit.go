@@ -27,6 +27,7 @@ var editCmd = &cobra.Command{
   gitee gist edit abc123 --file readme.md="New README content"
   gitee gist edit abc123 --file file1.txt="Content 1" --file file2.txt="@/path/to/file2.txt"
   gitee gist edit abc123 --file readme.md="Updated" --file newfile.md="New file"`,
+	Args:    cmd.AgentHelpAwareArgs(cobra.ExactArgs(1)),
 	PreRunE: func(c *cobra.Command, args []string) error {
 		if cmd.GlobalAgentHelp {
 			cmd.PrintAgentHelp(gistEditAgentHelp)
@@ -43,9 +44,6 @@ func init() {
 }
 
 func runEdit(cobraCmd *cobra.Command, args []string) error {
-	if len(args) < 1 {
-		return fmt.Errorf("gist ID is required")
-	}
 	gistID := args[0]
 
 	client, err := cmd.NewAPIClient()

@@ -15,6 +15,7 @@ var starCmd = &cobra.Command{
 	Use:     "star <id>",
 	Short:   "Star a gist",
 	Example: `  gitee gist star abc123`,
+	Args:    cmd.AgentHelpAwareArgs(cobra.ExactArgs(1)),
 	PreRunE: func(c *cobra.Command, args []string) error {
 		if cmd.GlobalAgentHelp {
 			cmd.PrintAgentHelp(gistStarAgentHelp)
@@ -25,9 +26,6 @@ var starCmd = &cobra.Command{
 }
 
 func runStar(cobraCmd *cobra.Command, args []string) error {
-	if len(args) < 1 {
-		return fmt.Errorf("gist ID is required")
-	}
 	gistID := args[0]
 
 	client, err := cmd.NewAPIClient()
