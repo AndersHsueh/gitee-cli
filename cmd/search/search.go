@@ -168,18 +168,7 @@ func runSearchIssues(c *cobra.Command, args []string) error {
 		return fmt.Errorf("search issues: %w", err)
 	}
 
-	var items []interface{}
-	if arr, ok := result.([]interface{}); ok {
-		items = arr
-	} else if m, ok := result.(map[string]interface{}); ok {
-		if arr, ok := m["items"].([]interface{}); ok {
-			items = arr
-		} else {
-			items = []interface{}{m}
-		}
-	}
-
-	return printSearchResults(items, "issues")
+	return printSearchResults(result, "issues")
 }
 
 // ----- users -----
@@ -218,19 +207,7 @@ func runSearchUsers(c *cobra.Command, args []string) error {
 		return fmt.Errorf("search users: %w", err)
 	}
 
-	// Convert to array for unified printing
-	var items []interface{}
-	if arr, ok := result.([]interface{}); ok {
-		items = arr
-	} else if m, ok := result.(map[string]interface{}); ok {
-		if arr, ok := m["items"].([]interface{}); ok {
-			items = arr
-		} else {
-			items = []interface{}{m}
-		}
-	}
-
-	return printSearchResults(items, "users")
+	return printSearchResults(result, "users")
 }
 
 // ----- code (v0.10.0) -----
@@ -294,18 +271,7 @@ func runSearchCode(c *cobra.Command, args []string) error {
 		return fmt.Errorf("search code: %w", err)
 	}
 
-	var items []interface{}
-	if arr, ok := result.([]interface{}); ok {
-		items = arr
-	} else if m, ok := result.(map[string]interface{}); ok {
-		if arr, ok := m["items"].([]interface{}); ok {
-			items = arr
-		} else {
-			items = []interface{}{m}
-		}
-	}
-
-	return printSearchResults(items, "code")
+	return printSearchResults(result, "code")
 }
 
 // ----- commits (v0.10.0) -----
@@ -353,18 +319,7 @@ func runSearchCommits(c *cobra.Command, args []string) error {
 		return fmt.Errorf("search commits: %w", err)
 	}
 
-	var items []interface{}
-	if arr, ok := result.([]interface{}); ok {
-		items = arr
-	} else if m, ok := result.(map[string]interface{}); ok {
-		if arr, ok := m["items"].([]interface{}); ok {
-			items = arr
-		} else {
-			items = []interface{}{m}
-		}
-	}
-
-	return printSearchResults(items, "commits")
+	return printSearchResults(result, "commits")
 }
 
 // printSearchResults prints search results in a unified format
