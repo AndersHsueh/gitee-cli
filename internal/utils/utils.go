@@ -152,6 +152,32 @@ func ResolveKeyInput(raw string) (string, error) {
 	return trimmed, nil
 }
 
+// ParseGistFileFlag parses a --file flag value for gist create/edit.
+// Accepted formats:
+//
+//	filename=content      inline content
+//	filename=@path        read content from a local file
+//
+// Returns the filename and resolved content. Shared by cmd/gist/create.go
+// and cmd/gist/edit.go so the parsing logic cannot drift between them.
+func ParseGistFileFlag(s string) (name, content string, err error) {
+	parts := strings.SplitN(s, "=", 2)
+	if len(parts) != 2 {
+		return "", "", fmt.Errorf("invalid --file format: %s (expected filename=content or filename=@filepath)", s)
+	}
+	name = parts[0]
+	contentOrPath := parts[1]
+	if strings.HasPrefix(contentOrPath, "@") {
+		filePath := contentOrPath[1:]
+		data, rErr := os.ReadFile(filePath)
+		if rErr != nil {
+			return "", "", fmt.Errorf("failed to read file %s: %w", filePath, rErr)
+		}
+		return name, string(data), nil
+	}
+	return name, contentOrPath, nil
+}
+
 // ConfirmYN prompts the user with a y/N question and returns true if they
 // answered affirmatively. If `defaultYes` is true, an empty input is treated
 // as yes. If stdin is not a terminal (piped, redirected, or closed), the

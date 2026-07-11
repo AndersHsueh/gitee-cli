@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -103,6 +105,43 @@ func TestResolveRepo(t *testing.T) {
 				assert.Equal(t, tt.wantOwner, owner)
 				assert.Equal(t, tt.wantRepo, repo)
 			}
+		})
+	}
+}
+
+func TestParseGistFileFlag(t *testing.T) {
+	// Create a temp file for the @path cases.
+	tmpFile := filepath.Join(t.TempDir(), "content.txt")
+	const tmpContent = "file body line 1\nline 2"
+	if err := os.WriteFile(tmpFile, []byte(tmpContent), 0600); err != nil {
+		t.Fatalf("writing temp file: %v", err)
+	}
+
+	tests := []struct {
+		name        string
+		input       string
+		wantName    string
+		wantContent string
+		wantErr     bool
+	}{
+		{"inline content", "readme.md=hello world", "readme.md", "hello world", false},
+		{"content with equals", "f.txt=a=b=c", "f.txt", "a=b=c", false},
+		{"from file path", "readme.md=@" + tmpFile, "readme.md", tmpContent, false},
+		{"missing equals", "noequals", "", "", true},
+		{"empty filename", "=content", "", "content", false},
+		{"nonexistent file", "x=@/does/not/exist.xyz", "", "", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			name, content, err := ParseGistFileFlag(tt.input)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			assert.NoError(t, err)
+			assert.Equal(t, tt.wantName, name)
+			assert.Equal(t, tt.wantContent, content)
 		})
 	}
 }

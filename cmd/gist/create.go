@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 	"time"
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
 	"gitee-cli/internal/terminal"
+	"gitee-cli/internal/utils"
 	"gitee-cli/pkg/types"
 
 	"github.com/fatih/color"
@@ -103,26 +103,10 @@ func runCreate(cobraCmd *cobra.Command, args []string) error {
 	} else {
 		// Non-interactive mode: Handle --file flags for inline content
 		for _, fileFlag := range createFlags.files {
-			parts := strings.SplitN(fileFlag, "=", 2)
-			if len(parts) != 2 {
-				return fmt.Errorf("invalid --file format: %s (expected filename=content or filename=@filepath)", fileFlag)
+			filename, content, err := utils.ParseGistFileFlag(fileFlag)
+			if err != nil {
+				return err
 			}
-
-			filename := parts[0]
-			contentOrPath := parts[1]
-
-			var content string
-			if strings.HasPrefix(contentOrPath, "@") {
-				filePath := contentOrPath[1:]
-				data, err := os.ReadFile(filePath)
-				if err != nil {
-					return fmt.Errorf("failed to read file %s: %w", filePath, err)
-				}
-				content = string(data)
-			} else {
-				content = contentOrPath
-			}
-
 			files[filename] = types.GistFileContent{Content: content}
 		}
 
