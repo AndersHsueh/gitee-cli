@@ -45,13 +45,13 @@ func init() {
 func runLogin(cobraCmd *cobra.Command, args []string) error {
 	hostname := cmd.ResolveHostname()
 
-	// Resolve the effective token. Priority matches the rest of the CLI:
-	// --token flag > GITEE_TOKEN env var > ~/.gitee-cli/settings.json.
+	// Resolve the effective token. The local --token flag (registered
+	// in init() above) shadows the persistent --token flag bound to
+	// cmd.GlobalToken, so GlobalToken is always empty here. The real
+	// fallback chain is: --token flag > config.GetToken (which checks
+	// GITEE_TOKEN env var, then ~/.gitee-cli/settings.json).
 	tokenFlag, _ := cobraCmd.Flags().GetString("token")
 	token := tokenFlag
-	if token == "" {
-		token = cmd.GlobalToken
-	}
 	if token == "" {
 		token = config.GetToken(hostname)
 	}
