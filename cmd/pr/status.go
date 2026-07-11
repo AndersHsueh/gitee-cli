@@ -265,7 +265,8 @@ None. No emails, no webhooks, no notifications.
 ## Common errors
 - 401 Unauthorized: run ` + "`" + `gitee auth login` + "`" + ` or set GITEE_TOKEN
 - No repos found: user has no repositories, or token lacks repo scope
-- Individual repo errors: printed to stderr but do not abort the whole scan
+- Individual repo errors: silently skipped; the scan continues but the
+  failing repo's PRs are absent from the result
 
 ## OAuth scope required
 projects (read)

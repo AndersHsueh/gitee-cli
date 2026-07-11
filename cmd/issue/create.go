@@ -222,7 +222,7 @@ Each call to this command counts as 1 request.
     --source fix/null-pointer --target main --body "Closes #${ISSUE_NUM}"
 
   # 4. After PR is merged, close the issue
-  gitee issue close "$ISSUE_NUM" --reason completed
+  gitee issue close "$ISSUE_NUM"
 
 ## See also
 - ` + "`" + `gitee issue view N` + "`" + `        — read an issue

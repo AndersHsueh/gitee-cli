@@ -176,7 +176,7 @@ Standard closing-the-loop sequence:
    (even if the PR body contains "Closes #N", that only takes effect on
     merge, and is invisible until then).
 3. After human review and merge, the issue can be closed:
-     gitee issue close {ISSUE_NUM} --reason completed
+     gitee issue close {ISSUE_NUM}
 
 ⚠️  Why this matters: in the test-agent → coder-agent workflow, the issue
     is filed by one agent and fixed by another. The human reads issues
@@ -203,7 +203,7 @@ Each call to this command counts as 1 request.
   gitee issue comment 42 --body "Fixed in PR #${PR_NUM}"
 
   # 3. (After human merges the PR) Close the issue
-  gitee issue close 42 --reason completed
+  gitee issue close 42
 
 ## See also
 - ` + "`" + `gitee pr list` + "`" + `              — find existing PRs
