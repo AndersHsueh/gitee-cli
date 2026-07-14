@@ -6,7 +6,7 @@
 [![Go Version](https://img.shields.io/badge/go-1.25+-blue.svg)](https://golang.org)
 [![License](https://img.shields.io/badge/license-MulanPSL--2.0-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey.svg)]()
-[![Version](https://img.shields.io/badge/version-v0.12.2-orange.svg)](https://gitee.com/andershsueh/gitee-cli/releases/latest)
+[![Version](https://img.shields.io/badge/version-v0.12.3-orange.svg)](https://gitee.com/andershsueh/gitee-cli/releases/latest)
 [![Agent Help](https://img.shields.io/badge/--agent--help-131%20verbs-8A2BE2.svg)](docs/philosophy.md)
 
 ```bash
@@ -220,6 +220,35 @@ golangci-lint run ./...           # Lint
 ---
 
 ## 更新日志
+
+### v0.12.3 (2026-07-14) — 累积修复与内部清理
+
+> 19 个 commit：6 处正确性修复 + 11 处内部重构 + 2 项 lint 工程化。**无新功能，无 breaking change**。行为对外保持完全一致，代码侧提升可维护性、`golangci-lint run ./...` 持续 0 issue。
+
+**🔧 正确性修复**
+
+- `issue view` 增加本地 `--owner`/`--repo` 标志——脱离 git 仓库时也能直接查询任意仓库的 issue
+- `ssh-key delete` 在 agent-help 中提示非交互式场景下 `--force` 缺省会自动取消，避免误删
+- `release download` 检查 `resp.Body.Close` 错误（之前静默吞掉），写盘失败时清理半截文件
+- `types`: 修正拼写错误的 `Comitter` 字段名为 `Committer`（影响 1 处 webhook payload）
+- `utils.GitConfigGet`: 区分 `git` exit-code-1（key 不存在）与真实错误（命令失败），避免把"未配置"误报为故障
+- `api raw` 输出缩进后 JSON 时检查 `Indent`/`Write` 错误而非静默吞掉
+
+**♻️ 重构（行为不变）**
+
+- `repo list`: 统一走 `api.FetchListOrAll`，删除重复 `addPageParams`；`repo delete` 折入 `do()`，去重 raw JSON 输出
+- `api`: 抽取 `do()` helper 收敛 GET/POST/PATCH/PUT/DELETE 公共逻辑；删除死代码 `Unwrap`/`Errors` 与未用的 Link-header 分页
+- `repo`/`org`/`extension`: 查询串改用 `url.Values` + perPage clamp，删除裸 `fmt.Sprintf` 拼接
+- `auth`: `token source` 标签统一为 `flag`/`env`/`config`，拆分 `logout.go`，集中 `switch` 初始化
+- `root`: 用 `Flags().Changed` 替代自维护的 `--hostname` 集合；提取 `ResolveAPIBaseURL`，合并 reservedNames 列表
+- `gist`: 导出 `GistEditFile` 类型，删除不可达的 `create` 分支
+- `utils`: 移除未使用的 `contains`/`indexOf` test helper；`url.Values` 校验 list flags
+- `label`/`extension`/`search`: 简化十六进制颜色检查（De Morgan）、删除死 `colorAttr`、去除冗余 type-assert
+
+**🛠️ 工程化**
+
+- `golangci-lint v2.12.2` 全面生效：`.golangci.yml` 改写为 v2 schema，删除冲突的 `exclude-use-default`，删除仓库内遗留的 v1.64.8 二进制
+- CI 端 `go test ./...` 32 包全绿，`golangci-lint run ./...` 0 issue
 
 ### v0.12.2 (2026-07-11) — 正确性与简化批次
 
