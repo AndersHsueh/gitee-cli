@@ -4,9 +4,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/go-resty/resty/v2"
 )
+
+// projectOrEnterpriseSignature is the lowercase substring Gitee v5 uses
+// in the message of PATCH /repos/{owner}/{repo}/issues/{number} 404
+// responses when the issue lives in an enterprise/project container that
+// the public API cannot route to. Exported as the matching happens in
+// two layers (predicate + agent-help docs).
+const projectOrEnterpriseSignature = "project or enterprise"
 
 // APIError represents an error returned by the Gitee API.
 type APIError struct {
@@ -105,4 +113,31 @@ func IsUnprocessable(err error) bool {
 		return apiErr.StatusCode == 422
 	}
 	return false
+}
+
+// IsProjectOrEnterpriseNotFound reports whether err is a Gitee v5 404
+// carrying the "project or enterprise" routing message. This is the
+// signature of the issue state-transition regression: when an issue
+// lives in an enterprise/project container, PATCH on
+// /repos/{owner}/{repo}/issues/{number} cannot find the container and
+// returns 404 with a body containing the signature string. Callers can
+// use this to surface a Web-UI fallback URL in the error message.
+//
+// We match on the APIError.Message field via errors.As rather than
+// strings.Contains(err.Error(), ...) so that outer wrapping text
+// (e.g. "closing issue: HTTP 404: project or enterprise") does not
+// re-trigger the predicate and so we don't allocate a lowercased
+// copy of the full Error() string on every check.
+func IsProjectOrEnterpriseNotFound(err error) bool {
+	if err == nil {
+		return false
+	}
+	var apiErr *APIError
+	if !errors.As(err, &apiErr) {
+		return false
+	}
+	if apiErr.StatusCode != 404 {
+		return false
+	}
+	return strings.Contains(strings.ToLower(apiErr.Message), projectOrEnterpriseSignature)
 }

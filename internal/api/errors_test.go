@@ -72,6 +72,52 @@ func TestIsUnprocessable(t *testing.T) {
 	assert.False(t, IsUnprocessable(shaLike))
 }
 
+func TestIsProjectOrEnterpriseNotFound(t *testing.T) {
+	assert.False(t, IsProjectOrEnterpriseNotFound(nil))
+	assert.False(t, IsProjectOrEnterpriseNotFound(errors.New("random error")))
+
+	// Canonical 404 with the project-or-enterprise signature.
+	assert.True(t, IsProjectOrEnterpriseNotFound(&APIError{
+		StatusCode: 404,
+		Message:    "404 Not Found: project or enterprise not found",
+	}))
+
+	// Case-insensitive: Gitee wording may shift case.
+	assert.True(t, IsProjectOrEnterpriseNotFound(&APIError{
+		StatusCode: 404,
+		Message:    "Project Or Enterprise",
+	}))
+
+	// 404 without the signature must NOT trigger.
+	assert.False(t, IsProjectOrEnterpriseNotFound(&APIError{
+		StatusCode: 404,
+		Message:    "issue not found",
+	}))
+
+	// Non-404 with the signature in the message must NOT trigger.
+	assert.False(t, IsProjectOrEnterpriseNotFound(&APIError{
+		StatusCode: 500,
+		Message:    "project or enterprise",
+	}))
+
+	// Wrapped chain must be detected via errors.As.
+	wrapped := fmt.Errorf("closing issue: %w", &APIError{
+		StatusCode: 404,
+		Message:    "project or enterprise not found",
+	})
+	assert.True(t, IsProjectOrEnterpriseNotFound(wrapped))
+
+	// Outer text containing the signature while the inner APIError has
+	// no signature (a generic 404 wrapped with an outer error that
+	// happens to mention project) must NOT trigger — the predicate
+	// inspects only the APIError.Message field.
+	misleading := fmt.Errorf("project or enterprise failure: %w", &APIError{
+		StatusCode: 404,
+		Message:    "issue not found",
+	})
+	assert.False(t, IsProjectOrEnterpriseNotFound(misleading))
+}
+
 func TestCheckStatus_Success_200(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)

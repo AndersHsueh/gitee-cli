@@ -189,7 +189,7 @@ func runClose(cobraCmd *cobra.Command, args []string) error {
 
 	var issue types.Issue
 	if err := client.Patch(ctx, path, req, &issue); err != nil {
-		return fmt.Errorf("closing issue: %w", err)
+		return formatStateTransitionError(err, owner, repoName, issueNum, "close")
 	}
 	fmt.Printf("Issue #%s closed\n", issueNum)
 	return nil
@@ -217,11 +217,83 @@ func runReopen(cobraCmd *cobra.Command, args []string) error {
 
 	var issue types.Issue
 	if err := client.Patch(ctx, path, req, &issue); err != nil {
-		return fmt.Errorf("reopening issue: %w", err)
+		return formatStateTransitionError(err, owner, repoName, issueNum, "reopen")
 	}
 	fmt.Printf("Issue #%s reopened\n", issueNum)
 	return nil
 }
+
+// issueWebURL builds the canonical Gitee web URL for an issue, honoring
+// the effective --hostname / config active_host so enterprise deployments
+// are not silently redirected to gitee.com. Used by the 404-workaround
+// hint emitted when the API rejects state transitions on issue
+// containers it cannot locate (see formatStateTransitionError).
+func issueWebURL(owner, repo, number string) string {
+	return fmt.Sprintf("https://%s/%s/%s/issues/%s", cmd.ResolveHostname(), owner, repo, number)
+}
+
+// stateTransitionVerbs maps a state-transition action ("close", "reopen")
+// to (1) the present-participle form used in the error prefix
+// ("closing issue: …") and (2) the imperative form used in the
+// workaround instruction ("close the issue manually at: …").
+//
+// Keep this in sync with runClose / runReopen, which already hard-code
+// the same strings.
+var stateTransitionVerbs = map[string]struct{ ing, imperative string }{
+	"close":  {"closing", "close"},
+	"reopen": {"reopening", "reopen"},
+}
+
+// formatStateTransitionError wraps a state-transition (close/reopen) PATCH
+// failure with a human-friendly hint when the underlying cause is the
+// known Gitee v5 routing limitation: issues belonging to an enterprise
+// project container cannot be state-toggled via
+// /repos/{owner}/{repo}/issues/{number} — the API returns 404 with a
+// body containing the project-or-enterprise signature. In that case we
+// surface the web UI URL so the user has a working alternative.
+//
+// For any other error we preserve the original "closing issue: %w" /
+// "reopening issue: %w" wrapping by looking up the verb from `action`
+// so the user-facing prefix matches what the runX function was doing.
+func formatStateTransitionError(err error, owner, repo, number, action string) error {
+	if err == nil {
+		return nil
+	}
+	verbs, ok := stateTransitionVerbs[action]
+	if !ok {
+		// Defensive fallback for unknown actions — should not happen
+		// because runClose/runReopen are the only callers.
+		return fmt.Errorf("%s issue: %w", action, err)
+	}
+	if api.IsProjectOrEnterpriseNotFound(err) {
+		return fmt.Errorf(
+			"%s issue: %w\n"+
+				"\n"+
+				"Gitee v5 cannot toggle the state of this issue via PATCH on\n"+
+				"/repos/{owner}/{repo}/issues/{number} (HTTP 404: project or enterprise).\n"+
+				"This usually means the issue lives in an enterprise/project\n"+
+				"container rather than directly under the repo. As a workaround,\n"+
+				"%s the issue manually at:\n"+
+				"  %s",
+			verbs.ing, err, verbs.imperative, issueWebURL(owner, repo, number),
+		)
+	}
+	return fmt.Errorf("%s issue: %w", verbs.ing, err)
+}
+
+// projectOrEnterprise404Note is the "Common errors" section snippet
+// shared by the issue close and issue reopen --agent-help. Both verbs
+// hit the same PATCH /repos/{owner}/{repo}/issues/{number} route and
+// therefore share the same 404 / "project or enterprise" failure mode.
+// Kept as a single constant so the wording stays in sync.
+const projectOrEnterprise404Note = `- 404 Not Found:     body says "project or enterprise"
+                  →  Gitee v5 cannot PATCH the state of an issue that
+                     lives in an enterprise/project container. Workaround:
+                     toggle the state at
+                     ` + "`" + `https://gitee.com/{owner}/{repo}/issues/{number}` + "`" + `
+                     (web UI). gitee-cli surfaces this URL in the error
+                     message automatically — look for the line beginning
+                     "Gitee v5 cannot toggle the state".`
 
 func runComment(cobraCmd *cobra.Command, args []string) error {
 	if len(args) < 1 {
@@ -423,6 +495,7 @@ or no change happens. There is no partial-success state.
 - 401 Unauthorized:  token expired or invalid    →  gitee auth login
 - 403 Forbidden:     token lacks write scope     →  check token permissions
 - 404 Not Found:     repo or issue doesn't exist →  verify owner/repo + number
+` + projectOrEnterprise404Note + `
 
 ## Reversibility
 This command is REVERSIBLE. To re-open a closed issue, run
@@ -532,6 +605,7 @@ or no change happens. There is no partial-success state.
 - 401 Unauthorized:  token expired or invalid    →  gitee auth login
 - 403 Forbidden:     token lacks write scope     →  check token permissions
 - 404 Not Found:     repo or issue doesn't exist →  verify owner/repo + number
+` + projectOrEnterprise404Note + `
 
 ## Reversibility
 This command is REVERSIBLE. To close the issue again, run
