@@ -6,7 +6,7 @@
 [![Go Version](https://img.shields.io/badge/go-1.25+-blue.svg)](https://golang.org)
 [![License](https://img.shields.io/badge/license-MulanPSL--2.0-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey.svg)]()
-[![Version](https://img.shields.io/badge/version-v0.12.3-orange.svg)](https://gitee.com/andershsueh/gitee-cli/releases/latest)
+[![Version](https://img.shields.io/badge/version-v0.12.4-orange.svg)](https://gitee.com/andershsueh/gitee-cli/releases/latest)
 [![Agent Help](https://img.shields.io/badge/--agent--help-131%20verbs-8A2BE2.svg)](docs/philosophy.md)
 
 ```bash
@@ -220,6 +220,21 @@ golangci-lint run ./...           # Lint
 ---
 
 ## 更新日志
+
+### v0.12.4 (2026-07-31) — `repo edit` PATCH 修复 + `--public` 反向开关
+
+> 1 个 commit：2 处正确性修复（#IK5FYW + #IK5FYX），新增 7 个 wire-format 测试。无新功能，无 breaking change，golangci-lint 与 `go test ./...` 持续全绿。
+
+**🔧 正确性修复**
+
+- **`repo edit` / `archive` PATCH 修复（#IK5FYW）** — Gitee API v5 强制 `PATCH /repos/{owner}/{repo}` 的 body 必须含 `name` 字段。之前 `cmd/repo/edit.go` 在用户没传 `--name` 时把 `req.Name` 留空，`cmd/repo/archive.go` 干脆没设 `Name`，加上 `pkg/types/repo.go` 的 `name` 字段是 `omitempty`，导致任何非 rename 路径（`--description`、`--private`、`--default-branch`、archive、unarchive）都返回 HTTP 400 `name is missing`。修复：3 处调用方都把当前 `repoName` 作为 baseline 写入 `req.Name`，`--name` 显式传入时再覆盖为新名；`types.RepositoryEditRequest.Name` 同步去掉 `omitempty` 并加契约注释。
+- **`repo edit --public` 反向开关（#IK5FYX）** — `--private` 是 cobra `BoolVar` 注册的"开关"，无反向标志；`--no-private` 也不会触发 `Changed("private")`，导致把 private 仓改回 public 没有任何 CLI 出口。修复：增加 `--public` 标志并用 `MarkFlagsMutuallyExclusive("private", "public")` 与 `--private` 互斥；`--public` → `private: false`。`--agent-help` 文档同步更新示例与互斥说明。
+
+**🧪 测试**
+
+- 新增 `cmd/repo/edit_test.go`（7 个 case）：name baseline、--public 路径、--private 路径、互斥短路（确认 HTTP 不被调用）、--name 覆盖、空 body 形态、agent-help 文档契约。
+- `registerEditFlags` 从 `init()` 抽出，使测试可 `ResetFlags() + registerEditFlags()` 重建 FlagSet 清除 pflag `Changed` map 的状态泄漏。
+- 测试模式（`httptest.NewServer` + 5 个 cmd global 保存/恢复）抽取为 `captureEditRequest` / `expectNoEditRequest` 两个 helper，避免 wire-format 测试之间的 setup 重复。
 
 ### v0.12.3 (2026-07-14) — 累积修复与内部清理
 
