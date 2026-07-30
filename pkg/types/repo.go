@@ -49,8 +49,16 @@ type RepositoryCreateRequest struct {
 }
 
 // RepositoryEditRequest is used when editing a repository.
+//
+// Gitee API v5 rejects PATCH /repos/{owner}/{repo} with HTTP 400
+// "name is missing" when the body omits `name` (issue #IK5FYW), so
+// callers must always populate Name with the current repo name.
+// The `name` tag has no `omitempty` on purpose: the API contract
+// requires the field to be present in every PATCH body, and a
+// zero value should surface as a server error rather than be
+// silently dropped.
 type RepositoryEditRequest struct {
-	Name            string `json:"name,omitempty"`
+	Name            string `json:"name"`
 	Description     string `json:"description,omitempty"`
 	Private         *bool  `json:"private,omitempty"`
 	DefaultBranch   string `json:"default_branch,omitempty"`

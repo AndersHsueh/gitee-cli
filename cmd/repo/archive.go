@@ -79,6 +79,11 @@ func runArchive(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	req := types.RepositoryEditRequest{
+		// Gitee API v5 rejects PATCH /repos/{owner}/{repo} with HTTP 400
+		// "name is missing" when the body omits `name` (issue #IK5FYW).
+		// Always send the current repo name; archive operation doesn't
+		// rename, so this just keeps the payload valid.
+		Name:     repoName,
 		Archived: utils.BoolPtr(!archiveFlags.unarchive), // true for archive, false for unarchive
 	}
 

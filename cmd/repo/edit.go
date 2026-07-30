@@ -7,6 +7,7 @@ import (
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
+	"gitee-cli/internal/utils"
 	"gitee-cli/pkg/types"
 
 	"github.com/fatih/color"
@@ -19,6 +20,7 @@ var editFlags struct {
 	name          string
 	description   string
 	privateValue  bool
+	publicValue   bool
 	defaultBranch string
 }
 
@@ -26,7 +28,8 @@ var editCmd = &cobra.Command{
 	Use:   "edit [<owner>/<repo>]",
 	Short: "Edit repository settings",
 	Example: `  gitee repo edit owner/repo --description "New description"
-  gitee repo edit --repo owner/repo --private`,
+  gitee repo edit --repo owner/repo --private
+  gitee repo edit --repo owner/repo --public`,
 	PreRunE: func(c *cobra.Command, args []string) error {
 		if cmd.GlobalAgentHelp {
 			cmd.PrintAgentHelp(repoEditAgentHelp)
@@ -37,13 +40,24 @@ var editCmd = &cobra.Command{
 }
 
 func init() {
-	f := editCmd.Flags()
+	registerEditFlags(editCmd)
+}
+
+// registerEditFlags attaches the edit command's flags to the given
+// command. Pulled out of init() so tests can rebuild the flag set via
+// editCmd.ResetFlags() and re-register without restarting the binary.
+// (ResetFlags is needed between tests because pflag's `Changed` setter
+// is cumulative across ParseFlags calls within a single process.)
+func registerEditFlags(c *cobra.Command) {
+	f := c.Flags()
 	f.StringVar(&editFlags.owner, "owner", "", "Repository owner")
 	f.StringVarP(&editFlags.repo, "repo", "R", "", "Repository name or owner/repo")
 	f.StringVar(&editFlags.name, "name", "", "New repository name")
 	f.StringVarP(&editFlags.description, "description", "d", "", "Repository description")
-	f.BoolVar(&editFlags.privateValue, "private", false, "Make repository private")
+	f.BoolVar(&editFlags.privateValue, "private", false, "Make repository private (mutually exclusive with --public)")
+	f.BoolVar(&editFlags.publicValue, "public", false, "Make repository public (mutually exclusive with --private)")
 	f.StringVar(&editFlags.defaultBranch, "default-branch", "", "Default branch name")
+	c.MarkFlagsMutuallyExclusive("private", "public")
 }
 
 func runEdit(cobraCmd *cobra.Command, args []string) error {
@@ -59,13 +73,25 @@ func runEdit(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	// Gitee API v5 rejects PATCH /repos/{owner}/{repo} with HTTP 400
+	// "name is missing" when the body omits `name` (issue #IK5FYW).
+	// Always send the current repo name; --name, if provided, overrides
+	// it for the rename case.
 	req := types.RepositoryEditRequest{
-		Name:          editFlags.name,
+		Name:          repoName,
 		Description:   editFlags.description,
 		DefaultBranch: editFlags.defaultBranch,
 	}
-	if cobraCmd.Flags().Changed("private") {
-		req.Private = &editFlags.privateValue
+	if editFlags.name != "" {
+		req.Name = editFlags.name
+	}
+	// --public flips visibility to public (private=false); --private keeps
+	// the value the user passed. --public's flag value is irrelevant — we
+	// only need the sentinel that the user explicitly chose public.
+	if cobraCmd.Flags().Changed("public") {
+		req.Private = utils.BoolPtr(false)
+	} else if cobraCmd.Flags().Changed("private") {
+		req.Private = utils.BoolPtr(editFlags.privateValue)
 	}
 
 	path := api.ReposEdit(owner, repoName)
@@ -99,15 +125,15 @@ through the web UI.
     - --repo / -R flag:           ` + "`" + `--repo owner/repo` + "`" + `
     - split --owner + --repo:     ` + "`" + `--owner owner --repo name` + "`" + `
 - At least one mutable flag is provided (--name, --description,
-  --private, --default-branch); otherwise the request is a no-op
+  --private, --public, --default-branch); otherwise the request is a no-op
 
 ## Optional flags
   --owner             Repository owner (when --repo is just the bare name)
   --repo / -R         Repository name, OR owner/name; overrides positional arg
   --name              New repository name (rename)
   --description / -d  New repository description
-  --private           Make the repository private (true) or public (false);
-                      only applied if the flag was explicitly set
+  --private           Make the repository private. Mutually exclusive with --public.
+  --public            Make the repository public.  Mutually exclusive with --private.
   --default-branch    New default branch name (branch must already exist)
 
 ## Idempotency
@@ -122,8 +148,8 @@ Atomic per request. Either all changed fields update, or none do.
 - Repo name, description, visibility, or default branch is updated on Gitee
 - If --default-branch points to a branch that does NOT exist on the
   server, the API returns 422 — no fallback
-- If --private is toggled: webhooks subscribed to repo events may fire;
-  collaborators may lose access (re-evaluate ACL after toggling)
+- If --private/--public is toggled: webhooks subscribed to repo events may
+  fire; collaborators may lose access (re-evaluate ACL after toggling)
 - Renaming (--name) changes the HTML URL and git remote URL. Existing
   clones need: ` + "`" + `git remote set-url origin <new-url>` + "`" + `
 - Webhook callbacks subscribed to "Repository" events may fire
@@ -168,6 +194,9 @@ Each call to this command counts as 1 request.
 
   # Toggle to private (must explicitly set the flag)
   gitee repo edit myorg/svc --private
+
+  # Toggle back to public
+  gitee repo edit myorg/svc --public
 
   # Switch default branch (branch must already exist)
   gitee repo edit myorg/svc --default-branch main
