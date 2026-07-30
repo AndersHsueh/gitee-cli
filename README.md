@@ -6,7 +6,7 @@
 [![Go Version](https://img.shields.io/badge/go-1.25+-blue.svg)](https://golang.org)
 [![License](https://img.shields.io/badge/license-MulanPSL--2.0-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey.svg)]()
-[![Version](https://img.shields.io/badge/version-v0.12.4-orange.svg)](https://gitee.com/andershsueh/gitee-cli/releases/latest)
+[![Version](https://img.shields.io/badge/version-v0.12.5-orange.svg)](https://gitee.com/andershsueh/gitee-cli/releases/latest)
 [![Agent Help](https://img.shields.io/badge/--agent--help-131%20verbs-8A2BE2.svg)](docs/philosophy.md)
 
 ```bash
@@ -220,6 +220,20 @@ golangci-lint run ./...           # Lint
 ---
 
 ## 更新日志
+
+### v0.12.5 (2026-07-31) — `gitee issue close/reopen` 优雅降级 Gitee v5 路由 404
+
+> 1 个 commit：1 处 API 兼容性降级（#IK5FZX），gitee-cli 不再因 Gitee v5 上游 API 变更而给用户死端。**无新功能，无 breaking change**，行为对外保持一致；`golangci-lint run ./...` 与 `go test ./...` 持续全绿。
+
+**🔧 上游兼容**
+
+- **`gitee issue close/reopen` 优雅降级 Gitee v5 路由 404（#IK5FZX）** — 调研发现 Gitee v5 路由层不再接受对归属 enterprise/project 容器的 issue 做 PATCH state 修改（`/repos/{owner}/{repo}/issues/{number}` 返 404 `project or enterprise`）。多个第三方 SDK、中文社区博客与官方 swagger 一致指向该端点，无备选端点可 fallback，gitee-cli 这侧能做的是把已知失败模式显式识别出来包装出可操作错误。修复：新增 `api.IsProjectOrEnterpriseNotFound(err)` predicate（用 `errors.As(*APIError)` + `StatusCode==404` + `apiErr.Message` 子串匹配，避免外层包装误判）；`runClose` / `runReopen` 改走 `formatStateTransitionError`，404 模式时输出含 `cmd.ResolveHostname()` 生成的 Web UI URL 与人工操作指引的多行错误；其他错误保持原 `closing issue: %w` 包装。
+
+**🧪 测试**
+
+- 合并原 `close_test.go` + `reopen_test.go` 为 `state_transition_test.go`（189+189 → 226 行带 t.Run 子测试），共享 server setup / globals restore 模板；`io.ReadAll` 替代 `r.Body.Read(len=ContentLength)` 短读模式；`t.Cleanup` 替代 `defer`。
+- 新增 `internal/api/errors_test.go::TestIsProjectOrEnterpriseNotFound` 覆盖 nil、随机 error、含/不含 signature 的 404、非 404、wrapped chain、外层文本含 signature 但内层 APIError 不含（验证 predicate 严格基于 `*APIError.Message`）等 case。
+- `cmd/issue` 现有 18 个测试全部保留 + 通过。
 
 ### v0.12.4 (2026-07-31) — `repo edit` PATCH 修复 + `--public` 反向开关
 

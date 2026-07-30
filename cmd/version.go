@@ -15,7 +15,7 @@ import (
 // This is how scripts/release.sh stamps the right version into release
 // binaries without editing source code. The default value below is the
 // fallback for `go build` without ldflags (e.g. local dev).
-var Version = "0.12.4"
+var Version = "0.12.5"
 
 var versionCmd = &cobra.Command{
 	Use:   "version",
