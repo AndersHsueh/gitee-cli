@@ -6,7 +6,7 @@
 [![Go Version](https://img.shields.io/badge/go-1.25+-blue.svg)](https://golang.org)
 [![License](https://img.shields.io/badge/license-MulanPSL--2.0-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey.svg)]()
-[![Version](https://img.shields.io/badge/version-v0.12.5-orange.svg)](https://gitee.com/andershsueh/gitee-cli/releases/latest)
+[![Version](https://img.shields.io/badge/version-v0.12.6-orange.svg)](https://gitee.com/andershsueh/gitee-cli/releases/latest)
 [![Agent Help](https://img.shields.io/badge/--agent--help-131%20verbs-8A2BE2.svg)](docs/philosophy.md)
 
 ```bash
@@ -220,6 +220,37 @@ golangci-lint run ./...           # Lint
 ---
 
 ## 更新日志
+
+### v0.12.6 (2026-08-15) — `gitee issue close/reopen/edit` 根因修复（v0.12.5 workaround 升级）
+
+> 1 个 commit。在 v0.12.5 的 `formatStateTransitionError` 优雅降级基础上，找出真正的根因——Gitee v5 写路径的形态与读路径不同，且只接受 formData。close / reopen / edit 三个 verb 现在直接走正确契约，HTTP 200 完成；v0.12.5 的 workaround 仍然保留作为边缘场景的兜底（enterprise/project 容器路由不到时仍按 v0.12.5 方式提示 Web UI URL）。
+
+**🔧 正确性根因修复**
+
+- `gitee issue close` / `reopen` / `edit` 此前对所有个人/普通组织仓返回 `HTTP 400` / `HTTP 404`，根因：
+  - **路径**：`PATCH /repos/{owner}/{repo}/issues/{number}`（用了 GET 读路径形状） → 正确：`PATCH /repos/{owner}/issues/{number}`（写路径**去掉** `{repo}`，`repo` 改用 formData 字段提交）。
+  - **Body 编码**：`Content-Type: application/json` `{"state":"closed"}` → 正确：`application/x-www-form-urlencoded` `repo=<repo>&state=closed`。
+  - 旧实现同时踩了两个坑，所以 v0.12.5 的 workaround 永远会被触发，因为它试图包装一个 404，而实际原因不是 Gitee v5 拒绝 enterprise，而是请求形态根本不对。
+- `internal/api/endpoints.go`：`IssuesEdit` 路径削掉 `{repo}`，附详细 doc 注释引用 swagger 与实测链接。
+- `internal/api/client.go`：新增 `Client.PatchForm(ctx, path, url.Values, result)`（走 resty `SetFormData`，Content-Type 自动设为 `application/x-www-form-urlencoded`）。`Patch`（JSON）保留给真吃 JSON 的端点（如 `repo edit`）。
+- `cmd/issue/helpers.go`：`runClose` / `runReopen` / `runEdit` 改用 `url.Values` + `PatchForm`，显式提交 `repo` + `state` 字段；`edit` 把 `assignee` / `milestone` 字段名对齐 Gitee v5 真实契约（不再发 `assignees` / `milestone_number`）。
+- v0.12.5 的 `formatStateTransitionError` + `IsProjectOrEnterpriseNotFound` 兜底**保留**：当修复后仍偶发 404（如 enterprise/project 容器路由不可达），错误信息仍带 Web UI URL 引导。
+
+**📖 文档同步**
+
+- `issue edit` / `close` / `reopen` 三段 `--agent-help` 都新增 `## Implementation notes (Gitee v5 quirk)` 章节，写明真实 wire shape + 排查指向（`internal/api/client.go` PatchForm + `internal/api/endpoints.go` IssuesEdit）。
+- `cmd/issue/{close,edit,reopen}_content_test.go` 契约测试同步加入新章节作为 required list 元素，防止后续重构被默默删掉。
+
+**🧪 测试**
+
+- `internal/api/endpoints_test.go` 加 `TestIssuesEditEndpoint`：锁定 `/repos/{owner}/issues/{number}` 不带 `{repo}` 段。
+- `internal/api/client_test.go` 加 3 个回归测试（路径 + Content-Type + form 字段全维度）：`TestClient_PatchForm` / `TestClient_PatchForm_EmptyForm` / `TestClient_PatchForm_400Error`。
+- `cmd/issue/state_transition_test.go` 既有 18 个测试更新断言到新契约（路径去掉 `{repo}` + formData 含 `repo`/`state`）。
+
+**🔁 验证**
+
+- 真实端到端：用本仓库 `IK5FZX` 跑 `close` → `state=closed` → `reopen` → `state=open` → `edit --title …`，全部 HTTP 200，状态正确切换。
+- `go test ./...` 32 个包全绿，`golangci-lint run ./...` 0 issue。
 
 ### v0.12.5 (2026-07-31) — `gitee issue close/reopen` 优雅降级 Gitee v5 路由 404
 
