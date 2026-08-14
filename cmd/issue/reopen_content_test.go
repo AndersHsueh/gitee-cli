@@ -24,6 +24,7 @@ func TestReopenAgentHelpContent(t *testing.T) {
 		"## Next steps",
 		"## OAuth scope required",
 		"## Rate limit",
+		"## Implementation notes (Gitee v5 quirk)",
 		"## Example",
 		"## See also",
 	}

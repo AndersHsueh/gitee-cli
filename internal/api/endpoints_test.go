@@ -101,6 +101,26 @@ func TestWebhookEndpoints(t *testing.T) {
 	}
 }
 
+func TestIssuesEditEndpoint(t *testing.T) {
+	// Gitee v5 update-issue endpoint drops {repo} from the path; callers
+	// pass `repo` via formData. This is a Gitee quirk — the read endpoint
+	// /repos/{owner}/{repo}/issues/{number} still includes {repo}, but the
+	// write endpoint /repos/{owner}/issues/{number} does not. Verified
+	// against the swagger and against a live gitee.com call.
+	cases := []struct {
+		name, got, want string
+	}{
+		{"standard", IssuesEdit("owner", "repo", "42"), "/repos/owner/issues/42"},
+		{"org repo", IssuesEdit("gitee-cli", "gitee", "IJP83Z"), "/repos/gitee-cli/issues/IJP83Z"},
+		{"repo name is intentionally unused in path", IssuesEdit("u", "any-repo", "7"), "/repos/u/issues/7"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			assert.Equal(t, c.want, c.got)
+		})
+	}
+}
+
 func TestIssueCommentsListEndpoint(t *testing.T) {
 	cases := []struct {
 		name, got, want string

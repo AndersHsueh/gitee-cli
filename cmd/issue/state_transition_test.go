@@ -1,7 +1,6 @@
 package issue
 
 import (
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -98,10 +97,10 @@ func withStateTransitionMockServer(t *testing.T, h http.HandlerFunc) {
 }
 
 // assertPatchIssuePath verifies the request method is PATCH and the
-// path matches /repos/{owner}/{repo}/issues/{number}. The
-// Gitee v5 PATCH on /repos/.../issues/{number} is the only supported
-// state-transition route; an off-route call would indicate a
-// regression in runClose / runReopen.
+// path matches /repos/{owner}/issues/{number}. The Gitee v5 PATCH
+// write path for issues DROPS {repo} from the URL (the read path still
+// includes it) — `repo` is supplied via formData instead. An off-route
+// call would indicate a regression in runClose / runReopen.
 func assertPatchIssuePath(t *testing.T, r *http.Request, wantPath string) {
 	t.Helper()
 	if r.Method != http.MethodPatch {
@@ -116,7 +115,8 @@ func TestRunStateTransition_ProjectOrEnterprise404(t *testing.T) {
 	for _, r := range []stateTransitionRunner{closeRunner(), reopenRunner()} {
 		t.Run(r.name, func(t *testing.T) {
 			withStateTransitionMockServer(t, func(w http.ResponseWriter, req *http.Request) {
-				assertPatchIssuePath(t, req, "/repos/owner/repo/issues/IK5FZX")
+				// Gitee v5 write path drops {repo}; should be /repos/owner/issues/IK5FZX.
+				assertPatchIssuePath(t, req, "/repos/owner/issues/IK5FZX")
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusNotFound)
 				_, _ = w.Write([]byte(`{"message":"404 Not Found: project or enterprise not found"}`))
@@ -149,15 +149,24 @@ func TestRunStateTransition_SuccessNoWorkaround(t *testing.T) {
 	for _, r := range []stateTransitionRunner{closeRunner(), reopenRunner()} {
 		t.Run(r.name, func(t *testing.T) {
 			withStateTransitionMockServer(t, func(w http.ResponseWriter, req *http.Request) {
-				assertPatchIssuePath(t, req, "/repos/owner/repo/issues/42")
-				// Body must be {"state":<stateValue>}. We use io.ReadAll
-				// rather than r.Body.Read into a ContentLength-sized
-				// buffer because Read is allowed to short-read, which
-				// would leave the assertion silently matching a
-				// zero-filled tail.
-				body, _ := io.ReadAll(req.Body)
-				if !strings.Contains(string(body), `"state":"`+r.stateValue+`"`) {
-					t.Errorf("expected body to contain state=%s, got %q", r.stateValue, body)
+				// Gitee v5 write path drops {repo}.
+				assertPatchIssuePath(t, req, "/repos/owner/issues/42")
+				// Body must be formData (NOT JSON) carrying `repo` and
+				// `state`. We use io.ReadAll rather than r.Body.Read
+				// into a ContentLength-sized buffer because Read is
+				// allowed to short-read, which would leave the assertion
+				// silently matching a zero-filled tail.
+				if err := req.ParseForm(); err != nil {
+					t.Fatalf("ParseForm: %v", err)
+				}
+				if req.FormValue("repo") != "repo" {
+					t.Errorf("expected formData repo=repo, got %q", req.FormValue("repo"))
+				}
+				if req.FormValue("state") != r.stateValue {
+					t.Errorf("expected formData state=%s, got %q", r.stateValue, req.FormValue("state"))
+				}
+				if ct := req.Header.Get("Content-Type"); !strings.Contains(ct, "application/x-www-form-urlencoded") {
+					t.Errorf("expected formData Content-Type, got %q", ct)
 				}
 				w.Header().Set("Content-Type", "application/json")
 				_, _ = w.Write([]byte(`{"number":"42","state":"` + r.stateValue + `","title":"x"}`))

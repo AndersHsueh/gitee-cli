@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"time"
 
 	"github.com/go-resty/resty/v2"
@@ -96,6 +97,42 @@ func (c *Client) Post(ctx context.Context, path string, body, result interface{}
 // Patch issues a PATCH request.
 func (c *Client) Patch(ctx context.Context, path string, body, result interface{}) error {
 	return c.do(ctx, resty.MethodPatch, path, body, result)
+}
+
+// PatchForm issues a PATCH request with an application/x-www-form-urlencoded
+// body built from the supplied url.Values. Use this for Gitee v5 endpoints
+// that accept only form-encoded input (the issue update endpoint
+// /repos/{owner}/issues/{number} is the canonical caller — see the
+// IssuesEdit endpoint builder doc for the gory details).
+//
+// Unlike Patch (which sends JSON via SetBody), PatchForm uses resty's
+// SetFormData, which sets Content-Type: application/x-www-form-urlencoded
+// and url.Values.Encode()s the payload. Pass an empty `form` to send a
+// PATCH with no body — equivalent to a no-op call (still useful for
+// endpoints that require a verb but no fields).
+//
+// When the same key appears multiple times in `form`, only the FIRST value
+// is sent (resty's SetFormData takes map[string]string, not []string). For
+// Gitee v5 issue update this is fine — every field we send is a scalar.
+func (c *Client) PatchForm(ctx context.Context, path string, form url.Values, result interface{}) error {
+	req := c.r.R().SetContext(ctx).SetHeader("Content-Type", "application/x-www-form-urlencoded")
+	if len(form) > 0 {
+		flat := make(map[string]string, len(form))
+		for k, vs := range form {
+			if len(vs) > 0 {
+				flat[k] = vs[0]
+			}
+		}
+		req = req.SetFormData(flat)
+	}
+	if result != nil {
+		req = req.SetResult(result)
+	}
+	resp, err := req.Patch(path)
+	if err != nil {
+		return err
+	}
+	return checkStatus(resp)
 }
 
 // Delete issues a DELETE request.

@@ -72,8 +72,28 @@ func IssuesCreate(owner string) string {
 	return fmt.Sprintf("/repos/%s/issues", owner)
 }
 
+// IssuesEdit returns the path for updating an existing issue on Gitee v5.
+//
+// IMPORTANT: Gitee v5's issue update endpoint is shaped DIFFERENTLY from the
+// read endpoint. The READ path is /repos/{owner}/{repo}/issues/{number}
+// (matches GitHub), but the WRITE path drops {repo} from the URL and
+// instead accepts `repo` as a formData parameter alongside the fields
+// being changed. All other update fields (title, body, state, assignee,
+// collaborators, milestone, labels, ...) are also formData, NOT JSON.
+//
+// Verified against https://gitee.com/api/v5/swagger_doc.json (path
+// /v5/repos/{owner}/issues/{number} with PATCH) and against a live
+// gitee.com call: PATCH {write-path} with `repo=`+`state=` formData
+// returns 200, while the read-shape path with JSON body returns 404
+// "project or enterprise" / 400.
+//
+// Callers MUST send the request as application/x-www-form-urlencoded
+// (use Client.PatchForm) and MUST include `repo` in the formData. The
+// `repo` argument is kept in the signature for symmetry with the other
+// getters/builders; callers should pass it through to PatchForm.
 func IssuesEdit(owner, repo, number string) string {
-	return fmt.Sprintf("/repos/%s/%s/issues/%s", owner, repo, number)
+	_ = repo // intentionally unused in URL path; supplied via formData
+	return fmt.Sprintf("/repos/%s/issues/%s", owner, number)
 }
 
 func IssuesComment(owner, repo, number string) string {

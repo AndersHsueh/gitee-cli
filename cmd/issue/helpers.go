@@ -3,6 +3,7 @@ package issue
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"time"
 
 	"gitee-cli/cmd"
@@ -138,21 +139,22 @@ func runEdit(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	req := types.IssueEditRequest{}
+	form := url.Values{}
+	form.Set("repo", repoName)
 	if editFlags.title != "" {
-		req.Title = editFlags.title
+		form.Set("title", editFlags.title)
 	}
 	if editFlags.body != "" {
-		req.Body = editFlags.body
+		form.Set("body", editFlags.body)
 	}
 	if editFlags.labels != "" {
-		req.Labels = editFlags.labels
+		form.Set("labels", editFlags.labels)
 	}
 	if editFlags.assignees != "" {
-		req.Assignees = editFlags.assignees
+		form.Set("assignee", editFlags.assignees)
 	}
 	if editFlags.milestone > 0 {
-		req.Milestone = editFlags.milestone
+		form.Set("milestone", fmt.Sprintf("%d", editFlags.milestone))
 	}
 
 	path := api.IssuesEdit(owner, repoName, issueNum)
@@ -160,7 +162,9 @@ func runEdit(cobraCmd *cobra.Command, args []string) error {
 	defer cancel()
 
 	var issue types.Issue
-	if err := client.Patch(ctx, path, req, &issue); err != nil {
+	// Gitee v5 issue update endpoint takes formData (NOT JSON) and requires
+	// `repo` as a form field. See the IssuesEdit builder doc.
+	if err := client.PatchForm(ctx, path, form, &issue); err != nil {
 		return fmt.Errorf("editing issue: %w", err)
 	}
 	fmt.Printf("Issue #%s updated\n", issueNum)
@@ -182,13 +186,20 @@ func runClose(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	req := map[string]string{"state": "closed"}
+	form := url.Values{}
+	form.Set("repo", repoName)
+	form.Set("state", "closed")
 	path := api.IssuesEdit(owner, repoName, issueNum)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
 	defer cancel()
 
 	var issue types.Issue
-	if err := client.Patch(ctx, path, req, &issue); err != nil {
+	// Gitee v5 issue update endpoint takes formData (NOT JSON) and requires
+	// `repo` as a form field. See the IssuesEdit builder doc. The remote's
+	// formatStateTransitionError still wraps the error for the (rare) case
+	// where Gitee v5 returns 404 for an enterprise/project container that
+	// the API cannot route to.
+	if err := client.PatchForm(ctx, path, form, &issue); err != nil {
 		return formatStateTransitionError(err, owner, repoName, issueNum, "close")
 	}
 	fmt.Printf("Issue #%s closed\n", issueNum)
@@ -210,13 +221,20 @@ func runReopen(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	req := map[string]string{"state": "open"}
+	form := url.Values{}
+	form.Set("repo", repoName)
+	form.Set("state", "open")
 	path := api.IssuesEdit(owner, repoName, issueNum)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
 	defer cancel()
 
 	var issue types.Issue
-	if err := client.Patch(ctx, path, req, &issue); err != nil {
+	// Gitee v5 issue update endpoint takes formData (NOT JSON) and requires
+	// `repo` as a form field. See the IssuesEdit builder doc. The remote's
+	// formatStateTransitionError still wraps the error for the (rare) case
+	// where Gitee v5 returns 404 for an enterprise/project container that
+	// the API cannot route to.
+	if err := client.PatchForm(ctx, path, form, &issue); err != nil {
 		return formatStateTransitionError(err, owner, repoName, issueNum, "reopen")
 	}
 	fmt.Printf("Issue #%s reopened\n", issueNum)
@@ -412,6 +430,26 @@ projects (write)
 Gitee API v5: 1000 requests/hour for authenticated users.
 Each call to this command counts as 1 request.
 
+## Implementation notes (Gitee v5 quirk)
+Gitee v5's issue update endpoint is shaped DIFFERENTLY from the read
+endpoint. The READ path is ` + "`" + `/repos/{owner}/{repo}/issues/{number}` + "`" + `
+(matches GitHub), but the WRITE path drops {repo} from the URL and
+instead accepts ` + "`" + `repo` + "`" + ` as a formData parameter alongside the
+fields being changed. All update fields (title, body, state, assignee,
+collaborators, milestone, labels, ...) are also formData, NOT JSON body.
+
+Concretely, this command sends:
+
+  PATCH /repos/{owner}/issues/{number}                <-- no {repo} in path
+  Content-Type: application/x-www-form-urlencoded
+  repo=<repo>&title=...&body=...&assignee=...&milestone=...&labels=...
+
+If you ever see ` + "`" + `HTTP 400 "state does not have a valid value"` + "`" + ` or
+` + "`" + `HTTP 404 "project or enterprise"` + "`" + ` after this command, the most
+likely cause is a regression that re-introduced the JSON body / wrong
+path — re-check ` + "`" + `internal/api/client.go` + "`" + ` (PatchForm) and
+` + "`" + `internal/api/endpoints.go` + "`" + ` (IssuesEdit) together.
+
 ## Example
   # Triage: add the "bug" label and assign to alice
   gitee issue edit 42 --repo owner/repo --labels "bug,priority/high" \
@@ -521,6 +559,28 @@ projects (write)
 Gitee API v5: 1000 requests/hour for authenticated users.
 Each call to this command counts as 1 request.
 
+## Implementation notes (Gitee v5 quirk)
+The wire shape of this command is non-obvious. Gitee v5's issue update
+endpoint is shaped DIFFERENTLY from the read endpoint:
+
+  PATCH /repos/{owner}/issues/{number}                <-- no {repo} in path
+  Content-Type: application/x-www-form-urlencoded
+  repo=<repo>&state=closed
+
+The READ path is ` + "`" + `/repos/{owner}/{repo}/issues/{number}` + "`" + ` (GitHub-style),
+but the WRITE path drops {repo} from the URL and instead accepts ` + "`" + `repo` + "`" + `
+as a formData parameter. All update fields (including ` + "`" + `state` + "`" + `) are
+formData, NOT JSON body.
+
+If you ever see ` + "`" + `HTTP 400 "state does not have a valid value"` + "`" + ` or
+` + "`" + `HTTP 404 "project or enterprise"` + "`" + ` after this command, the most
+likely cause is a regression that re-introduced the JSON body / wrong
+path — re-check ` + "`" + `internal/api/client.go` + "`" + ` (PatchForm) and
+` + "`" + `internal/api/endpoints.go` + "`" + ` (IssuesEdit) together.
+
+The same wiring is used by ` + "`" + `gitee issue reopen` + "`" + ` and ` + "`" + `gitee issue edit` + "`" + `;
+all three share the v0.12.6 fix.
+
 ## Example
   # Close issue 42
   gitee issue close 42 --repo owner/repo
@@ -629,6 +689,28 @@ projects (write)
 ## Rate limit
 Gitee API v5: 1000 requests/hour for authenticated users.
 Each call to this command counts as 1 request.
+
+## Implementation notes (Gitee v5 quirk)
+The wire shape of this command is non-obvious. Gitee v5's issue update
+endpoint is shaped DIFFERENTLY from the read endpoint:
+
+  PATCH /repos/{owner}/issues/{number}                <-- no {repo} in path
+  Content-Type: application/x-www-form-urlencoded
+  repo=<repo>&state=open
+
+The READ path is ` + "`" + `/repos/{owner}/{repo}/issues/{number}` + "`" + ` (GitHub-style),
+but the WRITE path drops {repo} from the URL and instead accepts ` + "`" + `repo` + "`" + `
+as a formData parameter. All update fields (including ` + "`" + `state` + "`" + `) are
+formData, NOT JSON body.
+
+If you ever see ` + "`" + `HTTP 400 "state does not have a valid value"` + "`" + ` or
+` + "`" + `HTTP 404 "project or enterprise"` + "`" + ` after this command, the most
+likely cause is a regression that re-introduced the JSON body / wrong
+path — re-check ` + "`" + `internal/api/client.go` + "`" + ` (PatchForm) and
+` + "`" + `internal/api/endpoints.go` + "`" + ` (IssuesEdit) together.
+
+The same wiring is used by ` + "`" + `gitee issue close` + "`" + ` and ` + "`" + `gitee issue edit` + "`" + `;
+all three share the v0.12.6 fix.
 
 ## Example
   # Reopen a prematurely-closed issue
