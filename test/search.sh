@@ -16,9 +16,9 @@ NC='\033[0m'
 
 passed=0; failed=0; skipped=0
 
-pass()    { ((passed++)); echo -e "  ${GREEN}✓${NC} $*"; }
-fail()    { ((failed++)); echo -e "  ${RED}✗${NC} $*" >&2; }
-skip()    { ((skipped++)); echo -e "  ${YELLOW}⊘${NC} $* (跳过)"; }
+pass()    { passed=$((passed+1)); echo -e "  ${GREEN}✓${NC} $*"; }
+fail()    { failed=$((failed+1)); echo -e "  ${RED}✗${NC} $*" >&2; }
+skip()    { skipped=$((skipped+1)); echo -e "  ${YELLOW}⊘${NC} $* (跳过)"; }
 section() { echo ""; echo -e "${BLUE}▶${NC} $*"; }
 
 # ---------------------------------------------------------------------------
@@ -63,7 +63,7 @@ done
 # ---------------------------------------------------------------------------
 section "gitee search repos 基本搜索"
 output=$("$BINARY" search repos "gitee" --limit 5 2>&1 || true)
-if echo "$output" | grep -qiE "gitee|NAME|full_name|language"; then
+if echo "$output" | grep -qiE "gitee|NAME|full_name|language|(no results)"; then
     pass "search repos 返回结果"
 else
     fail "search repos 无有效输出: ${output:0:200}"

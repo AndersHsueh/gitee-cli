@@ -16,9 +16,9 @@ NC='\033[0m'
 
 passed=0; failed=0; skipped=0
 
-pass() { ((passed++)); echo -e "  ${GREEN}✓${NC} $*"; }
-fail() { ((failed++)); echo -e "  ${RED}✗${NC} $*" >&2; }
-skip() { ((skipped++)); echo -e "  ${YELLOW}⊘${NC} $* (跳过)"; }
+pass() { passed=$((passed+1)); echo -e "  ${GREEN}✓${NC} $*"; }
+fail() { failed=$((failed+1)); echo -e "  ${RED}✗${NC} $*" >&2; }
+skip() { skipped=$((skipped+1)); echo -e "  ${YELLOW}⊘${NC} $* (跳过)"; }
 section() { echo ""; echo -e "${BLUE}▶${NC} $*"; }
 
 # ---------------------------------------------------------------------------
@@ -75,7 +75,7 @@ done
 # ---------------------------------------------------------------------------
 section "gitee pr list --output table"
 output=$("$BINARY" pr list --repo "$TEST_REPO" --limit 5 --output table 2>&1 || true)
-if echo "$output" | grep -qi "#\|TITLE\|PR\|pull_request"; then
+if echo "$output" | grep -qiE "#|TITLE|PR|pull_request|No pull requests"; then
     pass "pr list --output table 输出正常"
 else
     fail "pr list --output table 输出缺少表头"

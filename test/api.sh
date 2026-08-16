@@ -16,9 +16,9 @@ NC='\033[0m'
 
 passed=0; failed=0; skipped=0
 
-pass()    { ((passed++)); echo -e "  ${GREEN}✓${NC} $*"; }
-fail()    { ((failed++)); echo -e "  ${RED}✗${NC} $*" >&2; }
-skip()    { ((skipped++)); echo -e "  ${YELLOW}⊘${NC} $* (跳过)"; }
+pass()    { passed=$((passed+1)); echo -e "  ${GREEN}✓${NC} $*"; }
+fail()    { failed=$((failed+1)); echo -e "  ${RED}✗${NC} $*" >&2; }
+skip()    { skipped=$((skipped+1)); echo -e "  ${YELLOW}⊘${NC} $* (跳过)"; }
 section() { echo ""; echo -e "${BLUE}▶${NC} $*"; }
 
 # ---------------------------------------------------------------------------
@@ -59,7 +59,7 @@ done
 # api GET /user (当前用户信息)
 # ---------------------------------------------------------------------------
 section "gitee api GET /user"
-output=$("$BINARY" api raw GET /user 2>&1)
+output=$("$BINARY" api raw GET https://gitee.com/api/v5/user 2>&1)
 if echo "$output" | grep -qE '"login"|"name"'; then
     pass "api GET /user 返回有效 JSON（含 login/name 字段）"
 else
@@ -70,7 +70,7 @@ fi
 # api GET /user — 字段验证
 # ---------------------------------------------------------------------------
 section "gitee api GET /user 字段完整性"
-output=$("$BINARY" api raw GET /user 2>&1)
+output=$("$BINARY" api raw GET https://gitee.com/api/v5/user 2>&1)
 expected_fields=("login" "name" "id" "avatar_url" "html_url")
 for field in "${expected_fields[@]}"; do
     if echo "$output" | grep -q "\"$field\""; then
@@ -98,7 +98,7 @@ section "gitee api POST --field 参数（创建并删除测试仓库）"
 TEST_REPO_NAME="gitee-cli-api-test-$(date +%s)"
 
 # 创建仓库
-create_output=$("$BINARY" api POST /user/repos \
+create_output=$("$BINARY" api raw POST https://gitee.com/api/v5/user/repos \
     --field name="$TEST_REPO_NAME" \
     --field description="API test repo - will be deleted" \
     --field private=true \
@@ -109,7 +109,7 @@ if echo "$create_output" | grep -q "\"full_name\""; then
     pass "api POST /user/repos --field 创建仓库成功"
 
     # 获取当前用户名
-    user_login=$("$BINARY" api raw GET /user 2>&1 | grep '"login"' | head -1 | sed 's/.*"login": *"\([^"]*\)".*/\1/')
+    user_login=$("$BINARY" api raw GET https://gitee.com/api/v5/user 2>&1 | grep '"login"' | head -1 | sed 's/.*"login": *"\([^"]*\)".*/\1/')
 
     if [[ -n "$user_login" ]]; then
         # 删除测试仓库
@@ -130,7 +130,7 @@ fi
 # api --include 输出响应头
 # ---------------------------------------------------------------------------
 section "gitee api --include 响应头输出"
-output=$("$BINARY" api raw GET /user --include 2>&1)
+output=$("$BINARY" api raw GET https://gitee.com/api/v5/user --include 2>&1) || true
 if echo "$output" | grep -qiE "HTTP|Content-Type|X-Total|RateLimit|^HTTP"; then
     pass "api --include 输出包含响应头"
 else
@@ -141,7 +141,7 @@ fi
 # api 错误处理：无效路径
 # ---------------------------------------------------------------------------
 section "gitee api 错误路径处理"
-if output=$("$BINARY" api raw GET /nonexistent-endpoint-xyz 2>&1); then
+if output=$("$BINARY" api raw GET https://gitee.com/api/v5/nonexistent-endpoint-xyz 2>&1); then
     fail "api 访问不存在的端点应报错，但未报错"
 else
     if echo "$output" | grep -qiE "not found|404|error"; then
@@ -192,3 +192,4 @@ else
     echo -e "${RED}✗ api 模块测试有失败项${NC}"
     exit 1
 fi
+""

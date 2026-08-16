@@ -72,5 +72,12 @@ v*-修复指引.md
 *.key
 *.crt
 
+# Test reports & temp files (generated per-run, do not commit)
+test/full-test-output.txt
+test/API-ALIGNMENT-REPORT.md
+test/FULL-TEST-REPORT.md
+test/*.tmp
+
 # Release binaries (prevent stray commits)
+gitee-*
 gitee-*

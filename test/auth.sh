@@ -20,8 +20,8 @@ NC='\033[0m'
 passed=0
 failed=0
 
-pass() { ((passed++)); echo -e "  ${GREEN}✓${NC} $*"; }
-fail() { ((failed++)); echo -e "  ${RED}✗${NC} $*" >&2; }
+pass() { passed=$((passed+1)); echo -e "  ${GREEN}✓${NC} $*"; }
+fail() { failed=$((failed+1)); echo -e "  ${RED}✗${NC} $*" >&2; }
 
 section() {
     echo ""

@@ -17,6 +17,17 @@ set -euo pipefail
 
 BINARY="${GITEE_CLI_BINARY:-./gitee}"
 TEST_DIR="$(cd "$(dirname "$0")" && pwd)"
+ROOT_DIR="$(dirname "$TEST_DIR")"
+
+# 如果相对路径找不到，尝试绝对路径
+if [[ ! -f "$BINARY" ]]; then
+    if [[ -f "$ROOT_DIR/gitee" ]]; then
+        BINARY="$ROOT_DIR/gitee"
+    fi
+fi
+
+export BINARY
+export GITEE_CLI_BINARY="$BINARY"
 
 # 颜色定义
 RED='\033[0;31m'
@@ -25,8 +36,14 @@ YELLOW='\033[0;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-# 测试模块列表
-MODULES=("auth" "repo" "issue" "pr" "gist" "org" "search" "api" "config" "completion" "repo_view" "pagination" "gist-unstar" "repo-branches" "pr-comments")
+# 测试模块列表 (25 个)
+MODULES=(
+    "auth" "repo" "issue" "pr" "gist" "org" "search"
+    "api" "config" "completion" "repo_view" "pagination"
+    "gist-unstar" "repo-branches" "pr-comments"
+    "label" "milestone" "notification" "release" "ssh-key"
+    "user" "webhook" "alias" "extension" "status"
+)
 
 log_info()  { echo -e "${BLUE}[INFO]${NC}  $*"; }
 log_pass()  { echo -e "${GREEN}[PASS]${NC}  $*"; }
@@ -38,9 +55,21 @@ check_binary() {
     if [[ ! -f "$BINARY" ]]; then
         log_warn "未找到 gitee 二进制文件: $BINARY"
         log_info "正在编译..."
-        cd "$(dirname "$TEST_DIR")"
-        go build -o gitee ./cmd/gitee
-        log_info "编译完成"
+        cd "$ROOT_DIR"
+        if command -v go >/dev/null 2>&1; then
+            go build -o gitee ./cmd/gitee
+            log_info "编译完成"
+        else
+            log_warn "go 不可用，跳过编译"
+            if [[ -f "$ROOT_DIR/gitee" ]]; then
+                BINARY="$ROOT_DIR/gitee"
+                export BINARY
+                export GITEE_CLI_BINARY="$BINARY"
+            else
+                log_fail "找不到 gitee 二进制文件，且 go 不可用"
+                exit 1
+            fi
+        fi
     fi
     if [[ ! -x "$BINARY" ]]; then
         chmod +x "$BINARY"
@@ -64,7 +93,7 @@ run_module() {
     log_info "  运行 ${module} 模块测试"
     log_info "═══════════════════════════════════════════"
 
-    if bash "$script"; then
+    if GITEE_CLI_BINARY="$BINARY" bash "$script"; then
         log_pass "${module} 模块测试通过 ✓"
     else
         local exit_code=$?

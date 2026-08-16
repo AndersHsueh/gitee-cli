@@ -16,14 +16,17 @@ NC='\033[0m'
 
 passed=0; failed=0; skipped=0
 
-pass()    { ((passed++)); echo -e "  ${GREEN}✓${NC} $*"; }
-fail()    { ((failed++)); echo -e "  ${RED}✗${NC} $*" >&2; }
-skip()    { ((skipped++)); echo -e "  ${YELLOW}⊘${NC} $* (跳过)"; }
+pass()    { passed=$((passed+1)); echo -e "  ${GREEN}✓${NC} $*"; }
+fail()    { failed=$((failed+1)); echo -e "  ${RED}✗${NC} $*" >&2; }
+skip()    { skipped=$((skipped+1)); echo -e "  ${YELLOW}⊘${NC} $* (跳过)"; }
 section() { echo ""; echo -e "${BLUE}▶${NC} $*"; }
 
-# 获取当前用户名和测试仓库（使用 raw 子命令）
+# 获取当前用户名和测试仓库（使用 raw 子命令，v0.3.0 需要完整 URL）
 get_test_user() {
-    "$BINARY" api raw GET /user 2>/dev/null | grep '"login"' | head -1 | sed 's/.*"login": *"\([^"]*\)".*/\1/'
+    "$BINARY" api raw GET https://gitee.com/api/v5/user 2>/dev/null | grep '"login"' | head -1 | sed 's/.*"login": *"\([^"]*\)".*/\1/'
+}
+get_test_user() {
+    "$BINARY" api raw GET https://gitee.com/api/v5/user 2>/dev/null | grep '"login"' | head -1 | sed 's/.*"login": *"\([^"]*\)".*/\1/'
 }
 
 # ---------------------------------------------------------------------------
@@ -37,8 +40,9 @@ if [[ -z "$TEST_USER" ]]; then
 fi
 pass "认证状态正常 (用户: $TEST_USER)"
 
-# 使用用户自己的仓库进行测试（使用 raw 子命令）
-TEST_REPO=$("$BINARY" api raw GET /user/repos?type=owner\&per_page=1 2>/dev/null | grep '"full_name"' | head -1 | sed 's/.*"full_name": *"\([^"]*\)".*/\1/')
+# 使用用户自己的仓库进行测试（使用 raw 子命令，v0.3.0 需要完整 URL）
+TEST_REPO=$("$BINARY" api raw GET "https://gitee.com/api/v5/user/repos?type=owner&per_page=1" 2>/dev/null | grep '"full_name"' | head -1 | sed 's/.*"full_name": *"\([^"]*\)".*/\1/')
+TEST_REPO=$("$BINARY" api raw GET https://gitee.com/api/v5/user/repos?type=owner\&per_page=1 2>/dev/null | grep '"full_name"' | head -1 | sed 's/.*"full_name": *"\([^"]*\)".*/\1/')
 if [[ -z "$TEST_REPO" ]] || [[ "$TEST_REPO" == *"["* ]]; then
     skip "无法获取测试仓库，跳过需要实际仓库的测试"
     TEST_REPO=""

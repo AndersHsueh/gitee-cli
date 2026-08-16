@@ -44,9 +44,9 @@ declare -a FINDINGS=()   # 行为差异(非 bug)
 declare -a BUGS=()       # 真实 bug
 declare -a AGENT_HELP_GAPS=()  # --agent-help 缺失章节
 
-pass()    { ((passed++)) || true; echo -e "  ${GREEN}✓${NC} $*"; }
-fail()    { ((failed++)) || true; echo -e "  ${RED}✗${NC} $*" >&2; BUGS+=("$*"); }
-skip()    { ((skipped++)) || true; echo -e "  ${YELLOW}⊘${NC} $* (跳过)"; }
+pass()    { passed=$((passed+1)) || true; echo -e "  ${GREEN}✓${NC} $*"; }
+fail()    { failed=$((failed+1)) || true; echo -e "  ${RED}✗${NC} $*" >&2; BUGS+=("$*"); }
+skip()    { skipped=$((skipped+1)) || true; echo -e "  ${YELLOW}⊘${NC} $* (跳过)"; }
 note()    { echo -e "  ${CYAN}ⓘ${NC} $*"; FINDINGS+=("$*"); }
 section() { echo ""; echo -e "${BLUE}▶${NC} $*"; }
 hr()      { echo -e "────────────────────────────────────────"; }
