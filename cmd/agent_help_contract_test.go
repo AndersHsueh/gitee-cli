@@ -1,8 +1,11 @@
 package cmd
 
 import (
+	"os/exec"
 	"strings"
 	"testing"
+
+	"github.com/spf13/cobra"
 )
 
 // This file locks the parts of the --agent-help system that AI agents
@@ -164,4 +167,135 @@ func TestCoverageMatrixWellFormed(t *testing.T) {
 	if seen == 0 {
 		t.Fatal("coverage matrix appears empty — expected several 'gitee <cmd> --agent-help' rows")
 	}
+}
+
+// exemptHelpPathPrefixes lists the cobra subcommand path prefixes whose
+// leaf commands are exempt from the --agent-help contract check below.
+//
+//   - "help"                  — the cobra help dispatcher itself; users
+//                              should run `gitee help <topic>` instead.
+//   - "help environment"      — `gitee help <topic>` IS the documentation
+//   - "help exit-codes"         for those topics. Their --agent-help can
+//   - "help formatting"         legitimately return the topic content
+//   - "help reference"          itself (matrix marks them "n/a").
+//   - "co"                    — hidden alias of `gitee pr checkout`;
+//                              agent-help coverage is provided by
+//                              `gitee pr checkout --agent-help` so
+//                              adding it here would duplicate work
+//                              and confuse the matrix.
+//
+// New exemptions should be added deliberately and called out in the
+// commit message — the whole point of this test is that any new
+// leaf command without --agent-help coverage is loud, not silent.
+var exemptHelpPathPrefixes = []string{
+	"help",
+	"help environment",
+	"help exit-codes",
+	"help formatting",
+	"help reference",
+	"co",
+}
+
+// TestAgentHelpCoverageForAllCommands walks the live cobra command
+// tree (via cmd.RootCommand()) and asserts that every leaf command,
+// when probed with --agent-help, returns EITHER:
+//
+//  1. The operational/config n/a notice ("<prefix> is an
+//     operational/config command. Use --help for usage.") for
+//     verbs that don't have agent-targeted docs; OR
+//  2. The full agent-help markdown ("# gitee <name> — Agent Help")
+//     for verbs that do.
+//
+// This is the IK923X step-2 contract test: it would have caught
+// `gitee completion bash --agent-help` dumping 200 lines of shell
+// script, and `gitee version --agent-help` dumping the version
+// string, because both fail the prefix assertion. Before this test
+// landed, TestCoverageMatrixWellFormed only validated that matrix
+// rows were well-formed; it never verified that the matrix
+// actually covered every leaf in the tree.
+//
+// The check is run by shelling out to a freshly-built gitee binary
+// (buildThrowawayBinary, defined in version_test.go) so we exercise
+// the real Cobra flag-parsing + PreRunE pipeline — not in-process
+// mocks. In-process testing of os.Exit(0) is impractical, which is
+// also why this test lives at the contract level rather than inside
+// each subcommand's package.
+func TestAgentHelpCoverageForAllCommands(t *testing.T) {
+	bin := buildThrowawayBinary(t)
+
+	leaves := findAllLeafCommandsForCoverage(RootCommand())
+	if len(leaves) == 0 {
+		t.Fatal("no leaf commands discovered — registration may have regressed")
+	}
+	t.Logf("discovered %d leaf commands to probe", len(leaves))
+
+	for _, leaf := range leaves {
+		t.Run(leaf.CommandPath(), func(t *testing.T) {
+			if isExemptedFromAgentHelpCoverage(leaf) {
+				t.Skipf("exempted: %s (see exemptHelpPathPrefixes)", leaf.CommandPath())
+			}
+			args := strings.Fields(leaf.CommandPath())[1:] // drop "gitee"
+			args = append(args, "--agent-help")
+			run := exec.Command(bin, args...)
+			run.Env = []string{
+				"HOME=" + t.TempDir(),
+				"PATH=/usr/bin:/bin",
+				"GITEE_TOKEN=",
+				"GITEE_HOSTNAME=invalid.example.invalid",
+			}
+			out, err := run.CombinedOutput()
+			if err != nil {
+				t.Fatalf("%s --agent-help failed: %v\noutput:\n%s",
+					leaf.CommandPath(), err, out)
+			}
+			combined := string(out)
+			// Combine all n/a variants we accept:
+			//   - "X is an operational/config command. Use --help for usage." (current wording)
+			//   - "X is an operational/config — use --help" (matrix shorthand; only inside rootAgentHelp)
+			hasNA := strings.Contains(combined, "is an operational/config command") &&
+				strings.Contains(combined, "Use --help for usage")
+			hasFullDoc := strings.HasPrefix(strings.TrimLeft(combined, "\n"), "# gitee")
+			if !hasNA && !hasFullDoc {
+				t.Errorf("%s --agent-help output must start with the operational/config n/a notice "+
+					"or a '# gitee ... — Agent Help' header. Got:\n%s",
+					leaf.CommandPath(), combined)
+			}
+		})
+	}
+}
+
+// findAllLeafCommandsForCoverage recursively walks the cobra tree and
+// returns every command with no subcommands. We do not filter hidden
+// commands here (the help_topics dispatcher itself is a parent and
+// is naturally excluded by the "no subcommands" check; the four
+// topics are leaves and are handled by the exemption list above).
+func findAllLeafCommandsForCoverage(root *cobra.Command) []*cobra.Command {
+	var leaves []*cobra.Command
+	var walk func(c *cobra.Command)
+	walk = func(c *cobra.Command) {
+		children := c.Commands()
+		if len(children) == 0 {
+			leaves = append(leaves, c)
+			return
+		}
+		for _, child := range children {
+			walk(child)
+		}
+	}
+	walk(root)
+	return leaves
+}
+
+// isExemptedFromAgentHelpCoverage returns true if the leaf's command
+// path is in the exemptHelpPathPrefixes allowlist. We compare against
+// CommandPath() (e.g. "gitee help environment", "gitee co") so the
+// list can be expressed in user-visible form.
+func isExemptedFromAgentHelpCoverage(leaf *cobra.Command) bool {
+	full := leaf.CommandPath()
+	for _, exempt := range exemptHelpPathPrefixes {
+		if full == "gitee "+exempt {
+			return true
+		}
+	}
+	return false
 }

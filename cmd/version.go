@@ -20,6 +20,7 @@ var Version = "0.12.6"
 var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print the version of gitee-cli",
+	PreRunE: AgentHelpNA("version"),
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Printf("gitee version %s\n", Version)
 	},
