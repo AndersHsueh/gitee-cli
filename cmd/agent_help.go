@@ -92,7 +92,7 @@ gitee-cli ships TWO help systems side-by-side:
 ## How to invoke
   gitee <command> [subcommand] --agent-help
 
-## Coverage matrix (v0.12.1)
+## Coverage matrix (v0.12.6)
 
 ### repo — Repository management
   gitee repo list           --agent-help   ✅ available  🆕 v0.11.0
@@ -141,7 +141,12 @@ gitee-cli ships TWO help systems side-by-side:
   gitee issue comment       --agent-help   ✅ available  🆕 v0.11.0
   gitee issue comments      --agent-help   ✅ available  🆕 v0.8.0
   gitee issue status        --agent-help   ✅ available  🆕 v0.10.0
-  gitee issue label         --agent-help   ❌ not yet (legacy path; use 'gitee label')
+  gitee issue label list    --agent-help   ✅ available  (legacy alias; canonical at 'gitee label')
+  gitee issue label view    --agent-help   ✅ available  (legacy alias; canonical at 'gitee label')
+  gitee issue label create  --agent-help   ✅ available  (legacy alias; canonical at 'gitee label')
+  gitee issue label edit    --agent-help   ✅ available  (legacy alias; canonical at 'gitee label')
+  gitee issue label delete  --agent-help   ✅ available  (legacy alias; canonical at 'gitee label')
+  gitee issue label clone   --agent-help   ✅ available  (legacy alias; canonical at 'gitee label')
 
 ### pr — Pull Request management
   gitee pr list             --agent-help   ✅ available  🆕 v0.11.0
@@ -238,7 +243,7 @@ gitee-cli ships TWO help systems side-by-side:
   gitee notification read   --agent-help   ✅ available
 
 ### api — Raw API access
-  gitee api                 --agent-help   ❌ not yet (escape hatch — see --help)
+  gitee api raw             --agent-help   ✅ available  (escape hatch — see --help for usage)
 
 ### status — Cross-repo activity summary  🆕 v0.9.0
   gitee status              --agent-help   ✅ available  🆕 v0.9.0
@@ -276,10 +281,32 @@ gitee-cli ships TWO help systems side-by-side:
   gitee search code         --agent-help   ✅ available  🆕 v0.10.0
   gitee search commits      --agent-help   ✅ available  🆕 v0.10.0
 
-### auth, config, completion, version
-  These are operational / config commands. --agent-help is not needed for
-  them; consult --help.
+### auth — Authentication  (operational, n/a)
+  gitee auth login          --agent-help   n/a  (operational/config — use --help)
+  gitee auth logout         --agent-help   n/a  (operational/config — use --help)
+  gitee auth refresh        --agent-help   n/a  (operational/config — use --help)
+  gitee auth status         --agent-help   n/a  (operational/config — use --help)
   gitee auth switch         --agent-help   n/a  (operational/config — use --help)
+  gitee auth token          --agent-help   n/a  (operational/config — use --help)
+  Tokens resolved at runtime; --agent-help returns the standard n/a notice.
+
+### config — Configuration  (operational, n/a)
+  gitee config get          --agent-help   n/a  (operational/config — use --help)
+  gitee config list         --agent-help   n/a  (operational/config — use --help)
+  gitee config set          --agent-help   n/a  (operational/config — use --help)
+  gitee config unset        --agent-help   n/a  (operational/config — use --help)
+  Config sourced from ~/.gitee-cli/settings.json; use --help for flags.
+
+### completion — Shell completion scripts  (operational, n/a)
+  gitee completion bash     --agent-help   n/a  (operational — generates bash script, use the command directly)
+  gitee completion fish     --agent-help   n/a  (operational — generates fish script, use the command directly)
+  gitee completion powershell --agent-help  n/a  (operational — generates powershell script, use the command directly)
+  gitee completion zsh      --agent-help   n/a  (operational — generates zsh script, use the command directly)
+  Generates shell completion scripts; --agent-help returns the standard n/a notice.
+
+### version — Version  (operational, n/a)
+  gitee version             --agent-help   n/a  (operational — prints version, use --help for flags)
+  Cobra built-in version; --agent-help returns the standard n/a notice.
 
 ## Roadmap
   v0.4.0  ✅  Initial release: issue create, pr create
