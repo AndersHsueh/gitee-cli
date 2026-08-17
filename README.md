@@ -66,7 +66,7 @@ gitee agent onboard                     # 一键为你的仓库生成 Agent 编�
 Side effects、错误码与恢复、OAuth scope、Rate limit、竞态条件、
 **Orchestration hints**（跑完这条命令下一步跑什么）、**Parsing hints**（stdout 怎么 parse）。
 
-**当前覆盖：131 个 verb（v0.12.1 实测）**，并由 contract test 在 CI 层守护——
+**当前覆盖：137 个 verb（v0.12.6 实测）**，并由 contract test 在 CI 层守护——
 新命令不写 Agent 文档，测试直接红。此外我们保证三条"可达性法则"：
 缺少必填参数时 `--agent-help` 照样能出文档、查文档不需要 token、
 探测文档永远不会误执行真命令（`auth login --agent-help` 只会告诉你它是 operational 命令，
