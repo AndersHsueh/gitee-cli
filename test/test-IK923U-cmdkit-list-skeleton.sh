@@ -38,10 +38,10 @@ MIGRATED_CMDS=(
   "cmd/release/list.go"
   "cmd/org/list.go"
   "cmd/ssh-key/list.go"
-  "internal/handler/label.go"
-  "internal/handler/milestone.go"
-  "internal/handler/webhook.go"
-  "internal/handler/notification.go"
+  "internal/domain/label.go"
+  "internal/domain/milestone.go"
+  "internal/domain/webhook.go"
+  "internal/domain/notification.go"
 )
 ALL_MIGRATED=1
 for f in "${MIGRATED_CMDS[@]}"; do
