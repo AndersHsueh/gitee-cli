@@ -46,6 +46,23 @@
 - **遗留问题**：
   - 改动超过 300 行（骨架实现 + 配套测试），已在 PR 描述注明建议先做设计评审再合并。Gitee CLI 无给 PR 打标签的命令，故以描述提示代替 large-change-needs-design-review 标签。
 - **特殊依赖**：无
+### IK923S — 收敛 cmd.Global* 全局状态为显式注入的运行时上下文
+
+- **状态**：已提交 PR #17，等待人工审核合并
+- **修复 PR**：[#17](https://gitee.com/andershsueh/gitee-cli/pulls/17)
+- **测试结果**：test-case/test-IK923S-runtime-context.sh 27 PASS 0 FAIL；go test ./... 全绿；go vet 通过
+- **原则校验**：跳过（原则文档不存在，用户确认跳过）
+- **决策**：
+  - 新增 `cmd/runtime.go`：`Runtime` 结构体、`SetContext`/`RuntimeFrom`/`NewRuntime`、`RuntimeFromCmd` 辅助函数、`NewAPIClientFrom`/`NewCmdkitOptionsFrom`/`NewDomainClientFrom` 构造器。
+  - 重构 `cmd/root.go`：`NewAPIClient`/`NewCmdkitOptions`/`NewDomainClient` 委托到 `NewRuntime`，消除重复的全局变量读取逻辑。
+  - 迁移 `cmd/ssh-key/list.go` 为参考实现：使用 `RuntimeFromCmd(cobraCmd)` + `NewAPIClientFrom(rt)` + `NewCmdkitOptionsFrom(rt, client)`。
+  - 迁移 `cmd/ssh-key/list_test.go`：使用 `cmd.SetContext(context.Background(), &cmd.Runtime{...})` 构造 Runtime 注入到命令上下文，替代 save/restore 全局仪式代码。
+- **遗留问题**：
+  - 改动 317 行超阈值，PR 描述已注明建议先做设计评审再合并。
+  - 本 PR 仅迁移了 ssh-key list 一个命令作为参考实现。其余 ~100 个命令文件中的约 300 处全局变量引用可增量迁移。
+  - 测试文件中的 74 处 save/restore 仪式代码尚未全部消除，需逐个命令迁移。
+- **特殊依赖**：无
+
 ### IK923T — 统一命令组织模式：消除 internal/handler 分层倒置与双轨制
 
 - **状态**：已提交 PR #16，等待人工审核合并

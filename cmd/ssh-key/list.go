@@ -42,11 +42,12 @@ func init() {
 }
 
 func runList(cobraCmd *cobra.Command, args []string) error {
-	client, err := cmd.NewAPIClient()
+	rt := cmd.RuntimeFromCmd(cobraCmd)
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
-	opts := cmd.NewCmdkitOptions(client)
+	opts := cmd.NewCmdkitOptionsFrom(rt, client)
 	return cmdkit.RunList[types.SSHKey](opts, cmdkit.ListSpec[types.SSHKey]{
 		// ssh-key list lists the authenticated user's keys — no target repo.
 		ResolveOwnerRepo: func() (string, string, error) {

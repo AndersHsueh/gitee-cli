@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"time"
 
 	"gitee-cli/internal/alias"
 	"gitee-cli/internal/api"
@@ -216,17 +215,7 @@ func ResolveAPIBaseURL(hostname string) string {
 
 // NewAPIClient builds an authenticated API client using the resolved token.
 func NewAPIClient() (*api.Client, error) {
-	hostname := ResolveHostname()
-
-	token := GlobalToken
-	if token == "" {
-		token = config.GetToken(hostname)
-	}
-	if token == "" {
-		return nil, fmt.Errorf("not authenticated. Set GITEE_TOKEN or run 'gitee auth login'")
-	}
-
-	return api.NewClient(token, ResolveAPIBaseURL(hostname), GlobalVerbose, GlobalTimeout), nil
+	return NewAPIClientFrom(NewRuntime(ResolveHostname()))
 }
 
 // NewCmdkitOptions builds the explicit runtime dependencies for a list
@@ -234,32 +223,14 @@ func NewAPIClient() (*api.Client, error) {
 // passed in so callers can reuse one they already built. Centralizing this
 // keeps the cmd layer the only place that reads package globals.
 func NewCmdkitOptions(client *api.Client) cmdkit.Options {
-	return cmdkit.Options{
-		Client:   client,
-		Timeout:  time.Duration(GlobalTimeout) * time.Second,
-		Output:   GlobalOutput,
-		Paginate: GlobalPaginate,
-		PerPage:  GlobalPerPage,
-		Limit:    GlobalLimit,
-		Page:     GlobalPage,
-		Repo:     GlobalRepo,
-	}
+	return NewCmdkitOptionsFrom(NewRuntime(ResolveHostname()), client)
 }
 
 // NewDomainClient builds a domain.Client from the resolved globals, so
 // domain operations (label/milestone/notification/webhook) get their
 // explicit dependencies without importing cmd themselves.
 func NewDomainClient() (*domain.Client, error) {
-	apiClient, err := NewAPIClient()
-	if err != nil {
-		return nil, err
-	}
-	return &domain.Client{
-		API:     apiClient,
-		Timeout: time.Duration(GlobalTimeout) * time.Second,
-		Output:  GlobalOutput,
-		Repo:    GlobalRepo,
-	}, nil
+	return NewDomainClientFrom(NewRuntime(ResolveHostname()))
 }
 
 // ResolveCurrentUsername returns the authenticated username, trying config
