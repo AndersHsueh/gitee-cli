@@ -7,4 +7,4 @@
 |---------------|---------|-------------|-------|-----------|
 | cmd/issue/comment_test.go | issue comment 401-body 透传 + formData 契约（httptest 单测） | issue | #13 | 红 |
 | test/test-IK9KXC-issue-comment-401.sh | issue comment 锁定评论不误报 401（功能验证） | issue | #13 | 红（未修复时误报） |
-| test/test-IK923V-converge-repo-resolve.sh | repo 解析入口收敛：死代码包/冗余入口无引用 + 唯一入口三种路径解析 | repo/utils | 待定 | 红（修复前 ResolveRepoFromFlag 存在） |
+| test/test-IK923V-converge-repo-resolve.sh | repo 解析入口收敛：死代码包/冗余入口无引用 + 唯一入口三种路径解析 | repo/utils | #14 | 红（修复前 ResolveRepoFromFlag 存在） |
