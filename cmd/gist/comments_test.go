@@ -1,6 +1,7 @@
 package gist
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -255,9 +256,7 @@ func TestGistCommentDeleteCommandRejectsNonNumericID(t *testing.T) {
 // `gitee gist comments --agent-help` reach PreRunE without a
 // <gist_id> positional.
 func TestGistCommentsArgsBypassWithAgentHelp(t *testing.T) {
-	orig := cmd.GlobalAgentHelp
-	defer func() { cmd.GlobalAgentHelp = orig }()
-	cmd.GlobalAgentHelp = true
+	commentsCmd.SetContext(cmd.SetContext(context.Background(), &cmd.Runtime{AgentHelp: true}))
 	assert.NoError(t, commentsCmd.Args(commentsCmd, nil))
 }
 
@@ -282,21 +281,18 @@ func TestGistCommentsSendsPageAndPerPage(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	origAPIURL := cmd.GlobalAPIURL
-	origToken := cmd.GlobalToken
-	origTimeout := cmd.GlobalTimeout
 	defer func() {
-		cmd.GlobalAPIURL = origAPIURL
-		cmd.GlobalToken = origToken
-		cmd.GlobalTimeout = origTimeout
 		resetGistCommentFlags()
 	}()
-	cmd.GlobalAPIURL = ts.URL
-	cmd.GlobalToken = "test-token"
-	cmd.GlobalTimeout = 30
 	commentsFlags.limit = 50
 	commentsFlags.page = 2
 
+	commentsCmd.SetContext(cmd.SetContext(context.Background(), &cmd.Runtime{
+		AgentHelp: true,
+		APIURL:    ts.URL,
+		Token:     "test-token",
+		Timeout:   30,
+	}))
 	if err := runGistComments(commentsCmd, []string{"abc123def"}); err != nil {
 		t.Fatalf("runGistComments failed: %v", err)
 	}
@@ -322,21 +318,17 @@ func TestGistCommentsClampsPerPageTo100(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	origAPIURL := cmd.GlobalAPIURL
-	origToken := cmd.GlobalToken
-	origTimeout := cmd.GlobalTimeout
 	defer func() {
-		cmd.GlobalAPIURL = origAPIURL
-		cmd.GlobalToken = origToken
-		cmd.GlobalTimeout = origTimeout
 		resetGistCommentFlags()
 	}()
-	cmd.GlobalAPIURL = ts.URL
-	cmd.GlobalToken = "test-token"
-	cmd.GlobalTimeout = 30
 	commentsFlags.limit = 200
 	commentsFlags.page = 1
 
+	commentsCmd.SetContext(cmd.SetContext(context.Background(), &cmd.Runtime{
+		APIURL:  ts.URL,
+		Token:   "test-token",
+		Timeout: 30,
+	}))
 	if err := runGistComments(commentsCmd, []string{"abc123def"}); err != nil {
 		t.Fatalf("runGistComments failed: %v", err)
 	}
@@ -363,24 +355,18 @@ func TestGistCommentsClientSideTruncation(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	origAPIURL := cmd.GlobalAPIURL
-	origToken := cmd.GlobalToken
-	origTimeout := cmd.GlobalTimeout
-	origOutput := cmd.GlobalOutput
 	defer func() {
-		cmd.GlobalAPIURL = origAPIURL
-		cmd.GlobalToken = origToken
-		cmd.GlobalTimeout = origTimeout
-		cmd.GlobalOutput = origOutput
 		resetGistCommentFlags()
 	}()
-	cmd.GlobalAPIURL = ts.URL
-	cmd.GlobalToken = "test-token"
-	cmd.GlobalTimeout = 30
-	cmd.GlobalOutput = "json"
 	commentsFlags.limit = 2
 	commentsFlags.page = 1
 
+	commentsCmd.SetContext(cmd.SetContext(context.Background(), &cmd.Runtime{
+		APIURL:  ts.URL,
+		Token:   "test-token",
+		Timeout: 30,
+		Output:  "json",
+	}))
 	if err := runGistComments(commentsCmd, []string{"abc123def"}); err != nil {
 		t.Fatalf("runGistComments failed: %v", err)
 	}
@@ -389,9 +375,7 @@ func TestGistCommentsClientSideTruncation(t *testing.T) {
 // TestGistCommentArgsBypassWithAgentHelp verifies the wrapper on
 // cobra.ExactArgs(1) for `gitee gist comment --agent-help`.
 func TestGistCommentArgsBypassWithAgentHelp(t *testing.T) {
-	orig := cmd.GlobalAgentHelp
-	defer func() { cmd.GlobalAgentHelp = orig }()
-	cmd.GlobalAgentHelp = true
+	commentCmd.SetContext(cmd.SetContext(context.Background(), &cmd.Runtime{AgentHelp: true}))
 	assert.NoError(t, commentCmd.Args(commentCmd, nil))
 }
 
@@ -399,17 +383,13 @@ func TestGistCommentArgsBypassWithAgentHelp(t *testing.T) {
 // on cobra.ExactArgs(2) for `gitee gist comment-delete --agent-help`.
 // We pass nil to Args and rely on the wrapper short-circuit.
 func TestGistCommentDeleteArgsBypassWithAgentHelp(t *testing.T) {
-	orig := cmd.GlobalAgentHelp
-	defer func() { cmd.GlobalAgentHelp = orig }()
-	cmd.GlobalAgentHelp = true
+	commentDeleteCmd.SetContext(cmd.SetContext(context.Background(), &cmd.Runtime{AgentHelp: true}))
 	assert.NoError(t, commentDeleteCmd.Args(commentDeleteCmd, nil))
 }
 
 // TestGistUnstarArgsBypassWithAgentHelp verifies the wrapper on
 // cobra.ExactArgs(1) for `gitee gist unstar --agent-help`.
 func TestGistUnstarArgsBypassWithAgentHelp(t *testing.T) {
-	orig := cmd.GlobalAgentHelp
-	defer func() { cmd.GlobalAgentHelp = orig }()
-	cmd.GlobalAgentHelp = true
+	unstarCmd.SetContext(cmd.SetContext(context.Background(), &cmd.Runtime{AgentHelp: true}))
 	assert.NoError(t, unstarCmd.Args(unstarCmd, nil))
 }

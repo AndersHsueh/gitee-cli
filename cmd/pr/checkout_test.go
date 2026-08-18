@@ -2,6 +2,7 @@ package pr
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -56,17 +57,11 @@ func TestCheckoutNilHeadNoPanic(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	origAPIURL := cmd.GlobalAPIURL
-	origToken := cmd.GlobalToken
-	origTimeout := cmd.GlobalTimeout
 	origRepo := checkoutFlags.repo
 	origBranchFlag := checkoutFlags.branch
 	origNoFetch := checkoutFlags.noFetch
 	origForce := checkoutFlags.force
 	defer func() {
-		cmd.GlobalAPIURL = origAPIURL
-		cmd.GlobalToken = origToken
-		cmd.GlobalTimeout = origTimeout
 		checkoutFlags.repo = origRepo
 		checkoutFlags.branch = origBranchFlag
 		checkoutFlags.noFetch = origNoFetch
@@ -74,9 +69,6 @@ func TestCheckoutNilHeadNoPanic(t *testing.T) {
 		// Restore the original branch.
 		_ = exec.Command("git", "checkout", origBranch).Run()
 	}()
-	cmd.GlobalAPIURL = ts.URL
-	cmd.GlobalToken = "test-token"
-	cmd.GlobalTimeout = 30
 	checkoutFlags.repo = "owner/repo"
 	// Use the current branch as the checkout target. With --force,
 	// `git branch -D <current>` fails harmlessly (ignored), and
@@ -103,6 +95,11 @@ func TestCheckoutNilHeadNoPanic(t *testing.T) {
 				t.Fatalf("runCheckout panicked with nil Head: %v", rcv)
 			}
 		}()
+		checkoutCmd.SetContext(cmd.SetContext(context.Background(), &cmd.Runtime{
+			APIURL:  ts.URL,
+			Token:   "test-token",
+			Timeout: 30,
+		}))
 		if err := runCheckout(checkoutCmd, []string{"99999"}); err != nil {
 			// The git checkout step should succeed; any error here is
 			// unexpected but the key assertion is "no panic".

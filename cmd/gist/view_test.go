@@ -1,6 +1,7 @@
 package gist
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -53,21 +54,9 @@ func TestGistViewRawFetchFailureEmitsStderrWarning(t *testing.T) {
 	defer ts.Close()
 	rawURL = ts.URL + "/raw/main.go"
 
-	origAPIURL := cmd.GlobalAPIURL
-	origToken := cmd.GlobalToken
-	origTimeout := cmd.GlobalTimeout
-	origOutput := cmd.GlobalOutput
 	defer func() {
-		cmd.GlobalAPIURL = origAPIURL
-		cmd.GlobalToken = origToken
-		cmd.GlobalTimeout = origTimeout
-		cmd.GlobalOutput = origOutput
 		resetViewFlags()
 	}()
-	cmd.GlobalAPIURL = ts.URL
-	cmd.GlobalToken = "test-token"
-	cmd.GlobalTimeout = 30
-	cmd.GlobalOutput = "table"
 	viewFlags.raw = false // table mode → empty content triggers raw fetch
 
 	// Capture stderr to assert the warning is emitted there (not stdout,
@@ -77,6 +66,12 @@ func TestGistViewRawFetchFailureEmitsStderrWarning(t *testing.T) {
 	os.Stderr = wErr
 
 	errC := make(chan error, 1)
+	viewCmd.SetContext(cmd.SetContext(context.Background(), &cmd.Runtime{
+		APIURL:  ts.URL,
+		Token:   "test-token",
+		Timeout: 30,
+		Output:  "table",
+	}))
 	go func() { errC <- runView(viewCmd, []string{"abc123def"}) }()
 
 	// Drain stderr in a goroutine so the pipe doesn't block the writer.

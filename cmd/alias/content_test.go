@@ -1,6 +1,7 @@
 package alias
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -127,9 +128,7 @@ func TestAliasCmdWiring(t *testing.T) {
 // positional args are supplied. Before the wrapper this would fail
 // at cobra.ValidateArgs with "accepts 2 arg(s), received 0".
 func TestSetArgsPassesWithAgentHelp(t *testing.T) {
-	orig := cmd.GlobalAgentHelp
-	defer func() { cmd.GlobalAgentHelp = orig }()
-	cmd.GlobalAgentHelp = true
+	setCmd.SetContext(cmd.SetContext(context.Background(), &cmd.Runtime{AgentHelp: true}))
 	if err := setCmd.Args(setCmd, nil); err != nil {
 		t.Errorf("Args should pass when --agent-help is set, got: %v", err)
 	}
@@ -138,9 +137,7 @@ func TestSetArgsPassesWithAgentHelp(t *testing.T) {
 // TestSetArgsFailsWithoutAgentHelp confirms the wrapper still
 // surfaces the inner validator's error in the normal case (no flag).
 func TestSetArgsFailsWithoutAgentHelp(t *testing.T) {
-	orig := cmd.GlobalAgentHelp
-	defer func() { cmd.GlobalAgentHelp = orig }()
-	cmd.GlobalAgentHelp = false
+	setCmd.SetContext(cmd.SetContext(context.Background(), &cmd.Runtime{AgentHelp: false}))
 	if err := setCmd.Args(setCmd, nil); err == nil {
 		t.Error("Args should fail without --agent-help and no positional args")
 	}
@@ -150,9 +147,7 @@ func TestSetArgsFailsWithoutAgentHelp(t *testing.T) {
 // cobra.ExactArgs(1) lets `gitee alias delete --agent-help` reach
 // PreRunE without a <name>.
 func TestDeleteArgsPassesWithAgentHelp(t *testing.T) {
-	orig := cmd.GlobalAgentHelp
-	defer func() { cmd.GlobalAgentHelp = orig }()
-	cmd.GlobalAgentHelp = true
+	deleteCmd.SetContext(cmd.SetContext(context.Background(), &cmd.Runtime{AgentHelp: true}))
 	if err := deleteCmd.Args(deleteCmd, nil); err != nil {
 		t.Errorf("Args should pass when --agent-help is set, got: %v", err)
 	}

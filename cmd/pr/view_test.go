@@ -2,6 +2,7 @@ package pr
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -35,21 +36,12 @@ func TestViewNilHeadBaseNoPanic(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	origAPIURL := cmd.GlobalAPIURL
-	origToken := cmd.GlobalToken
-	origTimeout := cmd.GlobalTimeout
 	origRepo := viewFlags.repo
 	origOwner := viewFlags.owner
 	defer func() {
-		cmd.GlobalAPIURL = origAPIURL
-		cmd.GlobalToken = origToken
-		cmd.GlobalTimeout = origTimeout
 		viewFlags.repo = origRepo
 		viewFlags.owner = origOwner
 	}()
-	cmd.GlobalAPIURL = ts.URL
-	cmd.GlobalToken = "test-token"
-	cmd.GlobalTimeout = 30
 	viewFlags.repo = "owner/repo"
 	viewFlags.owner = ""
 
@@ -63,6 +55,11 @@ func TestViewNilHeadBaseNoPanic(t *testing.T) {
 	}()
 
 	// If the nil guard is missing, this will panic (fatal).
+	viewCmd.SetContext(cmd.SetContext(context.Background(), &cmd.Runtime{
+		APIURL:  ts.URL,
+		Token:   "test-token",
+		Timeout: 30,
+	}))
 	if err := runView(viewCmd, []string{"42"}); err != nil {
 		t.Fatalf("runView failed: %v", err)
 	}

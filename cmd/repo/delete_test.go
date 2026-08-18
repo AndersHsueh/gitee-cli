@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -30,20 +31,16 @@ func TestRepoDeleteNonInteractiveWithoutYesCancels(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	origAPIURL := cmd.GlobalAPIURL
-	origToken := cmd.GlobalToken
-	origTimeout := cmd.GlobalTimeout
 	defer func() {
-		cmd.GlobalAPIURL = origAPIURL
-		cmd.GlobalToken = origToken
-		cmd.GlobalTimeout = origTimeout
 		resetDeleteFlags()
 	}()
-	cmd.GlobalAPIURL = ts.URL
-	cmd.GlobalToken = "test-token"
-	cmd.GlobalTimeout = 30
 	deleteFlags.yes = false // force the prompt path
 
+	deleteCmd.SetContext(cmd.SetContext(context.Background(), &cmd.Runtime{
+		APIURL:  ts.URL,
+		Token:   "test-token",
+		Timeout: 30,
+	}))
 	err := runDelete(deleteCmd, []string{"owner/repo-to-delete"})
 	if err != nil {
 		t.Fatalf("runDelete returned error in non-interactive cancel: %v", err)
@@ -67,20 +64,16 @@ func TestRepoDeleteWithYesSkipsPromptAndDeletes(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	origAPIURL := cmd.GlobalAPIURL
-	origToken := cmd.GlobalToken
-	origTimeout := cmd.GlobalTimeout
 	defer func() {
-		cmd.GlobalAPIURL = origAPIURL
-		cmd.GlobalToken = origToken
-		cmd.GlobalTimeout = origTimeout
 		resetDeleteFlags()
 	}()
-	cmd.GlobalAPIURL = ts.URL
-	cmd.GlobalToken = "test-token"
-	cmd.GlobalTimeout = 30
 	deleteFlags.yes = true
 
+	deleteCmd.SetContext(cmd.SetContext(context.Background(), &cmd.Runtime{
+		APIURL:  ts.URL,
+		Token:   "test-token",
+		Timeout: 30,
+	}))
 	err := runDelete(deleteCmd, []string{"owner/repo-to-delete"})
 	if err != nil {
 		t.Fatalf("runDelete returned error: %v", err)

@@ -1,6 +1,7 @@
 package issue
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -9,35 +10,23 @@ import (
 	"gitee-cli/cmd"
 )
 
-// IMPORTANT: tests in this file mutate package-level globals
-// (cmd.GlobalAPIURL / GlobalToken / GlobalTimeout and commentFlags).
+// IMPORTANT: tests in this file inject a frozen cmd.Runtime via
+// withCommentMockServer and mutate commentFlags.
 // They MUST run sequentially — do NOT add t.Parallel(): the shared
-// globals would race.
+// flags would race.
 
 // withCommentMockServer starts an httptest server pointing at the cmd
 // globals, registers t.Cleanup to restore the globals and close the
 // server, and returns the server URL. Mirrors withStateTransitionMockServer.
-func withCommentMockServer(t *testing.T, h http.HandlerFunc) {
+func withCommentMockServer(t *testing.T, h http.HandlerFunc) *cmd.Runtime {
 	t.Helper()
 	ts := httptest.NewServer(h)
 	t.Cleanup(ts.Close)
-
-	snap := struct {
-		apiURL, token string
-		timeout       int
-	}{
-		apiURL:  cmd.GlobalAPIURL,
-		token:   cmd.GlobalToken,
-		timeout: cmd.GlobalTimeout,
+	return &cmd.Runtime{
+		APIURL:  ts.URL,
+		Token:   "test-token",
+		Timeout: 30,
 	}
-	cmd.GlobalAPIURL = ts.URL
-	cmd.GlobalToken = "test-token"
-	cmd.GlobalTimeout = 30
-	t.Cleanup(func() {
-		cmd.GlobalAPIURL = snap.apiURL
-		cmd.GlobalToken = snap.token
-		cmd.GlobalTimeout = snap.timeout
-	})
 }
 
 // setCommentFlags sets the package-level commentFlags and registers a
@@ -63,13 +52,14 @@ func setCommentFlags(t *testing.T, owner, repo, body string) {
 // issue even though the token is perfectly valid; swallowing the body
 // misleads the user into chasing a token problem that does not exist.
 func TestRunComment_401ErrorBodyPassthrough(t *testing.T) {
-	withCommentMockServer(t, func(w http.ResponseWriter, req *http.Request) {
+	rt := withCommentMockServer(t, func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusUnauthorized)
 		_, _ = w.Write([]byte(`{"error":"当前issue已关闭评论功能"}`))
 	})
 	setCommentFlags(t, "owner", "repo", "x")
 
+	commentCmd.SetContext(cmd.SetContext(context.Background(), rt))
 	err := runComment(commentCmd, []string{"42"})
 	if err == nil {
 		t.Fatal("expected error from 401, got nil")
@@ -88,7 +78,7 @@ func TestRunComment_401ErrorBodyPassthrough(t *testing.T) {
 // (NOT JSON). Gitee v5's issue comment endpoint rejects JSON bodies
 // with HTTP 401; only form-encoded bodies reach the business layer.
 func TestRunComment_FormDataBody(t *testing.T) {
-	withCommentMockServer(t, func(w http.ResponseWriter, req *http.Request) {
+	rt := withCommentMockServer(t, func(w http.ResponseWriter, req *http.Request) {
 		if req.Method != http.MethodPost {
 			t.Errorf("expected POST, got %s", req.Method)
 		}
@@ -109,6 +99,7 @@ func TestRunComment_FormDataBody(t *testing.T) {
 	})
 	setCommentFlags(t, "owner", "repo", "x")
 
+	commentCmd.SetContext(cmd.SetContext(context.Background(), rt))
 	if err := runComment(commentCmd, []string{"42"}); err != nil {
 		t.Fatalf("expected success, got error: %v", err)
 	}

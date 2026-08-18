@@ -81,3 +81,4 @@ test/*.tmp
 # Release binaries (prevent stray commits)
 gitee-*
 gitee-*
+.psacowork/

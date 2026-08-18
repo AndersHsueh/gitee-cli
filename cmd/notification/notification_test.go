@@ -175,9 +175,9 @@ func TestNotificationsCountEndpoint(t *testing.T) {
 // /notifications/threads/{id} — request body shape and the path used.
 func TestNotificationMarkReadEndpoint(t *testing.T) {
 	var (
-		gotMethod  string
-		gotPath    string
-		gotBody    types.NotificationMarkReadRequest
+		gotMethod string
+		gotPath   string
+		gotBody   types.NotificationMarkReadRequest
 	)
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotMethod = r.Method
@@ -202,9 +202,9 @@ func TestNotificationMarkReadEndpoint(t *testing.T) {
 // (no id in the path) with an explicit bulk-unread body.
 func TestNotificationsMarkAllReadEndpoint(t *testing.T) {
 	var (
-		gotMethod  string
-		gotPath    string
-		gotBody    types.NotificationMarkAllReadRequest
+		gotMethod string
+		gotPath   string
+		gotBody   types.NotificationMarkAllReadRequest
 	)
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotMethod = r.Method
@@ -336,21 +336,14 @@ func TestNotificationFlagsCoveredInAgentHelp(t *testing.T) {
 	}
 }
 
-// withAPIClientGlobals sets cmd.GlobalAPIURL / GlobalToken / GlobalTimeout
-// to point at a test server and returns a restore func. Used by the
-// NotificationRead behavior tests below.
-func withAPIClientGlobals(t *testing.T, serverURL string) func() {
+// withAPIClientGlobals returns a Runtime bound to the httptest server
+// so domain clients built from it hit the mock instead of gitee.com.
+func withAPIClientGlobals(t *testing.T, serverURL string) *cmd.Runtime {
 	t.Helper()
-	origAPIURL := cmd.GlobalAPIURL
-	origToken := cmd.GlobalToken
-	origTimeout := cmd.GlobalTimeout
-	cmd.GlobalAPIURL = serverURL
-	cmd.GlobalToken = "test-token"
-	cmd.GlobalTimeout = 30
-	return func() {
-		cmd.GlobalAPIURL = origAPIURL
-		cmd.GlobalToken = origToken
-		cmd.GlobalTimeout = origTimeout
+	return &cmd.Runtime{
+		APIURL:  serverURL,
+		Token:   "test-token",
+		Timeout: 30,
 	}
 }
 
@@ -382,11 +375,10 @@ func TestNotificationReadUnreadDirectionOutput(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	restore := withAPIClientGlobals(t, ts.URL)
-	defer restore()
+	rt := withAPIClientGlobals(t, ts.URL)
 
 	restoreOut, drain := captureStdout(t)
-	dc, err := cmd.NewDomainClient()
+	dc, err := cmd.NewDomainClientFrom(rt)
 	require.NoError(t, err)
 	err = dc.NotificationRead("1234", false, true /*markUnread*/, true /*force*/)
 	out := drain()
@@ -405,11 +397,10 @@ func TestNotificationReadDefaultDirectionOutput(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	restore := withAPIClientGlobals(t, ts.URL)
-	defer restore()
+	rt := withAPIClientGlobals(t, ts.URL)
 
 	restoreOut, drain := captureStdout(t)
-	dc, err := cmd.NewDomainClient()
+	dc, err := cmd.NewDomainClientFrom(rt)
 	require.NoError(t, err)
 	err = dc.NotificationRead("1234", false, false /*markUnread*/, true /*force*/)
 	out := drain()
@@ -427,11 +418,10 @@ func TestNotificationReadAllUnreadDirectionOutput(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	restore := withAPIClientGlobals(t, ts.URL)
-	defer restore()
+	rt := withAPIClientGlobals(t, ts.URL)
 
 	restoreOut, drain := captureStdout(t)
-	dc, err := cmd.NewDomainClient()
+	dc, err := cmd.NewDomainClientFrom(rt)
 	require.NoError(t, err)
 	err = dc.NotificationRead("", true /*all*/, true /*markUnread*/, true /*force*/)
 	out := drain()

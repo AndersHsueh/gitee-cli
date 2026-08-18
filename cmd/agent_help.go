@@ -47,7 +47,7 @@ func AgentHelpNA(prefix string) func(*cobra.Command, []string) error {
 //	}),
 func AgentHelpAwareArgs(wrapped cobra.PositionalArgs) cobra.PositionalArgs {
 	return func(c *cobra.Command, args []string) error {
-		if GlobalAgentHelp {
+		if rt := RuntimeFromCmd(c); rt != nil && rt.AgentHelp {
 			return nil
 		}
 		return wrapped(c, args)

@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -318,9 +319,7 @@ func TestRepoFlagsCoveredInAgentHelp(t *testing.T) {
 // `gitee repo clone --agent-help` reach PreRunE without the
 // required <owner>/<repo> positional.
 func TestRepoCloneArgsBypassWithAgentHelp(t *testing.T) {
-	orig := cmd.GlobalAgentHelp
-	defer func() { cmd.GlobalAgentHelp = orig }()
-	cmd.GlobalAgentHelp = true
+	cloneCmd.SetContext(cmd.SetContext(context.Background(), &cmd.Runtime{AgentHelp: true}))
 	if err := cloneCmd.Args(cloneCmd, nil); err != nil {
 		t.Errorf("repo clone --agent-help with no positional should pass Args, got: %v", err)
 	}

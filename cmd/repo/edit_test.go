@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -79,32 +80,13 @@ func captureEditRequest(t *testing.T, args []string) map[string]interface{} {
 	}))
 	t.Cleanup(ts.Close)
 
-	saved := struct {
-		apiURL, token, output string
-		timeout               int
-		agentHelp             bool
-	}{
-		apiURL:    cmd.GlobalAPIURL,
-		token:     cmd.GlobalToken,
-		timeout:   cmd.GlobalTimeout,
-		agentHelp: cmd.GlobalAgentHelp,
-		output:    cmd.GlobalOutput,
-	}
-	t.Cleanup(func() {
-		cmd.GlobalAPIURL = saved.apiURL
-		cmd.GlobalToken = saved.token
-		cmd.GlobalTimeout = saved.timeout
-		cmd.GlobalAgentHelp = saved.agentHelp
-		cmd.GlobalOutput = saved.output
-	})
-	cmd.GlobalAPIURL = ts.URL
-	cmd.GlobalToken = "test-token"
-	cmd.GlobalTimeout = 30
-	cmd.GlobalAgentHelp = false
-	cmd.GlobalOutput = ""
-
-	RepoCmd.SetArgs(append([]string{"edit"}, args...))
-	require.NoError(t, RepoCmd.Execute())
+	editCmd.SetContext(cmd.SetContext(context.Background(), &cmd.Runtime{
+		APIURL:  ts.URL,
+		Token:   "test-token",
+		Timeout: 30,
+	}))
+	require.NoError(t, editCmd.Flags().Parse(args))
+	require.NoError(t, runEdit(editCmd, args))
 
 	require.NotEmpty(t, gotBody, "PATCH body should not be empty")
 	var body map[string]interface{}
@@ -121,27 +103,6 @@ func expectNoEditRequest(t *testing.T) {
 		t.Errorf("server should not be called; got %s %s", r.Method, r.URL.Path)
 	}))
 	t.Cleanup(ts.Close)
-
-	saved := struct {
-		apiURL, token string
-		timeout       int
-		agentHelp     bool
-	}{
-		apiURL:    cmd.GlobalAPIURL,
-		token:     cmd.GlobalToken,
-		timeout:   cmd.GlobalTimeout,
-		agentHelp: cmd.GlobalAgentHelp,
-	}
-	t.Cleanup(func() {
-		cmd.GlobalAPIURL = saved.apiURL
-		cmd.GlobalToken = saved.token
-		cmd.GlobalTimeout = saved.timeout
-		cmd.GlobalAgentHelp = saved.agentHelp
-	})
-	cmd.GlobalAPIURL = ts.URL
-	cmd.GlobalToken = "test-token"
-	cmd.GlobalTimeout = 30
-	cmd.GlobalAgentHelp = false
 }
 
 // TestRunEditIncludesRepoNameInBody — issue #IK5FYW.
