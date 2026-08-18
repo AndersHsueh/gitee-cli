@@ -73,19 +73,6 @@ func ResolveRepo(owner, repo string, args []string) (string, string, error) {
 	return o, r, nil
 }
 
-// ResolveRepoFromFlag resolves a single "owner/repo" string flag (with
-// fallback to the global --repo) into (owner, name, error). Mirrors the
-// common pattern in per-resource handlers (label, release, webhook) of
-// substituting the global --repo when the local flag is empty. The caller
-// passes `globalRepo` explicitly so this package doesn't need to import
-// the cmd package (avoiding an import cycle through cmd → handlers → utils).
-func ResolveRepoFromFlag(repo, globalRepo string) (string, string, error) {
-	if repo == "" {
-		repo = globalRepo
-	}
-	return ResolveRepo("", repo, nil)
-}
-
 // ParseInt64Arg returns the value of `flagVal` if non-zero, otherwise parses
 // `args[0]` as an int64. Returns (0, nil) when neither is set so the caller
 // can decide whether to error ("id is required") or default. The `name`

@@ -26,11 +26,14 @@ import (
 
 // LabelResolveRepo resolves --repo flag / global --repo into (owner, repo).
 // Returns a clear error if neither is set or the format is invalid.
-// Delegates to utils.ResolveRepoFromFlag so the global --repo fallback
-// and parsing logic are shared across all command groups (label, release,
-// webhook).
+// Delegates to utils.ResolveRepo so parsing and the git-config fallback are
+// shared across all command groups (label, release, webhook). The local flag
+// wins; the global --repo is used only when the local flag is empty.
 func LabelResolveRepo(repo string) (string, string, error) {
-	return utils.ResolveRepoFromFlag(repo, cmd.GlobalRepo)
+	if repo == "" {
+		repo = cmd.GlobalRepo
+	}
+	return utils.ResolveRepo("", repo, nil)
 }
 
 // IsValidHexColor checks if s is exactly 6 lowercase hex digits.
