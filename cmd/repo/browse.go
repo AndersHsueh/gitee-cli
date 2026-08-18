@@ -115,6 +115,19 @@ the launching process exits as soon as the child starts.
 - Headless / SSH session: the GUI browser has nothing to attach to.
   Use ` + "`" + `gitee repo view` + "`" + ` for terminal-friendly output instead.
 
+## Race condition warning ⚠️
+This command makes no API call and shares no server-side state — the
+only mutable state is the user's desktop browser session. Two races to
+know about: (1) the repo can be renamed, made private, or deleted
+between when you resolve owner/repo and when the browser actually
+loads the URL, so the tab may land on a 404 page even though this
+command exited 0; (2) concurrent invocations each spawn a new tab, so
+N agents calling browse in a loop will flood the user's browser with
+N tabs — serialize at the orchestration layer. Because the command is
+fire-and-forget, a "successful" exit says nothing about what the user
+eventually sees; if the outcome matters, verify the repo still exists
+first with ` + "`" + `gitee repo view owner/repo` + "`" + `.
+
 ## Next steps (orchestration hints)
 After ` + "`" + `gitee repo browse` + "`" + ` hands off the GUI to the user, an agent
 typically wants to:

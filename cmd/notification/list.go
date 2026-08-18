@@ -103,6 +103,17 @@ None.
 - 401 Unauthorized: token missing or expired → gitee auth login
 - 403 Forbidden: token lacks ` + "`" + `notifications` + "`" + ` scope
 
+## Race condition warning ⚠️
+The inbox is shared, mutable server state: threads flip between read
+and unread as other sessions (web UI, other agents) mark them, and
+new threads arrive at any time. This output is a snapshot — by the
+time you feed an id into ` + "`" + `notification read` + "`" + `, the thread may
+already be read (harmless; re-marking is a server-side no-op) or,
+rarely, gone (404 — skip it and continue the loop). Feed ids from
+THIS output directly into ` + "`" + `notification read` + "`" + `; do not re-list
+between iterations to "confirm", and expect the ` + "`" + `*` + "`" + ` markers to
+shift between runs.
+
 ## OAuth scope required
 notifications
 

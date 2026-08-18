@@ -21,6 +21,7 @@ func TestGistCommentsAgentHelpContent(t *testing.T) {
 		"## Output (stdout, table mode)",
 		"## Output (stdout, json mode)",
 		"## Common errors",
+		"## Race condition warning ⚠️",
 		"## Next steps (orchestration hints)",
 		"## OAuth scope required",
 		"## Rate limit",
@@ -49,6 +50,7 @@ func TestGistCommentAgentHelpContent(t *testing.T) {
 		"## Side effects",
 		"## Post-conditions",
 		"## Common errors",
+		"## Race condition warning ⚠️",
 		"## OAuth scope required",
 		"## Rate limit",
 		"## Example",
@@ -77,6 +79,7 @@ func TestGistCommentDeleteAgentHelpContent(t *testing.T) {
 		"## Post-conditions",
 		"## Output (stdout, text mode)",
 		"## Common errors",
+		"## Race condition warning ⚠️",
 		"## Next steps (orchestration hints)",
 		"## OAuth scope required",
 		"## Rate limit",
@@ -107,6 +110,29 @@ func TestGistCommentFlagsCoveredInAgentHelp(t *testing.T) {
 	for _, c := range cases {
 		if !strings.Contains(c.inString, c.flag) {
 			t.Errorf("flag %q must be mentioned in agent help", c.flag)
+		}
+	}
+}
+
+// TestGistCommentRaceSections verifies each of the three comment
+// subcommands has a command-specific Race condition section with no
+// placeholder text left over.
+func TestGistCommentRaceSections(t *testing.T) {
+	cases := []struct {
+		name     string
+		doc      string
+		wantText string
+	}{
+		{"comments", gistCommentsAgentHelp, "indexing lag"},
+		{"comment", gistCommentAgentHelp, "posts the SAME comment twice"},
+		{"comment-delete", gistCommentDeleteAgentHelp, "treat 404 as success"},
+	}
+	for _, c := range cases {
+		if strings.Contains(c.doc, "TODO(domain)") {
+			t.Errorf("gist %s --agent-help still contains TODO(domain) placeholder", c.name)
+		}
+		if !strings.Contains(c.doc, c.wantText) {
+			t.Errorf("gist %s race section missing expected content %q", c.name, c.wantText)
 		}
 	}
 }

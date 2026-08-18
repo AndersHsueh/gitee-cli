@@ -325,6 +325,22 @@ behind for the user to inspect / remove).
 - "source ... is not a dir"    -> local path missing
 - "symlink failed"             -> no symlink permission; copy manually
 
+## Race condition warning ⚠️
+The shared mutable state is the install dir
+~/.gitee-cli/extensions/<name>/ plus its manifest.json. The
+"already installed" stat check and the clone/symlink are NOT atomic:
+two concurrent installs of the same name both pass the check, then
+the second ` + "`" + `git clone` + "`" + ` fails with "already exists and is not an empty
+directory" — or, with --force, one run's RemoveAll wipes the other's
+fresh clone mid-write. Concurrent manifest writes are
+last-writer-wins (each write is atomic, but there is no
+cross-process lock). Also note the clone pins whatever HEAD was at
+fetch time: if the upstream repo receives a push mid-install,
+PinnedRef records the older commit and ` + "`" + `gitee extension upgrade` + "`" + `
+will pull the newer one later. Serialize same-name installs across
+agents; retry after a failure is safe with --force, which wipes the
+partial destination first.
+
 ## OAuth scope required
 None (no Gitee API call; uses git over HTTPS).
 

@@ -144,6 +144,17 @@ Atomic. Either all fields are updated together, or no change happens.
 - 403 Forbidden:  token lacks write scope
 - 401 Unauthorized: token expired
 
+## Race condition warning ⚠️
+The shared mutable state is the release's metadata (name, body,
+prerelease flag). There is no optimistic locking: two agents editing
+the same release concurrently both PATCH, and the LAST write wins — the
+earlier edit is silently lost. A view→edit gap has the same hazard: you
+may overwrite changes made after your view. If the new content depends
+on the old (e.g. appending to the body), re-read with
+` + "`" + `gitee release view <tag> --output json` + "`" + ` immediately before
+editing, or serialize edits across agents. Retrying with the same
+values is safe (see Idempotency).
+
 ## OAuth scope required
 projects (write)
 

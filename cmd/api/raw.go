@@ -303,6 +303,19 @@ side effects on the Gitee side depend on the endpoint.
 - 422 Unprocessable: payload validation failed (form fields)
 - Network timeouts: bump --timeout and retry
 
+## Race condition warning ⚠️
+Depends entirely on the endpoint you hit — this command is a raw
+passthrough, so YOU own the concurrency story. GET/DELETE are safe to
+retry; a retried POST (e.g. after a client-side timeout where the
+server actually accepted the request) creates duplicates such as
+double comments — re-GET the collection to check before retrying any
+POST. With --paginate, each page is a separate request and the
+underlying collection can shift between pages (items created or
+deleted mid-walk), so the merged array may contain duplicates or miss
+moved items: treat paginated output as approximate and re-fetch the
+specific resource before acting on it. Note each page also consumes
+rate-limit budget (see Rate limit).
+
 ## Next steps (orchestration hints)
 After ` + "`" + `gitee api raw` + "`" + `, an agent typically wants to:
 1. Pipe through jq to extract a field:

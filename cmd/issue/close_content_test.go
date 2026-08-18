@@ -21,6 +21,8 @@ func TestCloseAgentHelpContent(t *testing.T) {
 		"## Side effects",
 		"## Post-conditions",
 		"## Common errors",
+		"## Race condition warning ⚠️",
+		"already-closed issue is a silent",
 		"## Next steps",
 		"## OAuth scope required",
 		"## Rate limit",

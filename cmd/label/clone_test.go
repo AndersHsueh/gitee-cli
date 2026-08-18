@@ -14,6 +14,11 @@ func TestCloneAgentHelpContent(t *testing.T) {
 		"Side effects",
 		"Post-conditions",
 		"Common errors",
+		"Race condition warning ⚠️",
+		"Two agents cloning into the same target concurrently",
+		"OAuth scope required",
+		"Rate limit",
+		"Example",
 		"See also",
 	}
 	for _, want := range required {

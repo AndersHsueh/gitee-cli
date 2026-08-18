@@ -94,6 +94,23 @@ writes are never visible to other processes.
 - "alias expansion is empty"     -> only the name was given
 - "accepts 2 arg(s), received 1" -> missing expansion (run --help)
 
+## Race condition warning ⚠️
+The shared mutable state is ~/.gitee-cli/aliases.json, which this
+command loads, modifies, and saves. Two concurrent ` + "`gitee alias set`" + `
+invocations (even for DIFFERENT names) can lose one update: each loads
+the file before the other saves, and the last save wins. The file
+itself is never corrupt — writes are atomic (temp-file + rename) — but
+a lost update means an alias you just set may silently revert to its
+previous value. If multiple agents manage aliases, serialize set/delete
+calls. Safe to retry: re-running with the same args converges to the
+same state (see Idempotency).
+
+## OAuth scope required
+N/A (local command) — no Gitee API request is made; works fully offline.
+
+## Rate limit
+N/A (local command) — no Gitee API request is made.
+
 ## Example
   gitee alias set co 'pr checkout'
   gitee alias set issues 'issue list --limit 50'

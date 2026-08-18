@@ -82,6 +82,21 @@ Atomic. Either the rename + color change happen together, or no change.
 - 422 Unprocessable: --new-name already taken
 - 403 Forbidden:  token lacks write scope
 
+## Race condition warning ⚠️
+The shared mutable state is the label's name + color record.
+- Two agents editing the same label concurrently: last writer wins per
+  field; there is no optimistic-locking token or ETag.
+- A rename invalidates the old name immediately — any agent still
+  holding the old name gets 404 on view/edit/delete. After a rename,
+  use the --new-name value for ALL follow-up calls.
+- A concurrent create of your --new-name target between check and PATCH
+  surfaces as 422 (name already taken); pick another name or edit the
+  colliding label instead.
+- ` + "`" + `gitee label list` + "`" + ` output captured before your edit is stale for
+  both name and color — re-list if you must display post-edit state.
+Safe to retry with the same values (server-side no-op). A retry after a
+successful rename must pass the NEW name as --name.
+
 ## OAuth scope required
 projects (write)
 

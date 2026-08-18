@@ -19,6 +19,8 @@ func TestCommentsAgentHelpContent(t *testing.T) {
 		"Side effects",
 		"Post-conditions",
 		"Common errors",
+		"Race condition warning ⚠️",
+		"comment list",
 		"OAuth scope required",
 		"Rate limit",
 		"See also",

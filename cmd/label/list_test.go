@@ -15,8 +15,11 @@ func TestListAgentHelpContent(t *testing.T) {
 		"Side effects",
 		"Post-conditions",
 		"Common errors",
+		"Race condition warning ⚠️",
+		"point-in-time snapshot",
 		"OAuth scope required",
 		"Rate limit",
+		"Example",
 		"See also",
 	}
 	for _, want := range required {

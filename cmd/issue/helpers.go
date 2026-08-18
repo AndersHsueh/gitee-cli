@@ -411,6 +411,19 @@ fields were updated and others failed.
 - 404 Not Found:     repo or issue doesn't exist →  verify owner/repo + number
 - 422 Unprocessable: bad label name or assignee  →  check spelling, label must exist
 
+## Race condition warning ⚠️
+The shared mutable state is the issue itself (title, body, labels,
+assignees, milestone). Edits are last-writer-wins with NO merge
+semantics: if another agent or user edits the same issue between
+your ` + "`" + `gitee issue view {N}` + "`" + ` and this call, your PATCH
+overwrites their newer values for every flag you pass. ` + "`" + `--labels` + "`" + `
+and ` + "`" + `--assignees` + "`" + ` replace the WHOLE set — two agents that each
+"add one label" concurrently will silently drop one of them. If your
+new value derives from the current content (append to the body, add
+to the labels), re-read with ` + "`" + `gitee issue view {N}` + "`" + ` immediately
+before editing and send the merged full value. Retrying with the
+same inputs is safe (see Idempotency).
+
 ## Next steps (orchestration hints)
 After editing an issue, an agent typically wants to:
 1. Verify the change: ` + "`" + `gitee issue view {N}` + "`" + `
@@ -534,6 +547,18 @@ or no change happens. There is no partial-success state.
 - 403 Forbidden:     token lacks write scope     →  check token permissions
 - 404 Not Found:     repo or issue doesn't exist →  verify owner/repo + number
 ` + projectOrEnterprise404Note + `
+
+## Race condition warning ⚠️
+The shared mutable state is the issue's ` + "`" + `state` + "`" + ` field on the
+server. Between your last ` + "`" + `gitee issue view {N}` + "`" + ` / ` + "`" + `gitee issue list` + "`" + `
+and this close call, another agent or user may have already closed
+(or reopened) the issue. Closing an already-closed issue is a silent
+no-op server-side (see Idempotency) — the exit code will NOT tell
+you the state had already flipped. If the close decision depends on
+the current state (e.g. "close only if still open"), re-check with
+` + "`" + `gitee issue view {N}` + "`" + ` immediately before this call. Retrying a
+failed close is safe. In multi-agent triage, serialize close/reopen
+transitions per issue number to avoid ping-pong.
 
 ## Reversibility
 This command is REVERSIBLE. To re-open a closed issue, run
@@ -666,6 +691,18 @@ or no change happens. There is no partial-success state.
 - 403 Forbidden:     token lacks write scope     →  check token permissions
 - 404 Not Found:     repo or issue doesn't exist →  verify owner/repo + number
 ` + projectOrEnterprise404Note + `
+
+## Race condition warning ⚠️
+The shared mutable state is the issue's ` + "`" + `state` + "`" + ` field on the
+server. Between your last ` + "`" + `gitee issue view {N}` + "`" + ` and this reopen
+call, another agent or user may have reopened the issue already —
+or closed it again. Reopening an already-open issue is a silent
+no-op server-side (see Idempotency), so a successful exit does NOT
+prove your call caused the transition. If a follow-up action depends
+on the issue being open (e.g. "reopen, then assign"), verify with
+` + "`" + `gitee issue view {N}` + "`" + ` right after reopening. Retrying a failed
+reopen is safe. In multi-agent triage, serialize close/reopen
+transitions per issue number to avoid ping-pong.
 
 ## Reversibility
 This command is REVERSIBLE. To close the issue again, run

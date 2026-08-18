@@ -18,6 +18,7 @@ func TestEditAgentHelpContent(t *testing.T) {
 		"Side effects",
 		"Post-conditions",
 		"Common errors",
+		"Race condition warning ⚠️",
 		"Next steps",
 		"OAuth scope required",
 		"Rate limit",
@@ -27,6 +28,22 @@ func TestEditAgentHelpContent(t *testing.T) {
 	for _, want := range required {
 		if !strings.Contains(prEditAgentHelp, want) {
 			t.Errorf("agent help missing required section: %q", want)
+		}
+	}
+}
+
+// TestEditAgentHelpRaceCondition asserts the race-condition section is
+// command-specific: the PATCH is last-write-wins with no optimistic
+// locking, and concurrent edits silently overwrite each other.
+func TestEditAgentHelpRaceCondition(t *testing.T) {
+	mustMention := []string{
+		"last-write-wins",
+		"silently overwrites",
+		"gitee pr view",
+	}
+	for _, want := range mustMention {
+		if !strings.Contains(prEditAgentHelp, want) {
+			t.Errorf("agent help race section missing: %q", want)
 		}
 	}
 }

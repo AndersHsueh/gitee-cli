@@ -130,6 +130,18 @@ snapshot it before calling this command.
 - 5xx Server error: transient — retry is safe (idempotent in the
                    end-state sense)
 
+## Race condition warning ⚠️
+The comment thread is shared mutable state. Specific risks:
+- A comment id captured from an earlier ` + "`" + `gitee gist comments` + "`" + ` list
+  may already be gone (the author deleted it). The delete then 404s
+  — that IS the desired end state, so treat 404 as success.
+- A comment reposted after a deletion gets a NEW id; never assume
+  id stability across a delete→repost cycle.
+- Concurrent deletes of the same id (comment author + gist owner,
+  or two agents): one wins, the rest get 404. End state identical.
+- If your target is "the latest comment", re-list right before
+  deleting — a newer comment may have arrived since your last list.
+
 ## Next steps (orchestration hints)
 After a successful delete, an agent typically wants to:
 1. Verify with ` + "`" + `gitee gist comments <gist_id> --output json` + "`" + ` and

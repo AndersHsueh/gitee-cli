@@ -101,6 +101,17 @@ None. Pure GETs.
 - "Origin points to ... not a Gitee repository": your 'origin' remote
   is on a non-Gitee host (e.g. github.com). Use --repo owner/repo.
 
+## Race condition warning ⚠️
+Read-only, but the snapshot is NOT atomic: this command makes three
+sequential GETs (/user, then /issues, then /pulls), and repo state can
+flip between them. An issue in "assigned to you" can be closed mid-run,
+and a PR in "awaiting review" can be merged between the /pulls call
+and your follow-up action — expect a 404 or a state error on the
+write, and re-check with ` + "`" + `gitee issue view` + "`" + ` / ` + "`" + `gitee pr view` + "`" + `
+immediately before acting. Two agents polling status concurrently see
+slightly different snapshots; do not treat absence from one section as
+proof the item is gone. Safe to retry freely (see Idempotency).
+
 ## Known limitations
 
 ### 1. "Awaiting my review" is client-side filtered

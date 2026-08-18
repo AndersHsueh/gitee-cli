@@ -25,6 +25,7 @@ func TestReposAgentHelpContent(t *testing.T) {
 		"## Output (stdout, table mode)",
 		"## Output (stdout, json mode)",
 		"## Common errors",
+		"## Race condition warning ⚠️",
 		"## Next steps (orchestration hints)",
 		"## OAuth scope required",
 		"## Rate limit",
@@ -40,6 +41,11 @@ func TestReposAgentHelpContent(t *testing.T) {
 		if !strings.Contains(searchReposAgentHelp, want) {
 			t.Errorf("search repos --agent-help missing section/flag: %q", want)
 		}
+	}
+	// Spot-check the race section carries command-specific guidance,
+	// not a bare "point-in-time snapshot" placeholder.
+	if !strings.Contains(searchReposAgentHelp, "renamed, deleted, or switched to private") {
+		t.Error("search repos race section missing repo-rename/delete guidance")
 	}
 }
 

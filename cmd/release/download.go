@@ -204,6 +204,16 @@ A subsequent run overwrites it cleanly.
 - 404 Not Found: tag has no release, or asset name typo
 - 403 Forbidden (download URL): private repo, token not sent (rare for release assets)
 
+## Race condition warning ⚠️
+The asset list from the enumerate step is a SNAPSHOT: an asset shown by
+--list can be deleted or re-uploaded before your download starts,
+leaving you with a 404 or different bytes than expected. If freshness
+matters, re-run --list immediately before downloading. Two agents
+downloading the same asset into the same --dest directory race on the
+destination file (create truncates, writes interleave) — use per-agent
+--dest paths. A killed download can leave a truncated file behind;
+re-running is safe and overwrites it (see Idempotency).
+
 ## OAuth scope required
 projects (read) for the list/enumerate step; download URLs themselves are public.
 

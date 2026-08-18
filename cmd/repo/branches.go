@@ -155,6 +155,19 @@ local checkout, etc.).
 - "invalid --repo format": must contain exactly one ` + "`" + `/` + "`" + `
 - Network/timeout:   transient; safe to retry
 
+## Race condition warning ⚠️
+The shared mutable state is the repo's branch set on the server (plus
+each branch's ` + "`" + `protected` + "`" + ` flag). This command returns a point-in-time
+snapshot: between your list call and a follow-up action, a branch can
+be deleted, created, renamed, or have protection toggled by another
+agent or human. The classic failure is list→act: you pick ` + "`" + `feature/x` + "`" + `
+as a PR source, but it was force-pushed away or deleted in the gap and
+` + "`" + `gitee pr create` + "`" + ` then fails with 404/422. Mitigation: re-check the
+specific branch immediately before acting (` + "`" + `gitee repo branches --repo
+owner/repo -o json | jq` + "`" + ` filter by name), and treat a stale entry as a
+signal to re-plan rather than to retry blindly. Retrying THIS command
+itself is always safe (read-only).
+
 ## Next steps (orchestration hints)
 After listing branches, an agent typically wants to:
 1. Pick a source/target pair (e.g. ` + "`" + `feature/login` + "`" + ` → ` + "`" + `main` + "`" + `)

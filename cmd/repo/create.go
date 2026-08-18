@@ -146,6 +146,22 @@ There is no partial state.
 - 422 Unprocessable: name already taken, invalid characters, etc.
 - Network/timeout:   transient; safe to retry (but check the URL didn't fire twice)
 
+## Race condition warning ⚠️
+The shared mutable state is the repo namespace of the target scope
+(user account or --org). Two interleavings to know about: (1) NAME
+CLAIM — checking availability first (e.g. via ` + "`" + `gitee repo view` + "`" + ` or
+` + "`" + `gitee repo list` + "`" + `) and then creating is NOT safe: another agent or
+human can claim the same --name in the gap, and one of you gets 422.
+Treat the 422 as the availability check itself; do not pre-verify.
+(2) RETRY DOUBLE-CREATE — this is a POST with no idempotency key (see
+Idempotency): if the request times out but the server already created
+the repo, a blind retry returns 422 "name has already been taken".
+That 422 may mean YOUR first attempt succeeded — before retrying or
+renaming, check with ` + "`" + `gitee repo view <owner>/<name>` + "`" + ` whether the
+repo now exists and is yours. Use the FullName/URL from THIS output
+as the canonical handle; do not re-list to "find" the new repo (list
+indexing can lag a moment after creation).
+
 ## Next steps (orchestration hints)
 After a successful repo create, an agent typically wants to:
 1. Record the FullName and URL from stdout

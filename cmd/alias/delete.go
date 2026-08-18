@@ -92,6 +92,28 @@ Atomic. The aliases file is replaced atomically.
 - "is not defined"            -> name was never set, or already deleted
 - "alias name ... contains"   -> name failed the [a-z0-9_-] validator
 
+## Race condition warning ⚠️
+The shared mutable state is the local aliases file
+(~/.gitee-cli/aliases.json), which this command reads and rewrites.
+Two interleavings to watch for:
+1. TOCTOU between pre-check and delete: this command reads the
+   expansion (to show it in the y/N prompt), then deletes. If another
+   process removes the alias in between, the delete fails with
+   "is not defined" — treat that as "already gone", not as a failure
+   worth retrying.
+2. Two concurrent writers (this delete plus a ` + "`gitee alias set`" + `
+   from another agent) each load-modify-save the file; the last save
+   wins and the other's change is silently lost. Individual writes are
+   atomic (temp-file + rename), so the file is never corrupt — but
+   updates can be lost. Serialize alias mutations across agents; do
+   not run them in parallel.
+
+## OAuth scope required
+N/A (local command) — no Gitee API request is made; works fully offline.
+
+## Rate limit
+N/A (local command) — no Gitee API request is made.
+
 ## Example
   gitee alias delete co
   gitee co 123

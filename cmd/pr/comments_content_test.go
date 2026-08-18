@@ -24,6 +24,7 @@ func TestCommentsAgentHelpContent(t *testing.T) {
 		"## Output (stdout, table mode)",
 		"## Output (stdout, json mode)",
 		"## Common errors",
+		"## Race condition warning ⚠️",
 		"## Next steps (orchestration hints)",
 		"## OAuth scope required",
 		"## Rate limit",
@@ -59,5 +60,21 @@ func TestPRCommentsArgsBypassWithAgentHelp(t *testing.T) {
 	cmd.GlobalAgentHelp = true
 	if err := commentsCmd.Args(commentsCmd, nil); err != nil {
 		t.Errorf("pr comments --agent-help with no positional should pass Args, got: %v", err)
+	}
+}
+
+// TestCommentsAgentHelpRaceCondition asserts the race-condition section
+// is command-specific: the conversation thread is the shared mutable
+// state, and the write side (gitee pr comment) is non-idempotent.
+func TestCommentsAgentHelpRaceCondition(t *testing.T) {
+	mustMention := []string{
+		"conversation thread",
+		"NOT idempotent",
+		"re-list",
+	}
+	for _, want := range mustMention {
+		if !strings.Contains(prCommentsAgentHelp, want) {
+			t.Errorf("pr comments --agent-help race section missing: %q", want)
+		}
 	}
 }

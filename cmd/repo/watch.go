@@ -306,6 +306,23 @@ changed. There is no partial state.
 - "invalid --repo format": must contain exactly one '/'
 - "invalid --type": must be one of watching, releases_only, ignoring
 
+## Race condition warning ⚠️
+The shared mutable state is YOUR subscription record for the repo —
+one record per user, shared across CLI agents, web UI sessions, and
+mobile clients using the same account. Last-writer-wins: two agents
+calling watch with different --type values concurrently resolve to
+whichever PUT lands last; neither errors. Subtle failure: one agent
+sets ` + "`" + `--type ignoring` + "`" + ` to silence noise while another assumes the
+default ` + "`" + `watching` + "`" + ` — the second agent's expected notifications
+never arrive and nothing in its own output explains why. Because the
+record is account-global, a human toggling the subscription in the
+web UI between your watch call and your notification check will make
+` + "`" + `gitee notification list` + "`" + ` results look inconsistent with what you
+"set". Mitigation: coordinate watch levels across agents on the same
+account; re-apply the desired --type right before depending on it
+(the call is idempotent); treat THIS verb as the re-check since
+Gitee exposes no separate "get my watch level" read here.
+
 ## Next steps (orchestration hints)
 After watching a repository, an agent typically wants to:
 1. Verify: gitee notification list --unread | grep owner/repo
@@ -392,6 +409,22 @@ changed.
                      Gitee usually returns 204 even when not currently
                      subscribed; see "Idempotency" above)
 - "invalid --repo format": must contain exactly one '/'
+
+## Race condition warning ⚠️
+The shared mutable state is YOUR subscription record, shared across
+every client and agent on the account. Two interleavings: (1)
+CONCURRENT UNSUB/RESUB: an unwatch racing another agent's ` + "`" + `gitee
+repo watch --type watching` + "`" + ` is last-writer-wins — the loser gets no
+error, so an agent expecting notifications may silently stop receiving
+them (or vice versa). (2) NOTIFICATION DRAIN GAP: notifications
+already queued BEFORE this call are NOT recalled — ` + "`" + `gitee
+notification list` + "`" + ` right after unwatch can still show items for
+this repo; that backlog is not evidence the unwatch failed. Because
+the endpoint returns 204 even when you were never subscribed, this
+command cannot distinguish "I removed a subscription" from "there was
+nothing to remove" — if that distinction matters, there is no
+CLI-level read for it; infer from prior watch calls in your own
+orchestration log. Retrying is always safe (idempotent no-op).
 
 ## Next steps (orchestration hints)
 After unwatching a repository, an agent typically wants to:

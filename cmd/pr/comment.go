@@ -139,6 +139,18 @@ conversation or the call fails — no partial state.
 - 422 Unprocessable: --body is empty (caught by Cobra before call) or
   exceeds the per-comment length limit (Gitee: ~65k chars)
 
+## Race condition warning ⚠️
+The shared mutable state is the PR's conversation thread. This command
+is NOT idempotent: a retry after a network timeout posts a duplicate
+comment if the first request actually landed. After an ambiguous
+failure, verify with ` + "`" + `gitee pr comments <N>` + "`" + ` before re-posting.
+Concurrent posters interleave freely — if your comment replies to the
+latest message, re-list (` + "`" + `gitee pr comments <N> --output json` + "`" + `,
+inspect .[-1]) immediately before posting, or your "reply" may answer
+a comment that is no longer the latest. Note the list endpoint can lag
+1-2 s behind a just-posted comment, so trust THIS call's success line
+over an immediate re-list.
+
 ## OAuth scope required
 projects (write) — comments are write operations even though they
 don't change code.

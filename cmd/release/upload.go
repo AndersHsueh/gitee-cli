@@ -161,6 +161,18 @@ valid but no file was uploaded (safe to retry).
 - 422 Unprocessable Entity: file type not allowed or release is in draft state
 - "file ... no such file or directory": --file path is invalid
 
+## Race condition warning ⚠️
+There is no server-side dedup by filename: two agents uploading the
+same-named file concurrently both succeed, producing DUPLICATE assets
+with different IDs and identical names (see Idempotency: NO). The same
+hazard applies to a blind retry — if the POST itself times out, verify
+with ` + "`" + `gitee release view <tag>` + "`" + ` before uploading again; the
+asset may already have landed. Right after a successful upload, the new
+asset can take 1-2 seconds to appear in ` + "`" + `gitee release view` + "`" + ` /
+` + "`" + `gitee release download --list` + "`" + `, and its download URL may
+briefly 404 — do not re-upload to "fix" that apparent gap. Serialize
+uploads of the same filename across agents.
+
 ## OAuth scope required
 projects (write)
 

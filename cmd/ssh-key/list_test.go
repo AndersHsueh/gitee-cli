@@ -20,6 +20,7 @@ func TestListAgentHelpContent(t *testing.T) {
 		"Side effects",
 		"Post-conditions",
 		"Common errors",
+		"Race condition warning ⚠️",
 		"OAuth scope required",
 		"Rate limit",
 		"See also",
@@ -28,6 +29,11 @@ func TestListAgentHelpContent(t *testing.T) {
 		if !strings.Contains(sshKeyListAgentHelp, want) {
 			t.Errorf("agent help missing required section: %q", want)
 		}
+	}
+	// Spot-check the race section: the list is a snapshot; re-list
+	// immediately before acting on an id from older output.
+	if !strings.Contains(sshKeyListAgentHelp, "re-run this command immediately before") {
+		t.Error("ssh-key list race section missing re-list-before-acting guidance")
 	}
 }
 

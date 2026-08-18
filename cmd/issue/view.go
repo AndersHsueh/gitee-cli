@@ -182,6 +182,20 @@ mutations on the issue, and no "viewed" event is fired.
 - 404 Not Found:     repo or issue doesn't exist →  verify owner/repo + number
 - 422 Unprocessable: issue number malformed      →  must be a positive integer
 
+## Race condition warning ⚠️
+The shared mutable state is the issue itself: state, title, labels,
+assignees, and the comment count can all change the moment after
+this GET returns. The classic failure is view-then-act: you read
+` + "`" + `state: open` + "`" + `, decide to close, but another agent closed (or
+reopened) the issue in the gap — ` + "`" + `gitee issue close` + "`" + ` treats
+"already closed" as a silent no-op, so nothing flags the flip. If
+any downstream action depends on what you see here (close only if
+open, comment only if unassigned), re-run ` + "`" + `gitee issue view {N}` + "`" + `
+immediately BEFORE the mutating call and decide from the fresh read.
+The ` + "`" + `comments` + "`" + ` field is a count snapshot; for the actual
+conversation use ` + "`" + `gitee issue comments {N}` + "`" + `. Re-running this
+command is always safe (read-only).
+
 ## Next steps (orchestration hints)
 After viewing an issue, an agent typically wants to:
 1. Edit it: ` + "`" + `gitee issue edit {N} --title '...'` + "`" + ` (or --body, --labels, etc.)

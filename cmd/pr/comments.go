@@ -162,6 +162,17 @@ fails — no partial-success state.
 - 404 Not Found:     PR number doesn't exist
 - Network timeouts:  bump ` + "`" + `--timeout` + "`" + ` and retry
 
+## Race condition warning ⚠️
+The comment list is a point-in-time snapshot. The shared mutable state
+is the PR's conversation thread: another reviewer (or agent) can post
+between your LIST and your next action. If you chain a conditional
+` + "`" + `gitee pr comment <N>` + "`" + ` off this output (e.g. "reply only if the
+latest comment is X"), re-list immediately before posting — a check
+done minutes ago is already stale. This command is read-only and safe
+to retry; the write side (` + "`" + `gitee pr comment` + "`" + `) is NOT idempotent,
+so never blind-retry that one after an ambiguous failure. Note the
+list endpoint can lag 1-2 s behind a just-posted comment.
+
 ## Next steps (orchestration hints)
 After listing comments, an agent typically wants to:
 1. Decide whether to post a follow-up:

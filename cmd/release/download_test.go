@@ -14,6 +14,10 @@ func TestDownloadAgentHelpContent(t *testing.T) {
 		"Side effects",
 		"Post-conditions",
 		"Common errors",
+		"Race condition warning ⚠️",
+		"The asset list from the enumerate step is a SNAPSHOT",
+		"OAuth scope required",
+		"Rate limit",
 		"See also",
 	}
 	for _, want := range required {

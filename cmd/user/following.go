@@ -143,6 +143,16 @@ None. Pure GET.
 - 401 Unauthorized: token missing or expired → ` + "`" + `gitee auth login` + "`" + `
 - 404 Not Found:    username doesn't exist
 
+## Race condition warning ⚠️
+The following list is live server-side state: edges are added and
+removed continuously, by the user themselves or by other sessions.
+This output is a snapshot — between listing and acting (e.g. piping
+logins into ` + "`" + `gitee user unfollow` + "`" + `), an edge may already be gone,
+and unfollow then returns 404 (see its Idempotency note); treat that
+as "already unfollowed". With ` + "`" + `--paginate` + "`" + `, mutations
+mid-traversal can make pages overlap or skip entries — dedupe by
+` + "`" + `login` + "`" + `. Read-only and always safe to retry.
+
 ## Next steps (orchestration hints)
 After listing who someone follows, an agent typically wants to:
 1. Pipe the JSON list to ` + "`" + `gitee user follow <login>` + "`" + ` for each

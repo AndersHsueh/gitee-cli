@@ -79,6 +79,20 @@ Atomic. Either the label is created, or no change happens.
 - 401 Unauthorized: token expired
 - 403 Forbidden:    token lacks write scope
 
+## Race condition warning ⚠️
+The shared mutable state is the repo's label set, keyed by name.
+- Two agents creating the same name concurrently: one wins, the other
+  gets 422 (label exists). On 422, fall back to ` + "`" + `gitee label edit` + "`" + `
+  if your intent was to update rather than create.
+- A ` + "`" + `gitee label list` + "`" + ` snapshot may miss a label created by another
+  agent in the list→create gap — never treat list output as proof of
+  absence before creating.
+- The new label can take 1-2 seconds to appear in list output. Do NOT
+  re-list to verify creation; the success output of THIS command is
+  authoritative.
+Blind retry of a request that actually succeeded surfaces as 422, not
+as a duplicate label — inspect the error before retrying.
+
 ## OAuth scope required
 projects (write)
 

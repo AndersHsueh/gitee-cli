@@ -18,6 +18,7 @@ func TestEditAgentHelpContent(t *testing.T) {
 		"Side effects",
 		"Post-conditions",
 		"Common errors",
+		"Race condition warning ⚠️",
 		"Next steps",
 		"OAuth scope required",
 		"Rate limit",

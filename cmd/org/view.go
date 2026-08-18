@@ -135,6 +135,16 @@ None. Pure GET on /orgs/{org}.
 - 401 Unauthorized: token missing or expired → ` + "`" + `gitee auth login` + "`" + `
 - 404 Not Found:    org name doesn't exist or has been renamed
 
+## Race condition warning ⚠️
+Org metadata is live server-side state: an admin can rename the org,
+edit its description/blog/email, or delete the org entirely between
+your read and any follow-up action — a rename makes the old login
+404 on the very next call. Counters (public_repos, followers) are
+point-in-time and can drift from what a subsequent
+` + "`" + `gitee org repos <login>` + "`" + ` count shows. If an action depends on a
+field value, re-run this command immediately before acting rather
+than trusting an older read. Read-only and always safe to retry.
+
 ## Next steps (orchestration hints)
 After reading org metadata, an agent typically wants to:
 1. Run ` + "`" + `gitee org repos <login>` + "`" + ` to enumerate its repos

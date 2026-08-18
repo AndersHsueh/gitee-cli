@@ -21,6 +21,8 @@ func TestReopenAgentHelpContent(t *testing.T) {
 		"## Side effects",
 		"## Post-conditions",
 		"## Common errors",
+		"## Race condition warning ⚠️",
+		"already-open issue is a silent",
 		"## Next steps",
 		"## OAuth scope required",
 		"## Rate limit",

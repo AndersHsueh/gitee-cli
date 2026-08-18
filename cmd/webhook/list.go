@@ -77,6 +77,16 @@ None. Pure GET.
 - 403 Forbidden:    no read access to the repo
 - 404 Not Found:    repo doesn't exist or you can't see it
 
+## Race condition warning ⚠️
+The webhook set is shared, mutable server state. This output is a
+point-in-time snapshot: another agent (or a repo admin in the web UI)
+can create or delete a hook the moment after you list, so an id from
+this output may 404 on a follow-up ` + "`" + `view` + "`" + ` / ` + "`" + `edit` + "`" + ` / ` + "`" + `delete` + "`" + `,
+and a hook created seconds ago may be missing here. Act on ids
+promptly, treat a 404 on the follow-up call as "the set changed —
+re-list", and do not cache the id list across long-running
+orchestrations.
+
 ## OAuth scope required
 projects (read)
 

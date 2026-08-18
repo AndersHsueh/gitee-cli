@@ -175,6 +175,18 @@ fails — there is no partial state.
                        or PR is closed/merged and no longer accepts reviews
 - Network timeouts:    bump ` + "`" + `--timeout` + "`" + ` and retry
 
+## Race condition warning ⚠️
+The shared mutable state is the PR's head branch and review thread.
+The classic foot-gun: you read ` + "`" + `gitee pr diff <N>` + "`" + `, deliberate, then
+` + "`" + `--approve` + "`" + ` — but the author force-pushed in between, so your
+approval now covers code you never saw. Minimize the read → review
+gap, and for high-stakes approvals compare the head SHA in a fresh
+` + "`" + `gitee pr view <N> --output json` + "`" + ` against the one you reviewed. This
+command is NOT idempotent: retrying after a timeout posts a duplicate
+review event; on ambiguous failure, check ` + "`" + `gitee pr comments <N>` + "`" + `
+before re-posting. If the PR is merged or closed between your read and
+this call, the API returns 422 — do not retry; re-view instead.
+
 ## Next steps (orchestration hints)
 After submitting a review, an agent typically wants to:
 1. Re-list PR comments to see the review appear:

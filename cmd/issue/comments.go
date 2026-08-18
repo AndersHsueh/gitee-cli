@@ -141,6 +141,19 @@ None. Pure GET.
 - 404 Not Found:    issue number doesn't exist
 - 422 Unprocessable: --limit is out of range (Gitee max per_page is 100)
 
+## Race condition warning ⚠️
+The shared mutable state is the issue's comment list, which any
+watcher or agent can append to at any time. The table/JSON you get
+is a snapshot: comments posted between the request and your parse
+are missing, and with the default ` + "`" + `--limit 30` + "`" + ` a burst of new
+comments pushes older ones out of the returned window — do not
+treat "not in output" as "does not exist". When verifying that a
+comment you just added via ` + "`" + `gitee issue comment {N}` + "`" + ` landed,
+re-run this command and match by author + body at the TAIL of the
+list (comments are chronological); do not match by row position or
+by the Total count — both shift under concurrent commenters.
+Re-running this command is always safe (read-only).
+
 ## OAuth scope required
 projects (read)
 

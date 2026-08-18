@@ -193,6 +193,19 @@ updated or none are.
 - 422 Unprocessable: --state is something other than "open"/"closed",
   PR is in a state that prevents editing (e.g. merged)
 
+## Race condition warning ⚠️
+The shared mutable state is the PR's title / body / state / draft
+fields. This PATCH is last-write-wins with no optimistic locking: if a
+human edits the title between your ` + "`" + `gitee pr view <N>` + "`" + ` and this
+call, your edit silently overwrites theirs. When composing from
+current content (e.g. appending to the body), fetch and PATCH in
+immediate succession and still expect to lose races. Concurrent state
+flips degrade more gracefully: --state closed on an already-closed PR
+returns 422 — treat that as "already in the desired state" after
+confirming with a fresh view. Retry after a timeout is safe for
+title/body (the same value is re-applied), but for state changes
+verify with ` + "`" + `gitee pr view <N>` + "`" + ` before re-running.
+
 ## Next steps (orchestration hints)
 1. Fetch the current PR: ` + "`" + `gitee pr view 42 -R owner/repo` + "`" + `
 2. Apply changes: ` + "`" + `gitee pr edit 42 -R owner/repo --title "..." --state closed` + "`" + `

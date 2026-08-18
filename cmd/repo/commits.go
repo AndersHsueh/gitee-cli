@@ -491,6 +491,20 @@ None.
 - 404 Not Found:      repo does not exist
 - 422 Unprocessable:  malformed --since/--until timestamp
 
+## Race condition warning ⚠️
+The shared mutable state is the branch ref being walked: --sha
+` + "`" + `main` + "`" + ` (or the default branch when --sha is omitted) resolves to
+whatever HEAD is AT REQUEST TIME. A push landing between pages of a
+--paginate walk can shift the window — the same commit may appear
+twice, or a commit may be skipped entirely, because page N+1 is
+fetched against a moved ref. Mitigation: for a stable snapshot, pin
+--sha to a full 40-char commit SHA (immutable) instead of a branch
+name; or re-run and diff if exactness matters. The list→act gap also
+applies: a commit you select here as a PR base or tag target can be
+force-pushed away before the follow-up call — re-verify with
+` + "`" + `gitee repo commits view --repo owner/repo <sha>` + "`" + ` immediately before
+acting on it. Retrying THIS command is always safe (read-only).
+
 ## Next steps (orchestration hints)
 After listing commits, an agent typically wants to:
 1. View a specific commit in detail:
@@ -600,6 +614,20 @@ None.
 - 403 Forbidden:      repo is private and the token cannot read it
 - 404 Not Found:      <sha> does not resolve to any commit
 - 422 Unprocessable:  <sha> is ambiguous (e.g. short SHA matches multiple)
+
+## Race condition warning ⚠️
+Full SHAs identify immutable commits, so a view-by-SHA result never
+goes stale. The race is in the MOVABLE ref forms: when <sha> is a
+branch name or tag, Gitee resolves it to the current tip at request
+time — a push or tag move between your call and a downstream action
+means you inspected commit X but the branch now points at commit Y.
+Classic failure: you view ` + "`" + `main` + "`" + `, decide it is safe to tag or
+release, and by the time ` + "`" + `gitee repo tag create --refs main` + "`" + ` runs,
+main has moved and the tag lands on the wrong commit. Mitigation:
+capture the full ` + "`" + `sha` + "`" + ` field from THIS output and pass that (not
+the branch name) to the follow-up write. A short-SHA prefix can also
+BECOME ambiguous later (new commits with the same prefix → 422);
+prefer the full SHA everywhere. Retrying THIS command is safe.
 
 ## Next steps (orchestration hints)
 After viewing a commit, an agent typically wants to:

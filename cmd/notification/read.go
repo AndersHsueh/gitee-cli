@@ -117,6 +117,19 @@ PARTIAL.
 - 401 Unauthorized: token missing or expired
 - 403 Forbidden:  token lacks ` + "`" + `notifications` + "`" + ` scope
 
+## Race condition warning ⚠️
+The read/unread flag on each thread is shared, mutable server state.
+Concurrent marks from two agents are last-writer-wins, but because
+each direction is idempotent (see Idempotency), same-direction races
+converge — the real hazard is a conflicting ` + "`" + `--unread` + "`" + ` from
+elsewhere silently re-surfacing a thread you just cleared. The bigger
+trap is ` + "`" + `--all` + "`" + `: the PUT covers every thread that exists WHEN IT
+LANDS, including threads that arrived after your last
+` + "`" + `gitee notification list` + "`" + ` — you can mark-as-read notifications you
+have never seen. Prefer explicit ids from a fresh list for surgical
+triage, reserve ` + "`" + `--all` + "`" + ` for "I truly want a clean inbox", and verify
+with ` + "`" + `gitee notification count` + "`" + ` afterwards.
+
 ## OAuth scope required
 notifications (write)
 

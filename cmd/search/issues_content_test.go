@@ -23,6 +23,7 @@ func TestIssuesAgentHelpContent(t *testing.T) {
 		"## Output (stdout, table mode)",
 		"## Output (stdout, json mode)",
 		"## Common errors",
+		"## Race condition warning ⚠️",
 		"## Next steps (orchestration hints)",
 		"## OAuth scope required",
 		"## Rate limit",
@@ -37,5 +38,10 @@ func TestIssuesAgentHelpContent(t *testing.T) {
 		if !strings.Contains(searchIssuesAgentHelp, want) {
 			t.Errorf("search issues --agent-help missing section/flag: %q", want)
 		}
+	}
+	// Spot-check the race section carries command-specific guidance:
+	// issues are mutable, so state-dependent follow-ups must re-check.
+	if !strings.Contains(searchIssuesAgentHelp, "gitee issue view owner/repo#N") {
+		t.Error("search issues race section missing re-check-before-acting guidance")
 	}
 }

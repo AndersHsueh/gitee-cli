@@ -190,6 +190,21 @@ field (e.g. "owner/repo") as input to other commands.
 - 422 Unprocessable: invalid --visibility value  →  use one of public|private|internal|all
 - Network/timeout:   transient; safe to retry
 
+## Race condition warning ⚠️
+The shared mutable state is the account's repository set: repos are
+created, deleted, renamed, and visibility-flipped by other agents and
+humans continuously. This list is a point-in-time snapshot — the
+classic failure is list→act: you pick ` + "`" + `owner/repo` + "`" + ` from the output
+and call ` + "`" + `gitee repo edit` + "`" + ` / ` + "`" + `delete` + "`" + ` / ` + "`" + `clone` + "`" + `, but in the gap
+the repo was renamed (old name 404s) or deleted. Conversely, a repo
+created by a concurrent process may be MISSING from your listing.
+STARS/FORKS/UPDATED columns are especially volatile — never make
+ordering decisions ("the most recently updated repo is X") on a stale
+list. Mitigation: act on full_name values promptly after listing;
+on 404 from the follow-up command, re-list rather than retrying the
+same name; and re-list immediately before any destructive batch loop.
+Retrying THIS command is always safe (read-only).
+
 ## Next steps (orchestration hints)
 After listing repos, an agent typically wants to:
 1. Pick a target by FullName (column 1 in table mode) and feed it to:

@@ -84,6 +84,18 @@ None.
 - 404 Not Found: repo does not exist or is private
 - 401 Unauthorized: token missing or expired
 
+## Race condition warning ⚠️
+The result is a point-in-time snapshot of the repo's milestone set.
+The OPEN/CLOSED issue counts move every time an issue is opened,
+closed, or reassigned, so counts parsed from this output can be stale
+within seconds — do not feed them into automation without a fresh
+` + "`" + `gitee milestone view` + "`" + `.
+- create→list gap: a milestone just created (by you or another agent)
+  may be missing from this list for 1-2s due to indexing lag. Do NOT
+  use this command to verify a create you just ran; use the number
+  from the create output instead.
+- delete→list gap: a just-deleted milestone may briefly still appear.
+
 ## OAuth scope required
 projects (read)
 

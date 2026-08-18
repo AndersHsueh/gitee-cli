@@ -96,6 +96,17 @@ change happens.
 - 401 Unauthorized: token expired
 - 403 Forbidden:    token lacks write scope
 
+## Race condition warning ⚠️
+The shared mutable state is the repo's milestone set. Gitee does NOT
+deduplicate by title: two agents (or a retried call) running this
+command with the same --title produce TWO milestones with different
+numbers, both appearing in the issue/PR milestone picker.
+- create→list gap: indexing can lag 1-2s, so an immediate ` + "`" + `gitee milestone list` + "`" + ` may NOT show the new milestone. Use the Number from THIS
+  command's output — do not re-list to find it.
+- On timeout / network error, DO NOT blindly retry: the first attempt
+  may have succeeded server-side. Run ` + "`" + `gitee milestone list` + "`" + ` first and
+  reuse the existing number if the title is already there.
+
 ## OAuth scope required
 projects (write)
 

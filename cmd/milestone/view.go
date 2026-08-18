@@ -83,6 +83,17 @@ None.
 - 404 Not Found: milestone does not exist in this repo
 - 401 Unauthorized: token missing or expired
 
+## Race condition warning ⚠️
+The result is a point-in-time snapshot of one milestone. The Open /
+Closed counts and the state field mutate as issues are opened, closed,
+or reassigned, and as other agents run ` + "`" + `gitee milestone edit` + "`" + ` — values
+you read here can change the moment after stdout is printed.
+- If a follow-up action depends on the state (e.g. "close only if no
+  open issues remain"), re-run this command immediately before acting;
+  do not reuse an earlier view.
+- If the milestone was just created, this read can briefly 404 due to
+  indexing lag (1-2s) — retry once before concluding it does not exist.
+
 ## OAuth scope required
 projects (read)
 

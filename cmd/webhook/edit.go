@@ -174,6 +174,18 @@ updated or none are.
 - 422 Unprocessable: --url is missing or unreachable, --password is
   too short, or --encryption-type is not 0/1
 
+## Race condition warning ⚠️
+This is a read-modify-write against shared server state: the hook's
+URL, event subscriptions, and secret can change between your
+` + "`" + `gitee webhook view` + "`" + ` and this PATCH. Because Gitee's PATCH contract
+requires --url, a stale read can silently REVERT a URL change another
+agent just made — always re-` + "`" + `view` + "`" + ` immediately before editing and
+pass back the URL you just saw. Two concurrent edits to the same hook
+are last-writer-wins per field; there is no optimistic-locking token.
+With multiple agents managing one repo's hooks, serialize edits per
+webhook id. Retrying with identical flag values is safe (server-side
+no-op, see Idempotency).
+
 ## Next steps (orchestration hints)
 1. Fetch the current state: ` + "`" + `gitee webhook view 1234 -R owner/repo` + "`" + `
 2. Apply changes: ` + "`" + `gitee webhook edit 1234 -R owner/repo --url ... --merge-request-events` + "`" + `

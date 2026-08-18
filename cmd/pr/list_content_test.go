@@ -23,6 +23,7 @@ func TestListAgentHelpContent(t *testing.T) {
 		"## Output (stdout, table mode)",
 		"## Output (stdout, json mode)",
 		"## Common errors",
+		"## Race condition warning ⚠️",
 		"## Next steps (orchestration hints)",
 		"## OAuth scope required",
 		"## Rate limit",
@@ -50,6 +51,22 @@ func TestListAgentHelpFlags(t *testing.T) {
 	for _, flag := range mustMention {
 		if !strings.Contains(prListAgentHelp, flag) {
 			t.Errorf("pr list --agent-help missing flag %q", flag)
+		}
+	}
+}
+
+// TestListAgentHelpRaceCondition asserts the race-condition section is
+// command-specific: the list is a snapshot, --paginate page boundaries
+// can shift mid-walk, and writes must re-verify with a fresh view.
+func TestListAgentHelpRaceCondition(t *testing.T) {
+	mustMention := []string{
+		"point-in-time snapshot",
+		"page boundaries",
+		"gitee pr view",
+	}
+	for _, want := range mustMention {
+		if !strings.Contains(prListAgentHelp, want) {
+			t.Errorf("pr list --agent-help race section missing: %q", want)
 		}
 	}
 }

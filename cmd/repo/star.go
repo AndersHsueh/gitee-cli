@@ -364,6 +364,21 @@ There is no partial state.
 - "invalid --repo format": must contain exactly one '/'
 - "username is required": must be supplied as positional arg or --repo
 
+## Race condition warning ⚠️
+The shared mutable state is YOUR starred set and the repo's public
+star counter. Two interleavings: (1) CONCURRENT STAR/UNSTAR: if
+another process (or the user in the web UI) toggles the same repo
+concurrently, the operations commute but the final state is last-
+writer-wins — a bulk "star these 50 repos" loop racing a human
+unstarring one of them will silently re-star it. (2) VERIFY GAP:
+checking ` + "`" + `gitee repo star list` + "`" + ` first and then starring is
+unnecessary and racy — just call this verb; it is idempotent on the
+server and the 204 is the check. Note the repo's star COUNTER is a
+shared global: its value in ` + "`" + `gitee repo view` + "`" + ` output reflects
+everyone's stars, not just yours, and moves constantly — never diff
+counter values across two reads to infer your own star state.
+Retrying after a transient error is safe.
+
 ## Next steps (orchestration hints)
 After starring a repository, an agent typically wants to:
 1. Verify: gitee repo star list | grep owner/repo
@@ -452,6 +467,18 @@ Atomic. Either the repo is unstarred after the call or nothing changed.
                      it (idempotent — already unstarred)
 - "invalid --repo format": must contain exactly one '/'
 - "username is required": must be supplied as positional arg or --repo
+
+## Race condition warning ⚠️
+The shared mutable state is YOUR starred set. Concurrent toggles are
+last-writer-wins: a bulk unstar loop racing the user re-starring the
+same repo in the web UI silently drops their new star. The 404 case
+("not currently starred") is benign and idempotent — treat it as
+"already in the desired state", not as a failure to retry. List→act
+gap: a ` + "`" + `gitee repo star list` + "`" + ` snapshot used to drive a bulk
+unstar can be stale (stars added after the list are missed, stars
+removed after the list yield harmless 404s) — that is usually fine
+for cleanup jobs, but if completeness matters, re-list and loop until
+the list is stable. Retrying THIS command is always safe.
 
 ## Next steps (orchestration hints)
 After unstarring a repository, an agent typically wants to:
@@ -545,6 +572,21 @@ as /user/repos). Use ` + "`" + `.full_name` + "`" + ` as input to other commands
 ## Common errors
 - 401 Unauthorized:  token expired or invalid → gitee auth login
 - Network/timeout:   transient; safe to retry
+
+## Race condition warning ⚠️
+The shared mutable state is YOUR starred set, which changes whenever
+you (or another agent using your token, or a web UI session) star or
+unstar a repo. This listing is a point-in-time snapshot — the classic
+failure is list→act: piping the output into a bulk clone or bulk
+unstar operates on a set that may already have changed (new stars
+missed, removed stars causing harmless 404s downstream). The STARS
+column is doubly volatile: it counts EVERYONE's stars and moves even
+when your own starred set is unchanged — never use counter deltas to
+detect your own star/unstar effects. Mitigation: when verifying that
+a ` + "`" + `gitee repo star` + "`" + ` call landed, re-run THIS command and grep for
+the full_name; for batch jobs, re-list immediately before acting and
+tolerate membership drift. Retrying THIS command is always safe
+(read-only).
 
 ## Next steps (orchestration hints)
 After listing your stars, an agent typically wants to:

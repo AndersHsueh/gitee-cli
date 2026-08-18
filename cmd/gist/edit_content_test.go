@@ -20,6 +20,7 @@ func TestEditAgentHelpContent(t *testing.T) {
 		"## Post-conditions",
 		"## Output (stdout, table mode)",
 		"## Common errors",
+		"## Race condition warning ⚠️",
 		"## Next steps",
 		"## OAuth scope required",
 		"## Rate limit",
@@ -44,5 +45,16 @@ func TestEditAgentHelpFlagsPresent(t *testing.T) {
 		if !strings.Contains(gistEditAgentHelp, want) {
 			t.Errorf("gist edit --agent-help missing flag: %q", want)
 		}
+	}
+}
+
+// TestEditAgentHelpRaceSection verifies the Race condition section is
+// command-specific (last-writer-wins) and free of placeholder text.
+func TestEditAgentHelpRaceSection(t *testing.T) {
+	if strings.Contains(gistEditAgentHelp, "TODO(domain)") {
+		t.Error("gist edit --agent-help still contains TODO(domain) placeholder")
+	}
+	if !strings.Contains(gistEditAgentHelp, "LAST-WRITER-WINS") {
+		t.Error("gist edit race section should call out last-writer-wins semantics")
 	}
 }

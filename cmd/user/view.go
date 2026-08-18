@@ -154,6 +154,16 @@ None. Pure GET.
 - 401 Unauthorized: token missing or expired → ` + "`" + `gitee auth login` + "`" + `
 - 404 Not Found:    username doesn't exist (typo, or account deleted)
 
+## Race condition warning ⚠️
+The profile is live server-side state: counters (followers, public
+repos) and mutable fields (bio, blog, email) can change the moment
+after you read them. Treat this output as a snapshot — if a later
+action depends on a value (e.g. "only follow if followers < 100"),
+re-run this command immediately before acting rather than trusting an
+older read. The account itself can also be renamed or deleted between
+your view and a follow-up call, surfacing as a 404 there. Read-only
+and always safe to retry.
+
 ## Next steps (orchestration hints)
 After reading a profile, an agent typically wants to:
 1. Run ` + "`" + `gitee user followers <login>` + "`" + ` to enumerate their follower set

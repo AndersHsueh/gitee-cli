@@ -20,6 +20,7 @@ func TestStarAgentHelpContent(t *testing.T) {
 		"## Post-conditions",
 		"## Output (stdout, table mode)",
 		"## Common errors",
+		"## Race condition warning ⚠️",
 		"## Next steps",
 		"## OAuth scope required",
 		"## Rate limit",
@@ -40,5 +41,16 @@ func TestStarAgentHelpFlagsPresent(t *testing.T) {
 		if strings.Contains(gistStarAgentHelp, banned) {
 			t.Errorf("gist star --agent-help should not mention %q (star has no flags)", banned)
 		}
+	}
+}
+
+// TestStarAgentHelpRaceSection verifies the Race condition section is
+// command-specific and free of placeholder text.
+func TestStarAgentHelpRaceSection(t *testing.T) {
+	if strings.Contains(gistStarAgentHelp, "TODO(domain)") {
+		t.Error("gist star --agent-help still contains TODO(domain) placeholder")
+	}
+	if !strings.Contains(gistStarAgentHelp, "already-starred") {
+		t.Error("gist star race section should state retrying is a no-op on an already-starred gist")
 	}
 }

@@ -79,6 +79,31 @@ None.
 ## Common errors
 - (none — empty install dir returns "No extensions installed")
 
+## Race condition warning ⚠️
+This command mutates nothing itself, but it reads shared mutable
+state: the ~/.gitee-cli/extensions/ directory. A concurrent
+` + "`" + `gitee extension install` + "`" + ` / ` + "`" + `remove` + "`" + ` / ` + "`" + `upgrade` + "`" + ` can add, delete, or
+rewrite a manifest mid-scan, so the printed table is a point-in-time
+view that may already be stale when you act on it. If a follow-up
+action depends on an entry (e.g. "remove X only if still
+installed"), re-run ` + "`" + `gitee extension list` + "`" + ` immediately before acting,
+and treat a subsequent "not installed" error from the follow-up
+command as the expected outcome of the race, not a bug.
+
+## OAuth scope required
+N/A (local command) — no Gitee API request is made; works fully offline.
+
+## Rate limit
+N/A (local command) — no Gitee API request is made.
+
+## Example
+  gitee extension list
+  # NAME       SOURCE                INSTALLED
+  # myext      andershsueh/myext     2026-06-06
+
+  gitee extension list -o json
+  # [{"name":"myext","source":"andershsueh/myext","installed_at":"..."}]
+
 ## See also
 - ` + "`" + `gitee extension install` + "`" + ` — add one
 - ` + "`" + `gitee extension remove` + "`" + `  — drop one

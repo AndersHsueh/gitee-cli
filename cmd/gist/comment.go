@@ -123,6 +123,19 @@ conversation or the call fails — no partial state.
 - 422 Unprocessable: --body is empty (caught by Cobra before call) or
   exceeds the per-comment length limit (Gitee: ~65k chars)
 
+## Race condition warning ⚠️
+The gist's comment thread is shared mutable state. Specific risks:
+- NOT idempotent: retrying after a timeout or 5xx (where the server
+  may actually have succeeded) posts the SAME comment twice. Before
+  a blind retry, check ` + "`" + `gitee gist comments <gist_id> --output json` + "`" + `
+  for your body text.
+- If you only comment under a condition (e.g. "reply only if nobody
+  answered yet"), re-run ` + "`" + `gitee gist comments` + "`" + ` immediately before
+  this call — another agent may have posted in the gap.
+- The new comment may not appear in ` + "`" + `gitee gist comments` + "`" + ` for
+  1-2 seconds (indexing lag). Use the "Comment id:" line from THIS
+  output; do not re-list to find it.
+
 ## Next steps (orchestration hints)
 After posting, an agent typically wants to:
 1. Verify with ` + "`" + `gitee gist comments <gist_id> --output json` + "`" + ` and

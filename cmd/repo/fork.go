@@ -119,6 +119,23 @@ fork exists, or it doesn't. There is no partial state.
                      or fork limit has been reached on this account
 - Network/timeout:   transient; safe to retry but verify no duplicate was created
 
+## Race condition warning ⚠️
+The shared mutable state is your account's repo namespace (the fork
+lands at <my-user>/<repo>) and the source repo itself. Three
+interleavings: (1) CHECK→FORK GAP: looking for an existing fork via
+` + "`" + `gitee repo list --owner <my-user>` + "`" + ` and then forking is not safe —
+a concurrent agent can create the same fork in the gap and one of you
+gets 422. Treat the 422 as "fork already exists" and proceed with it.
+(2) RETRY AFTER TIMEOUT: the fork POST has no idempotency key — if
+the request times out but the server started the fork, a blind retry
+can hit 422 even though YOUR first call caused it; check ` + "`" + `gitee repo
+view <my-user>/<repo>` + "`" + ` before retrying. (3) FORK-TIME SNAPSHOT: the
+fork copies the source at fork time; if the source is pushed to while
+you clone/branch, your fork is already behind — use ` + "`" + `gitee repo sync` + "`" + `
+before opening a PR back upstream. Large forks may also take seconds
+to become fully servable server-side; a clone immediately after can
+race the provisioning — retry the clone on transient failure.
+
 ## Next steps (orchestration hints)
 After a successful fork, an agent typically wants to:
 1. Clone the fork locally: ` + "`" + `gitee repo clone <my-user>/name` + "`" + `

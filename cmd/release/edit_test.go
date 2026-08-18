@@ -14,6 +14,10 @@ func TestEditAgentHelpContent(t *testing.T) {
 		"Side effects",
 		"Post-conditions",
 		"Common errors",
+		"Race condition warning ⚠️",
+		"the LAST write wins",
+		"OAuth scope required",
+		"Rate limit",
 		"See also",
 	}
 	for _, want := range required {

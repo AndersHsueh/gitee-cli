@@ -76,6 +76,20 @@ None.
 - 404 Not Found: repo does not exist or is private
 - 401 Unauthorized: token missing or expired
 
+## Race condition warning ⚠️
+The shared mutable state is the repo's label set; this command reads a
+point-in-time snapshot.
+- Labels created or deleted by concurrent agents between request and
+  parse appear as missing or phantom entries — re-list immediately
+  before acting on the result.
+- For 1-2 seconds after ` + "`" + `gitee label create` + "`" + ` or ` + "`" + `gitee label clone` + "`" + `,
+  the new labels may NOT appear here (indexing lag). Never use this
+  command to verify a just-completed write; trust the write command's
+  own output instead.
+- Do not treat absence in this output as proof a label does not exist
+  before calling ` + "`" + `gitee label create` + "`" + ` — the create call's 422
+  response is the authoritative existence check.
+
 ## OAuth scope required
 projects (read)
 

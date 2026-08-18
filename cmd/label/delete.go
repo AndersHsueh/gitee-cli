@@ -82,6 +82,21 @@ Atomic.
 - 404 Not Found: --name doesn't exist
 - 403 Forbidden:  token lacks admin scope
 
+## Race condition warning ⚠️
+The shared mutable state is the label itself plus every issue/PR that
+references it.
+- If another agent deletes the label first, your call returns 404.
+  Delete is NOT idempotent, but when removal was the goal, treat 404 as
+  "already gone" rather than retrying blindly.
+- Issues/PRs labeled between your ` + "`" + `gitee label list` + "`" + ` check and this
+  delete are silently unlabeled — the delete does not wait for them.
+- A concurrent delete→create of the same name yields a NEW label with
+  no usage history; a follow-up ` + "`" + `gitee label view` + "`" + ` by name cannot
+  tell the two apart.
+If the decision to delete depends on current existence or usage,
+verify with ` + "`" + `gitee label view -R owner/repo -n NAME` + "`" + ` immediately
+before this call.
+
 ## OAuth scope required
 projects (admin)
 

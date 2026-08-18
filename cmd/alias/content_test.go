@@ -23,6 +23,9 @@ func TestSetAgentHelpContent(t *testing.T) {
 		"## Side effects",
 		"## Post-conditions",
 		"## Common errors",
+		"## Race condition warning ⚠️",
+		"## OAuth scope required",
+		"## Rate limit",
 		"## Example",
 		"## See also",
 	}
@@ -30,6 +33,10 @@ func TestSetAgentHelpContent(t *testing.T) {
 		if !strings.Contains(aliasSetAgentHelp, want) {
 			t.Errorf("alias set --agent-help missing section: %q", want)
 		}
+	}
+	// Local command: OAuth/Rate-limit sections must carry the N/A reason.
+	if !strings.Contains(aliasSetAgentHelp, "N/A (local command) — no Gitee API request is made") {
+		t.Error("alias set --agent-help missing local-command N/A reason")
 	}
 }
 
@@ -46,12 +53,20 @@ func TestListAgentHelpContent(t *testing.T) {
 		"## Output (stdout, table mode)",
 		"## Output (stdout, json mode)",
 		"## Common errors",
+		"## Race condition warning ⚠️",
+		"## OAuth scope required",
+		"## Rate limit",
+		"## Example",
 		"## See also",
 	}
 	for _, want := range required {
 		if !strings.Contains(aliasListAgentHelp, want) {
 			t.Errorf("alias list --agent-help missing section: %q", want)
 		}
+	}
+	// Local command: OAuth/Rate-limit sections must carry the N/A reason.
+	if !strings.Contains(aliasListAgentHelp, "N/A (local command) — no Gitee API request is made") {
+		t.Error("alias list --agent-help missing local-command N/A reason")
 	}
 }
 
@@ -67,6 +82,9 @@ func TestDeleteAgentHelpContent(t *testing.T) {
 		"## Side effects",
 		"## Post-conditions",
 		"## Common errors",
+		"## Race condition warning ⚠️",
+		"## OAuth scope required",
+		"## Rate limit",
 		"## Example",
 		"## See also",
 	}
@@ -74,6 +92,10 @@ func TestDeleteAgentHelpContent(t *testing.T) {
 		if !strings.Contains(aliasDeleteAgentHelp, want) {
 			t.Errorf("alias delete --agent-help missing section: %q", want)
 		}
+	}
+	// Local command: OAuth/Rate-limit sections must carry the N/A reason.
+	if !strings.Contains(aliasDeleteAgentHelp, "N/A (local command) — no Gitee API request is made") {
+		t.Error("alias delete --agent-help missing local-command N/A reason")
 	}
 }
 

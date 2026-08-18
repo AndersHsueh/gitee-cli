@@ -183,6 +183,28 @@ dir as-is; the previous manifest + executable are still in place.
 - "skip: local"      -> extension was installed from a local path
 - "read manifest"    -> manifest.json missing or corrupt
 
+## Race condition warning ⚠️
+Two layers of shared mutable state. (1) The upstream Gitee repo:
+` + "`" + `git pull` + "`" + ` fetches whatever HEAD is at that moment, so a push that
+lands between your --dry-run and the real run changes what "latest"
+means. (2) The local clone + manifest.json under
+~/.gitee-cli/extensions/<name>/: two concurrent upgrades of the same
+extension race inside one git working dir — the second typically
+fails on git's index.lock. That failure is safe to retry (consistent
+with Idempotency: re-pulling once up-to-date is a no-op). With
+--all, the target list is snapshotted at start; an extension
+installed or removed concurrently is simply absent from (or drops
+out of) this run's set. A pull that hits a merge conflict leaves the
+working tree dirty and the manifest pinned to the pre-pull HEAD —
+resolve or re-run with --force before assuming the upgrade happened.
+
+## OAuth scope required
+None (no Gitee API call; uses ` + "`" + `git pull` + "`" + ` over HTTPS). Local-symlink
+installs are skipped entirely with no network op.
+
+## Rate limit
+git pull is not rate-limited by Gitee the way the API is.
+
 ## Example
   gitee extension upgrade --all --dry-run
   # would pull myext in /Users/.../extensions/myext

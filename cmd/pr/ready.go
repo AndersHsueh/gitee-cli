@@ -137,6 +137,17 @@ Atomic. Either the flag flips, or no change.
   state that prevents the flag flip (e.g. already merged). Check
   ` + "`" + `gitee pr view` + "`" + `.
 
+## Race condition warning ⚠️
+The shared mutable state is the PR's draft flag (and, transitively,
+its mergeability). This command itself is idempotent — re-running is a
+no-op — but the flag can be flipped back: a concurrent
+` + "`" + `gitee pr edit <N> --draft` + "`" + ` between your ready and a follow-up
+` + "`" + `gitee pr merge <N>` + "`" + ` re-drafts the PR, and the merge then fails with
+422. Also note that ready does NOT make a PR mergeable by itself: CI
+and review requirements still apply and can change at any time. Before
+merging, confirm with a fresh ` + "`" + `gitee pr view <N> --output json` + "`" + `
+that .draft is still false and required checks are green.
+
 ## OAuth scope required
 projects (write)
 

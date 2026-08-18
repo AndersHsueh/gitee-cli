@@ -179,6 +179,22 @@ Field names follow the Gitee API v5 /repos/{owner}/{repo} response.
 - 404 Not Found:     owner/name doesn't exist; check spelling
 - Network/timeout:   transient; safe to retry
 
+## Race condition warning ⚠️
+The shared mutable state is the repo's settings record and its
+counters. Everything in this output is a point-in-time snapshot:
+stars/forks/watchers/open_issues counts move continuously, and
+visibility, default_branch, even the repo's NAME can change between
+your view and a follow-up write. Classic failures: (1) you read
+` + "`" + `"private": false` + "`" + `, decide it is safe to paste the URL somewhere
+public, and in the gap an admin flips it private (or vice versa —
+you skip sharing a repo that just went public); (2) you read
+` + "`" + `default_branch: main` + "`" + ` and script against main, but an admin
+switched the default to master; (3) the repo was renamed after your
+view — follow-up calls to the old full_name 404. Mitigation: re-run
+THIS command immediately before any decision that depends on these
+fields, and prefer values from the most recent read over cached ones.
+Retrying is always safe (read-only).
+
 ## Next steps (orchestration hints)
 After viewing a repo, an agent typically wants to:
 1. To modify it:           ` + "`" + `gitee repo edit owner/repo ...` + "`" + `

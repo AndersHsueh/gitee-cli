@@ -148,6 +148,21 @@ nothing changes. There is no partial state visible to subsequent calls.
                      a partial server-side state could leave the repo half-deleted
                      (in practice the API is atomic, but be cautious)
 
+## Race condition warning ⚠️
+The shared mutable state is the repo's existence — and its NAMESPACE.
+Three interleavings: (1) VERIFY→DELETE GAP: confirming the repo with
+` + "`" + `gitee repo view` + "`" + ` and then deleting is safe only for existence; any
+state you inspected (open issues, last push) can change in the gap,
+but deletion erases everything anyway — the real risk is deleting the
+WRONG repo, so double-check owner/name in THIS command's own output,
+not a stale list. (2) CONCURRENT DELETE: two agents deleting the same
+repo — the second gets 404 (see Idempotency; treat it as "already
+done", not as a failure to retry). (3) DELETE→RECREATE: the freed
+namespace can be claimed by ANYONE immediately after deletion; if you
+plan to recreate owner/name, do it promptly — or someone else (or
+another agent in your fleet) can squat the name. A timeout retry is
+safe: re-running on an already-deleted repo just yields 404.
+
 ## Next steps (orchestration hints)
 Destructive verbs have NO direct follow-up on the deleted repo. Typical
 post-deletion next steps for an agent:

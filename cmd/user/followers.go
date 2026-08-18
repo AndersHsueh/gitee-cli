@@ -142,6 +142,16 @@ None. Pure GET.
 - 401 Unauthorized: token missing or expired → ` + "`" + `gitee auth login` + "`" + `
 - 404 Not Found:    username doesn't exist
 
+## Race condition warning ⚠️
+The follower list is live server-side state: accounts follow and
+unfollow ` + "`" + `<username>` + "`" + ` (and rename or delete themselves) continuously.
+This output is a snapshot at fetch time — a ` + "`" + `login` + "`" + ` you pick from
+it may have unfollowed or vanished by the time you act on it, so run
+` + "`" + `gitee user view <login>` + "`" + ` immediately before acting if existence
+matters. With ` + "`" + `--paginate` + "`" + `, pages fetched seconds apart can overlap
+or skip entries when the list mutates mid-traversal — dedupe by
+` + "`" + `login` + "`" + `. Read-only and always safe to retry.
+
 ## Next steps (orchestration hints)
 After listing followers, an agent typically wants to:
 1. Pick a ` + "`" + `login` + "`" + ` and run ` + "`" + `gitee user view <login>` + "`" + ` for details

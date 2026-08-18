@@ -89,6 +89,20 @@ Atomic.
 - 404 Not Found: --number doesn't exist
 - 403 Forbidden:  token lacks admin scope
 
+## Race condition warning ⚠️
+The shared mutable state is the milestone itself PLUS the ` + "`" + `milestone` + "`" + `
+field of every issue/PR that references it.
+- list→delete gap: another agent may delete and re-create a milestone
+  with the same title in between; the number you hold can then point
+  at a DIFFERENT milestone. Re-check with ` + "`" + `gitee milestone view -n N` + "`" + `
+  immediately before deleting.
+- Assignment race: an issue assigned to this milestone between your
+  last read and the delete is silently detached (its ` + "`" + `milestone` + "`" + `
+  field is cleared) — no warning, no undo. If issues are being triaged
+  concurrently, serialize milestone deletes.
+- If the response is lost after a successful delete, a retry returns
+  404 — treat 404 as "already deleted", not as a new failure.
+
 ## OAuth scope required
 projects (admin)
 
