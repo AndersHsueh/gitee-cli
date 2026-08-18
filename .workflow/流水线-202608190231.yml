@@ -1,0 +1,32 @@
+version: "1.0"
+name: 流水线-202608190231
+displayName: 流水线-202608190231
+stages:
+- name: 未命名
+  displayName: 未命名
+  strategy: naturally
+  trigger: auto
+  steps:
+  - step: build@golang
+    name: d86957e6
+    displayName: Golang 构建
+    golangVersion: "1.24"
+    commands:
+    - "# 默认使用goproxy.cn\\n export GOPROXY=https://goproxy.cn\\n # 输入你的构建命令 make build"
+    artifacts: []
+    caches:
+    - /go/pkg/mod
+    strategy:
+      retry: "0"
+      resource:
+        cpu: "2"
+        memory: "4"
+triggers:
+  trigger: auto
+  push:
+    branches:
+      prefix:
+      - ""
+      precise: []
+      include: []
+notify: []
