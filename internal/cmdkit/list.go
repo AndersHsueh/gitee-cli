@@ -20,11 +20,33 @@ import (
 	"strings"
 	"time"
 
-	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
 	"gitee-cli/internal/output"
 	"gitee-cli/internal/utils"
 )
+
+// Options carries the explicit runtime dependencies a list command needs.
+// Passing them in (instead of reading package globals) lets cmdkit live in
+// the internal layer without importing gitee-cli/cmd — the cmd layer builds
+// these from its flags/globals and hands them over.
+type Options struct {
+	// Client is the API client to use.
+	Client *api.Client
+	// Timeout is the per-request context timeout.
+	Timeout time.Duration
+	// Output is the output format: "table" (default) or "json".
+	Output string
+	// Paginate traverses all pages when true.
+	Paginate bool
+	// PerPage is the items-per-page for pagination (clamped 1-100).
+	PerPage int
+	// Limit caps the total items when Paginate is true (0 = no cap).
+	Limit int
+	// Page is the starting page for a single-page fetch.
+	Page int
+	// Repo is the global --repo fallback used by the default repo resolver.
+	Repo string
+}
 
 // ListSpec declares the business-specific parts of a list command.
 type ListSpec[T any] struct {
@@ -73,12 +95,12 @@ type ListSpec[T any] struct {
 // (--paginate/--page/--per-page/--limit), json/table output dispatch,
 // empty-result messaging, and 404→empty handling. Global behavior is
 // identical to the pre-skeleton list commands.
-func RunList[T any](spec ListSpec[T]) error {
+func RunList[T any](opts Options, spec ListSpec[T]) error {
 	// 1. Resolve the repository.
 	resolve := spec.ResolveOwnerRepo
 	if resolve == nil {
 		resolve = func() (string, string, error) {
-			return utils.ResolveRepo("", cmd.GlobalRepo, nil)
+			return utils.ResolveRepo("", opts.Repo, nil)
 		}
 	}
 	owner, repo, err := resolve()
@@ -86,14 +108,14 @@ func RunList[T any](spec ListSpec[T]) error {
 		return err
 	}
 
-	// 2. Build the API client.
-	client, err := cmd.NewAPIClient()
-	if err != nil {
-		return err
+	// 2. Use the injected API client.
+	client := opts.Client
+	if client == nil {
+		return fmt.Errorf("cmdkit: Options.Client is nil")
 	}
 
 	// 3. Apply the shared timeout.
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), opts.Timeout)
 	defer cancel()
 
 	// 4. Fetch. Default is FetchListOrAll (single page or all pages per
@@ -103,19 +125,19 @@ func RunList[T any](spec ListSpec[T]) error {
 	if spec.Fetch != nil {
 		items, err = spec.Fetch(ctx, client, spec.Path(owner, repo))
 	} else {
-		limit := cmd.GlobalLimit
+		limit := opts.Limit
 		if spec.Limit != nil {
 			limit = spec.Limit()
 		}
 		items, err = api.FetchListOrAll[T](ctx, client, spec.Path(owner, repo),
-			cmd.GlobalPaginate, cmd.GlobalPerPage, limit, cmd.GlobalPage, spec.ErrCtx)
+			opts.Paginate, opts.PerPage, limit, opts.Page, spec.ErrCtx)
 	}
 	if err != nil {
 		return err
 	}
 
 	// 5. Dispatch output.
-	if cmd.GlobalOutput == "json" {
+	if opts.Output == "json" {
 		if spec.JSON != nil {
 			return spec.JSON(items)
 		}

@@ -2,7 +2,6 @@ package milestone
 
 import (
 	"gitee-cli/cmd"
-	"gitee-cli/internal/handler"
 	"gitee-cli/internal/utils"
 
 	"github.com/spf13/cobra"
@@ -34,7 +33,11 @@ var deleteCmd = &cobra.Command{
 		if deleteFlags.force {
 			confirm = "y"
 		}
-		return handler.MilestoneDelete(deleteFlags.repo, int(parsed), confirm)
+		dc, err := cmd.NewDomainClient()
+		if err != nil {
+			return err
+		}
+		return dc.MilestoneDelete(deleteFlags.repo, int(parsed), confirm)
 	},
 }
 

@@ -6,10 +6,13 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"gitee-cli/internal/alias"
 	"gitee-cli/internal/api"
+	"gitee-cli/internal/cmdkit"
 	"gitee-cli/internal/config"
+	"gitee-cli/internal/domain"
 	"gitee-cli/pkg/types"
 
 	"github.com/fatih/color"
@@ -224,6 +227,39 @@ func NewAPIClient() (*api.Client, error) {
 	}
 
 	return api.NewClient(token, ResolveAPIBaseURL(hostname), GlobalVerbose, GlobalTimeout), nil
+}
+
+// NewCmdkitOptions builds the explicit runtime dependencies for a list
+// command's cmdkit.RunList call from the resolved globals. The client is
+// passed in so callers can reuse one they already built. Centralizing this
+// keeps the cmd layer the only place that reads package globals.
+func NewCmdkitOptions(client *api.Client) cmdkit.Options {
+	return cmdkit.Options{
+		Client:   client,
+		Timeout:  time.Duration(GlobalTimeout) * time.Second,
+		Output:   GlobalOutput,
+		Paginate: GlobalPaginate,
+		PerPage:  GlobalPerPage,
+		Limit:    GlobalLimit,
+		Page:     GlobalPage,
+		Repo:     GlobalRepo,
+	}
+}
+
+// NewDomainClient builds a domain.Client from the resolved globals, so
+// domain operations (label/milestone/notification/webhook) get their
+// explicit dependencies without importing cmd themselves.
+func NewDomainClient() (*domain.Client, error) {
+	apiClient, err := NewAPIClient()
+	if err != nil {
+		return nil, err
+	}
+	return &domain.Client{
+		API:     apiClient,
+		Timeout: time.Duration(GlobalTimeout) * time.Second,
+		Output:  GlobalOutput,
+		Repo:    GlobalRepo,
+	}, nil
 }
 
 // ResolveCurrentUsername returns the authenticated username, trying config

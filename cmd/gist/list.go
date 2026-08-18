@@ -38,7 +38,12 @@ func init() {
 }
 
 func runList(cobraCmd *cobra.Command, args []string) error {
-	return cmdkit.RunList[types.Gist](cmdkit.ListSpec[types.Gist]{
+	client, err := cmd.NewAPIClient()
+	if err != nil {
+		return err
+	}
+	opts := cmd.NewCmdkitOptions(client)
+	return cmdkit.RunList[types.Gist](opts, cmdkit.ListSpec[types.Gist]{
 		// gist list lists the authenticated user's gists — no target repo.
 		ResolveOwnerRepo: func() (string, string, error) {
 			return "", "", nil

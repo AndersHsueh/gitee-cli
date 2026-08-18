@@ -5,7 +5,6 @@ import (
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/alias"
-	"gitee-cli/internal/handler"
 	"gitee-cli/internal/output"
 
 	"github.com/spf13/cobra"
@@ -29,7 +28,7 @@ var listCmd = &cobra.Command{
 		if cmd.GlobalOutput == "json" {
 			// Emit the map itself, not the sorted-keys slice, so the
 			// JSON output is the canonical storage shape.
-			return handler.PrintJSON(m)
+			return output.PrintJSON(m)
 		}
 		w := output.NewTableWriter()
 		fmt.Fprintln(w, "NAME\tEXPANSION")

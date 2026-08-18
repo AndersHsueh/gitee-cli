@@ -1,10 +1,4 @@
-// Package handler — webhook subpackage logic.
-//
-// Webhook handlers follow the same shape as label handlers (per-repo, list/
-// view/create/edit/delete) plus two extra verbs that the label module does
-// not have: edit (PATCH) and test (POST /tests). Like labels, all writes
-// require repo admin rights.
-package handler
+package domain
 
 import (
 	"context"
@@ -14,31 +8,20 @@ import (
 	"strings"
 	"time"
 
-	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
 	"gitee-cli/internal/cmdkit"
+	"gitee-cli/internal/output"
 	"gitee-cli/internal/utils"
 	"gitee-cli/pkg/types"
 
 	"github.com/fatih/color"
 )
 
-// WebhookResolveRepo resolves --repo flag / global --repo into (owner, repo).
-// Delegates to utils.ResolveRepo so parsing and the git-config fallback are
-// shared across all command groups (label, release). The local flag wins;
-// the global --repo is used only when the local flag is empty.
-func WebhookResolveRepo(repo string) (string, string, error) {
-	if repo == "" {
-		repo = cmd.GlobalRepo
-	}
-	return utils.ResolveRepo("", repo, nil)
-}
-
 // WebhookList runs the webhook-list operation.
-func WebhookList(repo string, limit int) error {
-	return cmdkit.RunList[types.Webhook](cmdkit.ListSpec[types.Webhook]{
+func (c *Client) WebhookList(repo string, limit int) error {
+	return cmdkit.RunList[types.Webhook](c.opts(), cmdkit.ListSpec[types.Webhook]{
 		ResolveOwnerRepo: func() (string, string, error) {
-			return WebhookResolveRepo(repo)
+			return c.ResolveRepo(repo)
 		},
 		Path: func(owner, repoName string) string {
 			path := api.WebhooksList(owner, repoName)
@@ -71,7 +54,7 @@ func WebhookList(repo string, limit int) error {
 			return fmt.Sprintf("\nTotal: %d webhook(s)\n", count)
 		},
 		JSON: func(items []types.Webhook) error {
-			return PrintJSON(items)
+			return output.PrintJSON(items)
 		},
 	})
 }
@@ -103,33 +86,28 @@ func summarizeEvents(h types.Webhook) string {
 }
 
 // WebhookView runs the webhook-view operation.
-func WebhookView(repo string, id int64) error {
+func (c *Client) WebhookView(repo string, id int64) error {
 	if id <= 0 {
 		return fmt.Errorf("webhook id is required (positional or --id)")
 	}
-	owner, repoName, err := WebhookResolveRepo(repo)
+	owner, repoName, err := c.ResolveRepo(repo)
 	if err != nil {
 		return err
 	}
 
-	client, err := cmd.NewAPIClient()
-	if err != nil {
-		return err
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := c.ctx()
 	defer cancel()
 
 	var hook types.Webhook
-	if err := client.Get(ctx, api.WebhookGet(owner, repoName, id), &hook); err != nil {
+	if err := c.API.Get(ctx, api.WebhookGet(owner, repoName, id), &hook); err != nil {
 		if api.IsNotFound(err) {
 			return fmt.Errorf("webhook %d not found in %s/%s", id, owner, repoName)
 		}
 		return fmt.Errorf("getting webhook: %w", err)
 	}
 
-	if cmd.GlobalOutput == "json" {
-		return PrintJSON(hook)
+	if c.IsJSON() {
+		return output.PrintJSON(hook)
 	}
 
 	green := color.New(color.FgGreen).SprintFunc()
@@ -155,25 +133,20 @@ func WebhookView(repo string, id int64) error {
 }
 
 // WebhookCreate runs the webhook-create operation.
-func WebhookCreate(repo string, req types.WebhookCreateRequest) error {
+func (c *Client) WebhookCreate(repo string, req types.WebhookCreateRequest) error {
 	if req.URL == "" {
 		return fmt.Errorf("--url is required")
 	}
-	owner, repoName, err := WebhookResolveRepo(repo)
+	owner, repoName, err := c.ResolveRepo(repo)
 	if err != nil {
 		return err
 	}
 
-	client, err := cmd.NewAPIClient()
-	if err != nil {
-		return err
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := c.ctx()
 	defer cancel()
 
 	var hook types.Webhook
-	if err := client.Post(ctx, api.WebhookCreate(owner, repoName), req, &hook); err != nil {
+	if err := c.API.Post(ctx, api.WebhookCreate(owner, repoName), req, &hook); err != nil {
 		return fmt.Errorf("creating webhook: %w", err)
 	}
 
@@ -191,28 +164,23 @@ func WebhookCreate(repo string, req types.WebhookCreateRequest) error {
 
 // WebhookEdit runs the webhook-update operation (Gitee API uses PATCH).
 // Requires URL (per Gitee spec) plus any of the optional fields.
-func WebhookEdit(repo string, id int64, req types.WebhookEditRequest) error {
+func (c *Client) WebhookEdit(repo string, id int64, req types.WebhookEditRequest) error {
 	if id <= 0 {
 		return fmt.Errorf("webhook id is required (positional or --id)")
 	}
 	if req.URL == "" {
 		return fmt.Errorf("--url is required (Gitee API: PATCH payload must include the current URL)")
 	}
-	owner, repoName, err := WebhookResolveRepo(repo)
+	owner, repoName, err := c.ResolveRepo(repo)
 	if err != nil {
 		return err
 	}
 
-	client, err := cmd.NewAPIClient()
-	if err != nil {
-		return err
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := c.ctx()
 	defer cancel()
 
 	var hook types.Webhook
-	if err := client.Patch(ctx, api.WebhookEdit(owner, repoName, id), req, &hook); err != nil {
+	if err := c.API.Patch(ctx, api.WebhookEdit(owner, repoName, id), req, &hook); err != nil {
 		return fmt.Errorf("updating webhook: %w", err)
 	}
 
@@ -229,11 +197,11 @@ func WebhookEdit(repo string, id int64, req types.WebhookEditRequest) error {
 
 // WebhookDelete runs the webhook-delete operation. confirm matches the
 // label-delete convention: pass "y" (or set --force) to skip the prompt.
-func WebhookDelete(repo string, id int64, confirm string) error {
+func (c *Client) WebhookDelete(repo string, id int64, confirm string) error {
 	if id <= 0 {
 		return fmt.Errorf("webhook id is required (positional or --id)")
 	}
-	owner, repoName, err := WebhookResolveRepo(repo)
+	owner, repoName, err := c.ResolveRepo(repo)
 	if err != nil {
 		return err
 	}
@@ -252,15 +220,10 @@ func WebhookDelete(repo string, id int64, confirm string) error {
 		}
 	}
 
-	client, err := cmd.NewAPIClient()
-	if err != nil {
-		return err
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := c.ctx()
 	defer cancel()
 
-	if err := client.Delete(ctx, api.WebhookDelete(owner, repoName, id)); err != nil {
+	if err := c.API.Delete(ctx, api.WebhookDelete(owner, repoName, id)); err != nil {
 		return fmt.Errorf("deleting webhook: %w", err)
 	}
 
@@ -271,24 +234,19 @@ func WebhookDelete(repo string, id int64, confirm string) error {
 
 // WebhookTest fires a test ping (Gitee POSTs to the delivery URL).
 // Returns nil on HTTP 204; non-204 from Gitee surfaces as an error.
-func WebhookTest(repo string, id int64) error {
+func (c *Client) WebhookTest(repo string, id int64) error {
 	if id <= 0 {
 		return fmt.Errorf("webhook id is required (positional or --id)")
 	}
-	owner, repoName, err := WebhookResolveRepo(repo)
+	owner, repoName, err := c.ResolveRepo(repo)
 	if err != nil {
 		return err
 	}
 
-	client, err := cmd.NewAPIClient()
-	if err != nil {
-		return err
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := c.ctx()
 	defer cancel()
 
-	if err := client.Post(ctx, api.WebhookTest(owner, repoName, id), nil, nil); err != nil {
+	if err := c.API.Post(ctx, api.WebhookTest(owner, repoName, id), nil, nil); err != nil {
 		return fmt.Errorf("testing webhook: %w", err)
 	}
 

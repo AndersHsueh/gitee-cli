@@ -8,7 +8,7 @@ import (
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
 	"gitee-cli/internal/cmdkit"
-	"gitee-cli/internal/handler"
+	"gitee-cli/internal/output"
 	"gitee-cli/internal/utils"
 	"gitee-cli/pkg/types"
 
@@ -43,7 +43,12 @@ func init() {
 }
 
 func runList(cobraCmd *cobra.Command, args []string) error {
-	return cmdkit.RunList[types.Release](cmdkit.ListSpec[types.Release]{
+	client, err := cmd.NewAPIClient()
+	if err != nil {
+		return err
+	}
+	opts := cmd.NewCmdkitOptions(client)
+	return cmdkit.RunList[types.Release](opts, cmdkit.ListSpec[types.Release]{
 		ResolveOwnerRepo: func() (string, string, error) {
 			return resolveReleaseRepo(listFlags.repo)
 		},
@@ -82,7 +87,7 @@ func runList(cobraCmd *cobra.Command, args []string) error {
 			return fmt.Sprintf("\nTotal: %d release(s)\n", count)
 		},
 		JSON: func(items []types.Release) error {
-			return handler.PrintJSON(items)
+			return output.PrintJSON(items)
 		},
 	})
 }

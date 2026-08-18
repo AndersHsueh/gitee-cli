@@ -9,7 +9,7 @@ import (
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
 	"gitee-cli/internal/cmdkit"
-	"gitee-cli/internal/handler"
+	"gitee-cli/internal/output"
 	"gitee-cli/pkg/types"
 
 	"github.com/spf13/cobra"
@@ -42,7 +42,12 @@ func init() {
 }
 
 func runList(cobraCmd *cobra.Command, args []string) error {
-	return cmdkit.RunList[types.SSHKey](cmdkit.ListSpec[types.SSHKey]{
+	client, err := cmd.NewAPIClient()
+	if err != nil {
+		return err
+	}
+	opts := cmd.NewCmdkitOptions(client)
+	return cmdkit.RunList[types.SSHKey](opts, cmdkit.ListSpec[types.SSHKey]{
 		// ssh-key list lists the authenticated user's keys — no target repo.
 		ResolveOwnerRepo: func() (string, string, error) {
 			return "", "", nil
@@ -81,7 +86,7 @@ func runList(cobraCmd *cobra.Command, args []string) error {
 			return fmt.Sprintf("\nTotal: %d key(s)\n", count)
 		},
 		JSON: func(items []types.SSHKey) error {
-			return handler.PrintJSON(items)
+			return output.PrintJSON(items)
 		},
 	})
 }

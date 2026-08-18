@@ -11,8 +11,9 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
-	"gitee-cli/cmd"
+	"gitee-cli/internal/api"
 )
 
 // captured holds the result of running a function with os.Stdout swapped.
@@ -48,58 +49,24 @@ type testItem struct {
 	Title  string `json:"title"`
 }
 
-// withServer starts an httptest server, points the cmd globals at it, and
-// registers cleanup to restore the globals. The returned snapshot lets the
-// test mutate the remaining globals (output/paginate/limit/page/per-page)
-// and restore them via a second cleanup.
-func withServer(t *testing.T, h http.HandlerFunc) {
+// withServer starts an httptest server and returns an *api.Client pointed
+// at it, so tests exercise the skeleton with explicit dependencies (no cmd
+// globals involved).
+func withServer(t *testing.T, h http.HandlerFunc) *api.Client {
 	t.Helper()
 	ts := httptest.NewServer(h)
 	t.Cleanup(ts.Close)
-
-	snap := struct {
-		apiURL, token string
-		timeout       int
-	}{
-		apiURL:  cmd.GlobalAPIURL,
-		token:   cmd.GlobalToken,
-		timeout: cmd.GlobalTimeout,
-	}
-	cmd.GlobalAPIURL = ts.URL
-	cmd.GlobalToken = "test-token"
-	cmd.GlobalTimeout = 30
-	t.Cleanup(func() {
-		cmd.GlobalAPIURL = snap.apiURL
-		cmd.GlobalToken = snap.token
-		cmd.GlobalTimeout = snap.timeout
-	})
+	return api.NewClient("test-token", ts.URL, false, 30)
 }
 
-// withGlobals snapshots the output-related globals and restores them on
-// cleanup, so each test can set its own dispatch/pagination state.
-func withGlobals(t *testing.T) {
-	t.Helper()
-	snap := struct {
-		output, repo   string
-		paginate       bool
-		perPage, limit int
-		page           int
-	}{
-		output:   cmd.GlobalOutput,
-		repo:     cmd.GlobalRepo,
-		paginate: cmd.GlobalPaginate,
-		perPage:  cmd.GlobalPerPage,
-		limit:    cmd.GlobalLimit,
-		page:     cmd.GlobalPage,
+// opts builds a default Options for the test server. Tests mutate the
+// returned struct to set dispatch/pagination state.
+func opts(client *api.Client) Options {
+	return Options{
+		Client:  client,
+		Timeout: 30 * time.Second,
+		Output:  "table",
 	}
-	t.Cleanup(func() {
-		cmd.GlobalOutput = snap.output
-		cmd.GlobalRepo = snap.repo
-		cmd.GlobalPaginate = snap.paginate
-		cmd.GlobalPerPage = snap.perPage
-		cmd.GlobalLimit = snap.limit
-		cmd.GlobalPage = snap.page
-	})
 }
 
 // spec returns a minimal ListSpec for testItem that renders a two-column
@@ -127,17 +94,12 @@ func spec() ListSpec[testItem] {
 // TestRunList_TableOutput verifies the default table dispatch: header row,
 // one tab-separated row per item, and a trailing newline.
 func TestRunList_TableOutput(t *testing.T) {
-	withServer(t, func(w http.ResponseWriter, req *http.Request) {
+	client := withServer(t, func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`[{"number":1,"title":"a"},{"number":2,"title":"b"}]`))
 	})
-	withGlobals(t)
-	cmd.GlobalOutput = "table"
 
-	// Capture stdout by swapping os.Stdout is intrusive; instead assert the
-	// skeleton reaches the table branch without error and that the server
-	// saw the expected pagination query.
-	err := RunList[testItem](spec())
+	err := RunList[testItem](opts(client), spec())
 	if err != nil {
 		t.Fatalf("RunList table: %v", err)
 	}
@@ -146,16 +108,15 @@ func TestRunList_TableOutput(t *testing.T) {
 // TestRunList_JSONOutput verifies the json dispatch emits the full item
 // array as indented JSON.
 func TestRunList_JSONOutput(t *testing.T) {
-	withServer(t, func(w http.ResponseWriter, req *http.Request) {
+	client := withServer(t, func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`[{"number":1,"title":"a"}]`))
 	})
-	withGlobals(t)
-	cmd.GlobalOutput = "json"
+	o := opts(client)
+	o.Output = "json"
 
-	// Capture stdout.
 	out := captureStdout(t, func() error {
-		return RunList[testItem](spec())
+		return RunList[testItem](o, spec())
 	})
 	if err := out.err; err != nil {
 		t.Fatalf("RunList json: %v", err)
@@ -173,7 +134,7 @@ func TestRunList_JSONOutput(t *testing.T) {
 // skeleton walks multiple pages and merges them into one result.
 func TestRunList_PaginateMergesPages(t *testing.T) {
 	var pages []string
-	withServer(t, func(w http.ResponseWriter, req *http.Request) {
+	client := withServer(t, func(w http.ResponseWriter, req *http.Request) {
 		page := req.URL.Query().Get("page")
 		w.Header().Set("Content-Type", "application/json")
 		switch page {
@@ -186,13 +147,13 @@ func TestRunList_PaginateMergesPages(t *testing.T) {
 		}
 		pages = append(pages, page)
 	})
-	withGlobals(t)
-	cmd.GlobalPaginate = true
-	cmd.GlobalPerPage = 2
-	cmd.GlobalLimit = 0
+	o := opts(client)
+	o.Paginate = true
+	o.PerPage = 2
+	o.Limit = 0
 
 	out := captureStdout(t, func() error {
-		return RunList[testItem](spec())
+		return RunList[testItem](o, spec())
 	})
 	if out.err != nil {
 		t.Fatalf("RunList paginate: %v", out.err)
@@ -210,17 +171,17 @@ func TestRunList_PaginateMergesPages(t *testing.T) {
 // TestRunList_LimitTruncates verifies that --paginate --limit N caps the
 // merged result at N items.
 func TestRunList_LimitTruncates(t *testing.T) {
-	withServer(t, func(w http.ResponseWriter, req *http.Request) {
+	client := withServer(t, func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`[{"number":1,"title":"a"},{"number":2,"title":"b"}]`))
 	})
-	withGlobals(t)
-	cmd.GlobalPaginate = true
-	cmd.GlobalPerPage = 2
-	cmd.GlobalLimit = 1
+	o := opts(client)
+	o.Paginate = true
+	o.PerPage = 2
+	o.Limit = 1
 
 	out := captureStdout(t, func() error {
-		return RunList[testItem](spec())
+		return RunList[testItem](o, spec())
 	})
 	if out.err != nil {
 		t.Fatalf("RunList limit: %v", out.err)
@@ -234,15 +195,13 @@ func TestRunList_LimitTruncates(t *testing.T) {
 // TestRunList_EmptyText verifies the empty-result message is printed when
 // the API returns no items.
 func TestRunList_EmptyText(t *testing.T) {
-	withServer(t, func(w http.ResponseWriter, req *http.Request) {
+	client := withServer(t, func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`[]`))
 	})
-	withGlobals(t)
-	cmd.GlobalOutput = "table"
 
 	out := captureStdout(t, func() error {
-		return RunList[testItem](spec())
+		return RunList[testItem](opts(client), spec())
 	})
 	if out.err != nil {
 		t.Fatalf("RunList empty: %v", out.err)
@@ -256,16 +215,14 @@ func TestRunList_EmptyText(t *testing.T) {
 // list (not an error) — the shared contract that used to drift between
 // issue list and pr list (v0.4.1).
 func TestRunList_404IsEmpty(t *testing.T) {
-	withServer(t, func(w http.ResponseWriter, req *http.Request) {
+	client := withServer(t, func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
 		_, _ = w.Write([]byte(`{"message":"not found"}`))
 	})
-	withGlobals(t)
-	cmd.GlobalOutput = "table"
 
 	out := captureStdout(t, func() error {
-		return RunList[testItem](spec())
+		return RunList[testItem](opts(client), spec())
 	})
 	if out.err != nil {
 		t.Fatalf("404 should be empty, not error: %v", out.err)
@@ -278,19 +235,17 @@ func TestRunList_404IsEmpty(t *testing.T) {
 // TestRunList_Footer verifies a table footer is printed after the rows
 // (used by label/milestone/webhook/ssh-key/release/notification list).
 func TestRunList_Footer(t *testing.T) {
-	withServer(t, func(w http.ResponseWriter, req *http.Request) {
+	client := withServer(t, func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`[{"number":1,"title":"a"}]`))
 	})
-	withGlobals(t)
-	cmd.GlobalOutput = "table"
 
 	s := spec()
 	s.Footer = func(count int) string {
 		return fmt.Sprintf("\nTotal: %d item(s)\n", count)
 	}
 	out := captureStdout(t, func() error {
-		return RunList[testItem](s)
+		return RunList[testItem](opts(client), s)
 	})
 	if out.err != nil {
 		t.Fatalf("RunList footer: %v", out.err)
@@ -300,15 +255,15 @@ func TestRunList_Footer(t *testing.T) {
 	}
 }
 
-// TestRunList_CustomJSON verifies a custom JSON printer (e.g.
-// handler.PrintJSON) is invoked instead of the default indented marshal.
+// TestRunList_CustomJSON verifies a custom JSON printer is invoked instead
+// of the default indented marshal.
 func TestRunList_CustomJSON(t *testing.T) {
-	withServer(t, func(w http.ResponseWriter, req *http.Request) {
+	client := withServer(t, func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`[{"number":1,"title":"a"}]`))
 	})
-	withGlobals(t)
-	cmd.GlobalOutput = "json"
+	o := opts(client)
+	o.Output = "json"
 
 	called := false
 	s := spec()
@@ -319,7 +274,7 @@ func TestRunList_CustomJSON(t *testing.T) {
 		}
 		return nil
 	}
-	if err := RunList[testItem](s); err != nil {
+	if err := RunList[testItem](o, s); err != nil {
 		t.Fatalf("RunList custom json: %v", err)
 	}
 	if !called {

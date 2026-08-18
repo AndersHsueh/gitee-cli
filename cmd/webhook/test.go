@@ -2,7 +2,6 @@ package webhook
 
 import (
 	"gitee-cli/cmd"
-	"gitee-cli/internal/handler"
 	"gitee-cli/internal/utils"
 
 	"github.com/spf13/cobra"
@@ -38,7 +37,11 @@ func runTest(cobraCmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	return handler.WebhookTest(testFlags.repo, id)
+	dc, err := cmd.NewDomainClient()
+	if err != nil {
+		return err
+	}
+	return dc.WebhookTest(testFlags.repo, id)
 }
 
 const webhookTestAgentHelp = `# gitee webhook test — Agent Help

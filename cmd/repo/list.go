@@ -65,7 +65,12 @@ func runList(cobraCmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid --direction %q: use asc or desc", listFlags.direction)
 	}
 
-	return cmdkit.RunList[types.Repository](cmdkit.ListSpec[types.Repository]{
+	client, err := cmd.NewAPIClient()
+	if err != nil {
+		return err
+	}
+	opts := cmd.NewCmdkitOptions(client)
+	return cmdkit.RunList[types.Repository](opts, cmdkit.ListSpec[types.Repository]{
 		// repo list has no target repo — it lists by --owner (or the
 		// authenticated user). Return empty owner/repo; Path ignores them.
 		ResolveOwnerRepo: func() (string, string, error) {

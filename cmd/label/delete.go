@@ -2,7 +2,6 @@ package label
 
 import (
 	"gitee-cli/cmd"
-	"gitee-cli/internal/handler"
 
 	"github.com/spf13/cobra"
 )
@@ -29,7 +28,11 @@ var deleteCmd = &cobra.Command{
 		if deleteFlags.force {
 			confirm = "y"
 		}
-		return handler.LabelDelete(deleteFlags.repo, deleteFlags.name, confirm)
+		dc, err := cmd.NewDomainClient()
+		if err != nil {
+			return err
+		}
+		return dc.LabelDelete(deleteFlags.repo, deleteFlags.name, confirm)
 	},
 }
 
