@@ -1,6 +1,7 @@
 package issue
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -11,10 +12,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// IMPORTANT: tests in this file mutate package-level globals
-// (cmd.GlobalAPIURL / Token / Timeout and the per-verb *Flags struct
-// fields). They MUST run sequentially — do NOT add t.Parallel(): the
-// shared globals would race.
+// IMPORTANT: tests in this file inject a frozen cmd.Runtime via
+// withStateTransitionMockServer and mutate the per-verb *Flags struct
+// fields. They MUST run sequentially — do NOT add t.Parallel(): the
+// shared flags would race.
 
 // stateTransitionRunner abstracts the small differences between
 // runClose and runReopen so the table-driven tests below can share the
@@ -73,27 +74,15 @@ func reopenRunner() stateTransitionRunner {
 // withStateTransitionMockServer starts an httptest server pointing at
 // the cmd globals, registers t.Cleanup to restore the globals and
 // close the server, and returns the server URL.
-func withStateTransitionMockServer(t *testing.T, h http.HandlerFunc) {
+func withStateTransitionMockServer(t *testing.T, h http.HandlerFunc) *cmd.Runtime {
 	t.Helper()
 	ts := httptest.NewServer(h)
 	t.Cleanup(ts.Close)
-
-	snap := struct {
-		apiURL, token string
-		timeout       int
-	}{
-		apiURL:  cmd.GlobalAPIURL,
-		token:   cmd.GlobalToken,
-		timeout: cmd.GlobalTimeout,
+	return &cmd.Runtime{
+		APIURL:  ts.URL,
+		Token:   "test-token",
+		Timeout: 30,
 	}
-	cmd.GlobalAPIURL = ts.URL
-	cmd.GlobalToken = "test-token"
-	cmd.GlobalTimeout = 30
-	t.Cleanup(func() {
-		cmd.GlobalAPIURL = snap.apiURL
-		cmd.GlobalToken = snap.token
-		cmd.GlobalTimeout = snap.timeout
-	})
 }
 
 // assertPatchIssuePath verifies the request method is PATCH and the
@@ -114,7 +103,7 @@ func assertPatchIssuePath(t *testing.T, r *http.Request, wantPath string) {
 func TestRunStateTransition_ProjectOrEnterprise404(t *testing.T) {
 	for _, r := range []stateTransitionRunner{closeRunner(), reopenRunner()} {
 		t.Run(r.name, func(t *testing.T) {
-			withStateTransitionMockServer(t, func(w http.ResponseWriter, req *http.Request) {
+			rt := withStateTransitionMockServer(t, func(w http.ResponseWriter, req *http.Request) {
 				// Gitee v5 write path drops {repo}; should be /repos/owner/issues/IK5FZX.
 				assertPatchIssuePath(t, req, "/repos/owner/issues/IK5FZX")
 				w.Header().Set("Content-Type", "application/json")
@@ -123,6 +112,7 @@ func TestRunStateTransition_ProjectOrEnterprise404(t *testing.T) {
 			})
 			r.setFlags("owner", "repo")
 			t.Cleanup(r.restoreFlags)
+			r.cobraCmd.SetContext(cmd.SetContext(context.Background(), rt))
 
 			err := r.run(r.cobraCmd, []string{"IK5FZX"})
 			if err == nil {
@@ -148,7 +138,7 @@ func TestRunStateTransition_ProjectOrEnterprise404(t *testing.T) {
 func TestRunStateTransition_SuccessNoWorkaround(t *testing.T) {
 	for _, r := range []stateTransitionRunner{closeRunner(), reopenRunner()} {
 		t.Run(r.name, func(t *testing.T) {
-			withStateTransitionMockServer(t, func(w http.ResponseWriter, req *http.Request) {
+			rt := withStateTransitionMockServer(t, func(w http.ResponseWriter, req *http.Request) {
 				// Gitee v5 write path drops {repo}.
 				assertPatchIssuePath(t, req, "/repos/owner/issues/42")
 				// Body must be formData (NOT JSON) carrying `repo` and
@@ -173,6 +163,7 @@ func TestRunStateTransition_SuccessNoWorkaround(t *testing.T) {
 			})
 			r.setFlags("owner", "repo")
 			t.Cleanup(r.restoreFlags)
+			r.cobraCmd.SetContext(cmd.SetContext(context.Background(), rt))
 
 			if err := r.run(r.cobraCmd, []string{"42"}); err != nil {
 				t.Fatalf("expected success, got error: %v", err)
@@ -184,13 +175,14 @@ func TestRunStateTransition_SuccessNoWorkaround(t *testing.T) {
 func TestRunStateTransition_Generic404DoesNotShowWorkaround(t *testing.T) {
 	for _, r := range []stateTransitionRunner{closeRunner(), reopenRunner()} {
 		t.Run(r.name, func(t *testing.T) {
-			withStateTransitionMockServer(t, func(w http.ResponseWriter, req *http.Request) {
+			rt := withStateTransitionMockServer(t, func(w http.ResponseWriter, req *http.Request) {
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusNotFound)
 				_, _ = w.Write([]byte(`{"message":"404 Not Found: issue not found"}`))
 			})
 			r.setFlags("owner", "repo")
 			t.Cleanup(r.restoreFlags)
+			r.cobraCmd.SetContext(cmd.SetContext(context.Background(), rt))
 
 			err := r.run(r.cobraCmd, []string{"42"})
 			if err == nil {

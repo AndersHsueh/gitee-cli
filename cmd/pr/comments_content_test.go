@@ -1,6 +1,7 @@
 package pr
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -55,9 +56,7 @@ func TestCommentsAgentHelpFlags(t *testing.T) {
 // `gitee pr comments --agent-help` reach PreRunE without the
 // required <number> positional.
 func TestPRCommentsArgsBypassWithAgentHelp(t *testing.T) {
-	orig := cmd.GlobalAgentHelp
-	defer func() { cmd.GlobalAgentHelp = orig }()
-	cmd.GlobalAgentHelp = true
+	commentsCmd.SetContext(cmd.SetContext(context.Background(), &cmd.Runtime{AgentHelp: true}))
 	if err := commentsCmd.Args(commentsCmd, nil); err != nil {
 		t.Errorf("pr comments --agent-help with no positional should pass Args, got: %v", err)
 	}

@@ -1,6 +1,7 @@
 package issue
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -37,9 +38,7 @@ func TestCommentsAgentHelpContent(t *testing.T) {
 // `gitee issue comments --agent-help` reach PreRunE without the
 // required <number> positional.
 func TestIssueCommentsArgsBypassWithAgentHelp(t *testing.T) {
-	orig := cmd.GlobalAgentHelp
-	defer func() { cmd.GlobalAgentHelp = orig }()
-	cmd.GlobalAgentHelp = true
+	commentsCmd.SetContext(cmd.SetContext(context.Background(), &cmd.Runtime{AgentHelp: true}))
 	if err := commentsCmd.Args(commentsCmd, nil); err != nil {
 		t.Errorf("issue comments --agent-help with no positional should pass Args, got: %v", err)
 	}
@@ -48,9 +47,7 @@ func TestIssueCommentsArgsBypassWithAgentHelp(t *testing.T) {
 // TestIssueViewArgsBypassWithAgentHelp verifies the wrapper for
 // `gitee issue view --agent-help`.
 func TestIssueViewArgsBypassWithAgentHelp(t *testing.T) {
-	orig := cmd.GlobalAgentHelp
-	defer func() { cmd.GlobalAgentHelp = orig }()
-	cmd.GlobalAgentHelp = true
+	viewCmd.SetContext(cmd.SetContext(context.Background(), &cmd.Runtime{AgentHelp: true}))
 	if err := viewCmd.Args(viewCmd, nil); err != nil {
 		t.Errorf("issue view --agent-help with no positional should pass Args, got: %v", err)
 	}

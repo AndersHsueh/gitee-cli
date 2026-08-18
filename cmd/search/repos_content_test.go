@@ -1,6 +1,7 @@
 package search
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -54,9 +55,7 @@ func TestReposAgentHelpContent(t *testing.T) {
 // `gitee search repos --agent-help` reach PreRunE without a
 // <query> positional.
 func TestSearchReposArgsBypassWithAgentHelp(t *testing.T) {
-	orig := cmd.GlobalAgentHelp
-	defer func() { cmd.GlobalAgentHelp = orig }()
-	cmd.GlobalAgentHelp = true
+	searchReposCmd.SetContext(cmd.SetContext(context.Background(), &cmd.Runtime{AgentHelp: true}))
 	if err := searchReposCmd.Args(searchReposCmd, nil); err != nil {
 		t.Errorf("search repos --agent-help with no positional should pass Args, got: %v", err)
 	}
@@ -65,9 +64,7 @@ func TestSearchReposArgsBypassWithAgentHelp(t *testing.T) {
 // TestSearchIssuesArgsBypassWithAgentHelp verifies the wrapper for
 // `gitee search issues --agent-help`.
 func TestSearchIssuesArgsBypassWithAgentHelp(t *testing.T) {
-	orig := cmd.GlobalAgentHelp
-	defer func() { cmd.GlobalAgentHelp = orig }()
-	cmd.GlobalAgentHelp = true
+	searchIssuesCmd.SetContext(cmd.SetContext(context.Background(), &cmd.Runtime{AgentHelp: true}))
 	if err := searchIssuesCmd.Args(searchIssuesCmd, nil); err != nil {
 		t.Errorf("search issues --agent-help with no positional should pass Args, got: %v", err)
 	}
@@ -76,9 +73,7 @@ func TestSearchIssuesArgsBypassWithAgentHelp(t *testing.T) {
 // TestSearchUsersArgsBypassWithAgentHelp verifies the wrapper for
 // `gitee search users --agent-help`.
 func TestSearchUsersArgsBypassWithAgentHelp(t *testing.T) {
-	orig := cmd.GlobalAgentHelp
-	defer func() { cmd.GlobalAgentHelp = orig }()
-	cmd.GlobalAgentHelp = true
+	searchUsersCmd.SetContext(cmd.SetContext(context.Background(), &cmd.Runtime{AgentHelp: true}))
 	if err := searchUsersCmd.Args(searchUsersCmd, nil); err != nil {
 		t.Errorf("search users --agent-help with no positional should pass Args, got: %v", err)
 	}

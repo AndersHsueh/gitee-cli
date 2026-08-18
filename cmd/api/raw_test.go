@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -18,9 +19,7 @@ import (
 // is the task-A part of the api raw fix; task B adds the PreRunE
 // hook so the doc actually prints before auth checks.
 func TestRawArgsBypassWithAgentHelp(t *testing.T) {
-	orig := cmd.GlobalAgentHelp
-	defer func() { cmd.GlobalAgentHelp = orig }()
-	cmd.GlobalAgentHelp = true
+	rawCmd.SetContext(cmd.SetContext(context.Background(), &cmd.Runtime{AgentHelp: true}))
 	if err := rawCmd.Args(rawCmd, nil); err != nil {
 		t.Errorf("api raw --agent-help with no positional should pass Args, got: %v", err)
 	}
@@ -30,9 +29,7 @@ func TestRawArgsBypassWithAgentHelp(t *testing.T) {
 // parent `gitee api` command (the raw subcommand is also registered
 // under it for backwards compatibility).
 func TestAPIArgsBypassWithAgentHelp(t *testing.T) {
-	orig := cmd.GlobalAgentHelp
-	defer func() { cmd.GlobalAgentHelp = orig }()
-	cmd.GlobalAgentHelp = true
+	apiCmd.SetContext(cmd.SetContext(context.Background(), &cmd.Runtime{AgentHelp: true}))
 	if err := apiCmd.Args(apiCmd, nil); err != nil {
 		t.Errorf("api --agent-help with no positional should pass Args, got: %v", err)
 	}
@@ -175,21 +172,12 @@ func TestRunAPIWithFieldFlag(t *testing.T) {
 
 	// Point NewAPIClient at the test server and supply a token so it
 	// doesn't error out on "not authenticated".
-	origAPIURL := cmd.GlobalAPIURL
-	origToken := cmd.GlobalToken
-	origTimeout := cmd.GlobalTimeout
 	origFields := rawFlags.fields
 	origRaw := rawFlags.raw
 	defer func() {
-		cmd.GlobalAPIURL = origAPIURL
-		cmd.GlobalToken = origToken
-		cmd.GlobalTimeout = origTimeout
 		rawFlags.fields = origFields
 		rawFlags.raw = origRaw
 	}()
-	cmd.GlobalAPIURL = ts.URL
-	cmd.GlobalToken = "test-token"
-	cmd.GlobalTimeout = 30
 	rawFlags.fields = []string{"name=my-repo", "private=true"}
 	rawFlags.raw = false
 
@@ -199,6 +187,12 @@ func TestRunAPIWithFieldFlag(t *testing.T) {
 
 	var out strings.Builder
 	apiCmd.SetOut(&out)
+	apiCmd.SetContext(cmd.SetContext(context.Background(), &cmd.Runtime{
+		AgentHelp: true,
+		APIURL:    ts.URL,
+		Token:     "test-token",
+		Timeout:   30,
+	}))
 	if err := runAPI(apiCmd, []string{"POST", "/user/repos"}); err != nil {
 		t.Fatalf("runAPI with --field failed: %v", err)
 	}
@@ -225,21 +219,12 @@ func TestRunAPIRawFlagOnAPICmd(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	origAPIURL := cmd.GlobalAPIURL
-	origToken := cmd.GlobalToken
-	origTimeout := cmd.GlobalTimeout
 	origFields := rawFlags.fields
 	origRaw := rawFlags.raw
 	defer func() {
-		cmd.GlobalAPIURL = origAPIURL
-		cmd.GlobalToken = origToken
-		cmd.GlobalTimeout = origTimeout
 		rawFlags.fields = origFields
 		rawFlags.raw = origRaw
 	}()
-	cmd.GlobalAPIURL = ts.URL
-	cmd.GlobalToken = "test-token"
-	cmd.GlobalTimeout = 30
 	rawFlags.fields = nil
 	rawFlags.raw = true
 
@@ -247,6 +232,11 @@ func TestRunAPIRawFlagOnAPICmd(t *testing.T) {
 
 	var out strings.Builder
 	apiCmd.SetOut(&out)
+	apiCmd.SetContext(cmd.SetContext(context.Background(), &cmd.Runtime{
+		APIURL:  ts.URL,
+		Token:   "test-token",
+		Timeout: 30,
+	}))
 	if err := runAPI(apiCmd, []string{"GET", "/user"}); err != nil {
 		t.Fatalf("runAPI with --raw failed: %v", err)
 	}
