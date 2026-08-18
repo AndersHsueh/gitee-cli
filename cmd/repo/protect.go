@@ -324,6 +324,22 @@ changed.
 - "branch is required": no positional argument was given
 - "invalid --repo format": must contain exactly one '/'
 
+## Race condition warning ⚠️
+The shared mutable state is the branch's ` + "`" + `protected` + "`" + ` flag (and the
+branch's existence). Two interleavings: (1) CHECK→PROTECT GAP: the
+common pipeline "list branches, protect the unprotected ones" can act
+on a stale snapshot — a concurrent agent may have already protected
+the branch (harmless; protect is idempotent) or DELETED it (you get
+422 "branch not found"). Treat 422 as "branch changed under me;
+re-list with ` + "`" + `gitee repo branches` + "`" + `". (2) PROTECT vs IN-FLIGHT PUSH:
+a push that started before this call may land after it — protection
+is not retroactive, so one last direct push can slip through during
+the toggle. If you are protecting a branch to stop an active pusher,
+verify quiescence afterwards via ` + "`" + `gitee repo commits list --repo
+owner/repo --sha <branch>` + "`" + `. Concurrent protect calls from two
+agents are safe (same post-condition); concurrent protect/unprotect
+is last-writer-wins — serialize those at the orchestration layer.
+
 ## Next steps (orchestration hints)
 After enabling protection, an agent typically wants to:
 1. Verify: ` + "`" + `gitee repo branches --repo owner/repo -o json | jq '.[] | select(.protected)'` + "`" + `
@@ -415,6 +431,21 @@ changed.
                      protected (idempotent — already unprotected)
 - "branch is required": no positional argument was given
 - "invalid --repo format": must contain exactly one '/'
+
+## Race condition warning ⚠️
+The shared mutable state is the branch's ` + "`" + `protected` + "`" + ` flag — and the
+DANGER WINDOW it opens. The moment this call succeeds, direct pushes
+and force-pushes are accepted; any collaborator (or a compromised
+token) pushing in the gap before you re-protect can rewrite history.
+The unprotect→operate→re-protect sequence is NOT atomic: minimize the
+window, do not interleave unrelated work, and never leave the branch
+unprotected overnight. Concurrent state flips: if another agent
+re-protects while your exceptional force-push is still running, the
+push fails mid-window with "branch is protected" — coordinate so only
+one orchestration owns the toggle at a time. Conversely your own
+re-protect racing someone's legitimate PR-merge push can block them
+unexpectedly. Re-running THIS command is safe (idempotent; 404 just
+means "already unprotected").
 
 ## Safety warning ⚠️
 Removing protection re-enables direct pushes AND force-pushes. A

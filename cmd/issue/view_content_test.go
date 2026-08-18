@@ -23,6 +23,8 @@ func TestViewAgentHelpContent(t *testing.T) {
 		"## Output (stdout, text mode)",
 		"## Output (stdout, json mode)",
 		"## Common errors",
+		"## Race condition warning ⚠️",
+		"view-then-act",
 		"## Next steps",
 		"## OAuth scope required",
 		"## Rate limit",

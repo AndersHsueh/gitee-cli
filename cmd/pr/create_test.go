@@ -27,6 +27,7 @@ func TestCreateAgentHelpContent(t *testing.T) {
 		"Side effects",
 		"Post-conditions",
 		"Common errors",
+		"Race condition warning ⚠️",
 		"OAuth scope required",
 		"Rate limit",
 		"Next steps",
@@ -36,6 +37,23 @@ func TestCreateAgentHelpContent(t *testing.T) {
 	for _, want := range required {
 		if !strings.Contains(prCreateAgentHelp, want) {
 			t.Errorf("agent help missing required section: %q", want)
+		}
+	}
+}
+
+// TestCreateAgentHelpRaceCondition asserts the race-condition section
+// is command-specific: 409 on retry means the first attempt landed
+// (do NOT retry), list indexing lags 1-2 s, and the agent must use the
+// PR number from this command's own stdout.
+func TestCreateAgentHelpRaceCondition(t *testing.T) {
+	mustMention := []string{
+		"409 Conflict",
+		"indexing can lag 1-2 seconds",
+		"Use the PR number from THIS",
+	}
+	for _, want := range mustMention {
+		if !strings.Contains(prCreateAgentHelp, want) {
+			t.Errorf("agent help race section missing: %q", want)
 		}
 	}
 }

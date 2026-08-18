@@ -103,6 +103,18 @@ is no partial-success state.
                      end state you want is already in place
 - 5xx Server error:  transient                →  retry; idempotent so safe
 
+## Race condition warning ⚠️
+The star relationship is shared mutable state, but unstar is
+idempotent, which defuses most races:
+- A 404 means the star record was already gone (already unstarred,
+  or the gist itself was deleted) — that IS the desired end state;
+  treat it as success, not a failure to retry.
+- A concurrent ` + "`" + `gitee gist star` + "`" + ` racing this call: last write
+  wins. If the gist must stay unstarred, re-check after any
+  parallel automation settles.
+- Unstar does NOT touch the gist itself — a concurrent
+  ` + "`" + `gitee gist delete` + "`" + ` is unaffected by this call and vice versa.
+
 ## Next steps (orchestration hints)
 After unstarring, an agent typically wants to:
 1. Verify by re-listing the starred gists (no CLI command yet for

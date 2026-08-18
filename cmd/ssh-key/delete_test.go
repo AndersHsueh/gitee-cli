@@ -17,6 +17,7 @@ func TestDeleteAgentHelpContent(t *testing.T) {
 		"Side effects",
 		"Post-conditions",
 		"Common errors",
+		"Race condition warning ⚠️",
 		"OAuth scope required",
 		"Rate limit",
 		"See also",
@@ -25,5 +26,10 @@ func TestDeleteAgentHelpContent(t *testing.T) {
 		if !strings.Contains(sshKeyDeleteAgentHelp, want) {
 			t.Errorf("agent help missing required section: %q", want)
 		}
+	}
+	// Spot-check the race section: concurrent delete of the same id
+	// returns 404 and must not be retried.
+	if !strings.Contains(sshKeyDeleteAgentHelp, "do NOT retry on 404") {
+		t.Error("ssh-key delete race section missing no-retry-on-404 guidance")
 	}
 }

@@ -70,6 +70,20 @@ None.
 - 404 Not Found: label does not exist in this repo
 - 401 Unauthorized: token missing or expired
 
+## Race condition warning ⚠️
+The shared mutable state is the single label record; this command reads
+a point-in-time snapshot.
+- The label can be renamed, recolored, or deleted between this read and
+  any action you take based on it. If your action depends on current
+  state (e.g. "only delete if the color is red"), re-view immediately
+  before the write.
+- After a rename by another agent, view by the old name returns 404.
+  That means "renamed or deleted", not "never existed" — cross-check
+  with ` + "`" + `gitee label list` + "`" + ` before concluding anything.
+- For 1-2 seconds after ` + "`" + `gitee label create` + "`" + `, viewing the new name
+  may briefly 404 (indexing lag); retry once rather than assuming the
+  create failed.
+
 ## OAuth scope required
 projects (read)
 

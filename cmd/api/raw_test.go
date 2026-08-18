@@ -52,6 +52,7 @@ func TestAPIRawAgentHelpContent(t *testing.T) {
 		"## Idempotency",
 		"## Atomicity",
 		"## Side effects",
+		"## Race condition warning ⚠️",
 		"## OAuth scope required",
 		"## Rate limit",
 		"## Example",
@@ -60,6 +61,15 @@ func TestAPIRawAgentHelpContent(t *testing.T) {
 		if !strings.Contains(apiRawAgentHelp, want) {
 			t.Errorf("apiRawAgentHelp missing required section: %q", want)
 		}
+	}
+	// Spot-check the race section: as a passthrough, the doc must push
+	// the concurrency story onto the caller (retried POST duplicates,
+	// paginated walks can shift between pages).
+	if !strings.Contains(apiRawAgentHelp, "YOU own the concurrency story") {
+		t.Error("apiRawAgentHelp race section missing passthrough ownership guidance")
+	}
+	if !strings.Contains(apiRawAgentHelp, "duplicates") {
+		t.Error("apiRawAgentHelp race section missing retried-POST duplicate warning")
 	}
 }
 

@@ -155,6 +155,20 @@ them are. There is no partial-success state.
 - 422 Unprocessable: payload rejected          →  check filenames + content
 - "invalid --file format": missing "=" in a --file value
 
+## Race condition warning ⚠️
+The gist's description and file contents are shared mutable state,
+and edit is LAST-WRITER-WINS with whole-file replacement:
+- Two writers editing the SAME file concurrently do not get merged —
+  the later call silently overwrites the earlier one's content.
+  (Files not named in --file are preserved.) Serialize edits in
+  multi-agent setups.
+- Content captured by an earlier ` + "`" + `gitee gist view` + "`" + ` or
+  ` + "`" + `gitee gist clone` + "`" + ` is stale the moment this call succeeds —
+  re-read before building on old content.
+- Retrying with the same flags after a timeout/5xx is safe: the
+  call is idempotent for the same end state (only ` + "`" + `updated_at` + "`" + `
+  advances on a no-change re-apply).
+
 ## Next steps (orchestration hints)
 After a successful edit, an agent typically wants to:
 1. ` + "`" + `gitee gist view <id>` + "`" + `    — verify the new content

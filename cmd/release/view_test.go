@@ -14,6 +14,10 @@ func TestViewAgentHelpContent(t *testing.T) {
 		"Side effects",
 		"Post-conditions",
 		"Common errors",
+		"Race condition warning ⚠️",
+		"metadata and asset list returned here are a snapshot",
+		"OAuth scope required",
+		"Rate limit",
 		"See also",
 	}
 	for _, want := range required {

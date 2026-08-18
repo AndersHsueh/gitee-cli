@@ -22,6 +22,7 @@ func TestListAgentHelpContent(t *testing.T) {
 		"## Output (stdout, table mode)",
 		"## Output (stdout, json mode)",
 		"## Common errors",
+		"## Race condition warning ⚠️",
 		"## Next steps",
 		"## OAuth scope required",
 		"## Rate limit",
@@ -49,5 +50,16 @@ func TestListAgentHelpFlagsPresent(t *testing.T) {
 		if !strings.Contains(gistListAgentHelp, want) {
 			t.Errorf("gist list --agent-help missing flag: %q", want)
 		}
+	}
+}
+
+// TestListAgentHelpRaceSection verifies the Race condition section is
+// command-specific and free of placeholder text.
+func TestListAgentHelpRaceSection(t *testing.T) {
+	if strings.Contains(gistListAgentHelp, "TODO(domain)") {
+		t.Error("gist list --agent-help still contains TODO(domain) placeholder")
+	}
+	if !strings.Contains(gistListAgentHelp, "indexing lag") {
+		t.Error("gist list race section should mention indexing lag for fresh gists")
 	}
 }

@@ -156,6 +156,16 @@ None.
 ## Common errors
 - 404 Not Found: tag has no release attached (the git tag exists but no release metadata)
 
+## Race condition warning ⚠️
+The metadata and asset list returned here are a snapshot. An asset can
+be uploaded or deleted between this view and a follow-up download or
+delete-asset call — the follow-up then 404s or fetches different bytes
+than you saw. If the gap is more than a few seconds and your action
+depends on what you saw, re-run this command immediately before acting.
+Right after ` + "`" + `gitee release create` + "`" + `, this command may briefly
+return 404 while Gitee indexing catches up (1-2 seconds); retry instead
+of concluding the release is missing.
+
 ## OAuth scope required
 projects (read)
 

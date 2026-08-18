@@ -29,10 +29,14 @@ func TestListAgentHelpContent(t *testing.T) {
 		"## Side effects",
 		"## Post-conditions",
 		"## Common errors",
+		"## Race condition warning ⚠️",
 		"## OAuth scope required",
 		"## Rate limit",
 		"## Example",
 		"## See also",
+		// race section names the concrete interleavings
+		"point-in-time snapshot",
+		"indexing lag",
 	}
 	for _, want := range required {
 		if !strings.Contains(milestoneListAgentHelp, want) {
@@ -52,7 +56,12 @@ func TestViewAgentHelpContent(t *testing.T) {
 		"## Side effects",
 		"## Post-conditions",
 		"## Common errors",
+		"## Race condition warning ⚠️",
+		"## OAuth scope required",
+		"## Rate limit",
+		"## Example",
 		"## See also",
+		"point-in-time snapshot",
 	}
 	for _, want := range required {
 		if !strings.Contains(milestoneViewAgentHelp, want) {
@@ -72,7 +81,13 @@ func TestCreateAgentHelpContent(t *testing.T) {
 		"## Side effects",
 		"## Post-conditions",
 		"## Common errors",
+		"## Race condition warning ⚠️",
+		"## OAuth scope required",
+		"## Rate limit",
+		"## Example",
 		"## See also",
+		"does NOT",
+		"deduplicate by title",
 	}
 	for _, want := range required {
 		if !strings.Contains(milestoneCreateAgentHelp, want) {
@@ -92,7 +107,12 @@ func TestEditAgentHelpContent(t *testing.T) {
 		"## Side effects",
 		"## Post-conditions",
 		"## Common errors",
+		"## Race condition warning ⚠️",
+		"## OAuth scope required",
+		"## Rate limit",
+		"## Example",
 		"## See also",
+		"last-write-wins",
 	}
 	for _, want := range required {
 		if !strings.Contains(milestoneEditAgentHelp, want) {
@@ -112,7 +132,12 @@ func TestDeleteAgentHelpContent(t *testing.T) {
 		"## Side effects",
 		"## Post-conditions",
 		"## Common errors",
+		"## Race condition warning ⚠️",
+		"## OAuth scope required",
+		"## Rate limit",
+		"## Example",
 		"## See also",
+		"silently detached",
 	}
 	for _, want := range required {
 		if !strings.Contains(milestoneDeleteAgentHelp, want) {

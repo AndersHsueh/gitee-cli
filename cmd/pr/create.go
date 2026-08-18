@@ -162,6 +162,18 @@ change happens. There is no partial-success state.
 - 409 Conflict:       PR already exists              →  check existing PRs, or use it
 - 422 Unprocessable:  validation failed              →  check source/target branch names
 
+## Race condition warning ⚠️
+The shared mutable state is the repo's (source→target) PR mapping.
+This command is NOT idempotent: a retry after a network timeout either
+fails with 409 Conflict (the first attempt landed) or creates a
+second, duplicate-intent PR. On 409, do NOT retry — find the existing
+PR with ` + "`" + `gitee pr list --head <you:source>` + "`" + ` and use its number.
+Conversely, DO NOT call ` + "`" + `gitee pr list` + "`" + ` immediately after a
+successful create to verify: Gitee's list indexing can lag 1-2 seconds
+and the new PR may briefly be missing. Use the PR number from THIS
+command's stdout directly. Two agents racing to open a PR for the same
+branch pair: one wins, the other gets 409.
+
 ## Next steps (orchestration hints) — CRITICAL
 
 After a successful PR create, an agent MUST close the loop with the

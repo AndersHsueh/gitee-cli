@@ -167,6 +167,24 @@ Atomic per request. Either all changed fields update, or none do.
                      or invalid characters in --name
 - Network/timeout:   transient; safe to retry (PATCH is idempotent for the same payload)
 
+## Race condition warning ⚠️
+The shared mutable state is the repo's settings record (name,
+description, visibility, default branch). There is no optimistic-
+concurrency token on this endpoint — LAST WRITER WINS per field. Two
+agents patching the same repo concurrently: each PATCH carries only
+its own flags, so they don't clobber each other's fields, but two
+agents setting the SAME field (e.g. different --description values)
+resolve to whichever request lands last; neither gets an error.
+Rename-specific race: a successful --name rename instantly frees the
+OLD name — another user or agent can claim it, breaking anyone who
+"temporarily" vacated it; and local clones / CI remotes pointing at
+the old URL start failing in the gap before ` + "`" + `git remote set-url` + "`" + `
+runs. --default-branch race: the branch must exist at PATCH time — if
+a concurrent process deletes that branch between your ` + "`" + `gitee repo
+branches` + "`" + ` check and this call, you get 422. Mitigation: serialize
+settings changes per repo in multi-agent setups, and verify the final
+state with ` + "`" + `gitee repo view owner/repo -o json` + "`" + ` after editing.
+
 ## Next steps (orchestration hints)
 After a successful edit, an agent typically wants to:
 1. Verify the change: ` + "`" + `gitee repo view owner/name -o json | jq` + "`" + `

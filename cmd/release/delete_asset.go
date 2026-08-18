@@ -194,6 +194,18 @@ is done (the asset still exists; retry).
 - Asset not found by name: use ` + "`" + `gitee release view <tag> --repo owner/repo` + "`" + ` to list
   available assets and their IDs, then use --asset-id
 
+## Race condition warning ⚠️
+The shared mutable state is the release's asset list. This command
+resolves the asset with a GET, then issues DELETE; between the two
+steps another agent can delete or re-upload that asset, and the DELETE
+then 404s — treat that as "already gone", not as a retryable failure.
+A re-uploaded asset gets a NEW numeric ID, so a stale --asset-id never
+matches the replacement (and never deletes it by accident). Two agents
+deleting the same filename concurrently both resolve the same ID; one
+wins, the other 404s safely. Take --asset-id from a fresh
+` + "`" + `gitee release view <tag>` + "`" + ` output, not from a view you ran
+minutes ago.
+
 ## OAuth scope required
 projects (write)
 

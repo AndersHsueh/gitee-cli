@@ -92,6 +92,16 @@ None. Pure GET.
 - 404 Not Found:    webhook id doesn't exist (was it deleted?)
 - 422 Unprocessable: --id is not an integer
 
+## Race condition warning ⚠️
+The webhook (and its last-delivery ` + "`" + `result` + "`" + ` field) is shared,
+mutable server state. Two consecutive views can differ without any
+action by you: another agent may edit or delete the hook (your next
+call then 404s), and the ` + "`" + `result` + "`" + ` is updated asynchronously a few
+seconds after each delivery — reading immediately after
+` + "`" + `gitee webhook test` + "`" + ` usually shows the PREVIOUS delivery's outcome.
+Re-view right before acting on what you see, and sleep 2-3 seconds
+after a test ping before trusting the ` + "`" + `result` + "`" + ` line.
+
 ## Parsing hint (json output)
   gitee webhook view -R owner/repo 1234 --output json | jq '{id, url, events}'
 
@@ -100,6 +110,16 @@ projects (read)
 
 ## Rate limit
 Gitee API v5: 1000 req/hour.
+
+## Example (closing the loop)
+  # 1. Find candidate hooks
+  gitee webhook list -R owner/repo
+
+  # 2. Inspect one before changing it
+  gitee webhook view 1234 -R owner/repo
+
+  # 3. Extract just the URL for a follow-up edit
+  gitee webhook view 1234 -R owner/repo --output json | jq -r .url
 
 ## See also
 - ` + "`" + `gitee webhook list` + "`" + `    — enumerate webhooks

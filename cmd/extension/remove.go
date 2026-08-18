@@ -103,6 +103,24 @@ Atomic. Either the dir is gone, or no change.
 - "not installed"        -> already removed or never installed
 - "invalid name"         -> name didn't pass the [a-z0-9_-] validator
 
+## Race condition warning ⚠️
+The shared mutable state is ~/.gitee-cli/extensions/<name>/, deleted
+recursively. A concurrent ` + "`" + `gitee extension remove <name>` + "`" + ` (or a
+list → remove gap where another agent removed it first) turns this
+run into a "not installed" error — treat that as the goal state
+already reached, not a failure worth retrying. A concurrent
+install/upgrade of the same name can interleave with the recursive
+delete and leave a partially-deleted dir; re-run remove to finish
+the job. Removing while the extension is mid-execution does not kill
+the running process — it keeps its already-loaded code, but the next
+` + "`" + `gitee <name>` + "`" + ` invocation fails with "unknown command".
+
+## OAuth scope required
+N/A (local command) — no Gitee API request is made; works fully offline.
+
+## Rate limit
+N/A (local command) — no Gitee API request is made.
+
 ## Example
   gitee extension remove myext
   gitee myext foo

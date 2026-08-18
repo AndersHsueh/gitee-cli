@@ -206,6 +206,19 @@ no partial-success state on the client.
 - 422 Unprocessable: invalid --state value  →  use open|closed|merged|all
 - Network timeouts:  bump ` + "`" + `--timeout` + "`" + ` (global flag) or retry
 
+## Race condition warning ⚠️
+The list is a point-in-time snapshot. The shared mutable state is the
+repo's PR set: states flip (open → merged/closed), new PRs appear, and
+updated_at ordering shifts between your list and any follow-up action.
+A PR shown as "open" here may be merged by the time you run
+` + "`" + `gitee pr merge <N>` + "`" + ` — always re-check with ` + "`" + `gitee pr view <N>` + "`" + `
+immediately before a write. When --paginate walks multiple pages, PRs
+created or closed mid-walk can shift page boundaries and yield
+duplicates or gaps; for consistent batch work, snapshot to JSON first
+(this command is read-only, so re-listing is cheap), operate on numbers
+from that snapshot, and verify each PR with a fresh view before acting
+on it.
+
 ## Next steps (orchestration hints)
 After enumerating PRs, an agent typically wants to:
 1. Pick PR numbers from the table or JSON output

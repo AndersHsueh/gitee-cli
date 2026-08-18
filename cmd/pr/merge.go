@@ -176,6 +176,21 @@ until the PR is deleted, but they are not on the base branch).
                        required CI checks have not passed
 - Network timeouts:    bump ` + "`" + `--timeout` + "`" + ` (global flag) and retry
 
+## Race condition warning ⚠️
+Mergeability is a moving target. The shared mutable state is the PR's
+state plus BOTH branch tips: between your ` + "`" + `gitee pr checks <N>` + "`" + ` /
+` + "`" + `gitee pr view <N>` + "`" + ` and this call, the head can be force-pushed (you
+would merge code nobody reviewed), the base can advance (new
+conflicts), CI can flip red, or a human can merge first (you get 422).
+The API re-validates at merge time, so a 422 is the protection working
+— do NOT blind-retry it; re-check .state / .merged / .mergeable with a
+fresh ` + "`" + `gitee pr view <N> --output json` + "`" + `. After an ambiguous failure
+(timeout), verify with view whether the merge actually landed
+(.merged == true) before re-running — retrying a landed merge returns
+422, which is harmless but masks the real outcome. Keep the
+check → merge gap as short as possible; in multi-agent repos,
+serialize merges through one agent.
+
 ## Next steps (orchestration hints)
 After a successful merge, an agent typically wants to:
 1. Delete the head branch: ` + "`" + `git push origin --delete <head>` + "`" + `

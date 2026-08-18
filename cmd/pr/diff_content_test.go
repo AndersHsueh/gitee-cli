@@ -20,6 +20,7 @@ func TestDiffAgentHelpContent(t *testing.T) {
 		"## Side effects",
 		"## Post-conditions",
 		"## Common errors",
+		"## Race condition warning ⚠️",
 		"## Next steps (orchestration hints)",
 		"## OAuth scope required",
 		"## Rate limit",
@@ -41,6 +42,22 @@ func TestDiffAgentHelpFlags(t *testing.T) {
 	for _, want := range mustMention {
 		if !strings.Contains(prDiffAgentHelp, want) {
 			t.Errorf("pr diff --agent-help missing flag %q", want)
+		}
+	}
+}
+
+// TestDiffAgentHelpRaceCondition asserts the race-condition section is
+// command-specific: the diff is a snapshot and a force-push between
+// diff and approve/merge means reviewing code you never read.
+func TestDiffAgentHelpRaceCondition(t *testing.T) {
+	mustMention := []string{
+		"snapshot",
+		"force-push",
+		"re-fetch",
+	}
+	for _, want := range mustMention {
+		if !strings.Contains(prDiffAgentHelp, want) {
+			t.Errorf("pr diff --agent-help race section missing: %q", want)
 		}
 	}
 }

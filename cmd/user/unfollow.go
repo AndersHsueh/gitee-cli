@@ -105,6 +105,18 @@ Atomic. Either the follow edge is gone, or no change.
 - 401 Unauthorized: token missing or expired
 - 403 Forbidden: token lacks ` + "`" + `user_info` + "`" + ` write scope
 
+## Race condition warning ⚠️
+The shared state is the follow edge between you and ` + "`" + `<username>` + "`" + `.
+If another agent (or a web session) unfollows the same user first,
+this call returns 404 — the edge is already gone, which IS the desired
+end state, so orchestrators should treat that 404 as "already
+unfollowed" rather than a hard failure. Conversely, if another agent
+follows ` + "`" + `<username>` + "`" + ` between your ` + "`" + `user following` + "`" + ` check and
+this DELETE, you may remove an edge you didn't create — re-check
+immediately before calling if that matters. Do NOT blind-retry after
+a timeout: a successful-but-unacknowledged DELETE returns 404 on
+retry (see Idempotency).
+
 ## OAuth scope required
 user_info (write)
 

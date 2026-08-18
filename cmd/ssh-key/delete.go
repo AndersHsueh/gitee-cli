@@ -125,6 +125,17 @@ Atomic. Either the key is gone, or no change.
 - 403 Forbidden: token lacks write scope
 - Non-interactive (no TTY): without --force the prompt is auto-cancelled and the key is NOT deleted (exit 0). In scripts/agents always pass --force.
 
+## Race condition warning ⚠️
+The shared mutable state is the account's SSH key list. If another
+agent or session adds/removes keys between your ` + "`" + `gitee ssh-key list` + "`" + `
+and this delete, the id→title mapping you based the choice on may be
+stale — re-run ` + "`" + `gitee ssh-key list` + "`" + ` immediately before deleting if
+any time has passed. Two concurrent deletes of the same id: the first
+succeeds, the second gets 404 — do NOT retry on 404, the key is
+already gone (consistent with the Idempotency section above). Also
+beware self-lockout: deleting the key your own git/SSH session uses
+breaks subsequent pushes; confirm the id is not your current key first.
+
 ## OAuth scope required
 user_info (write)
 

@@ -105,6 +105,18 @@ Atomic. Either the follow edge exists, or no change.
 - 401 Unauthorized: token missing or expired
 - 403 Forbidden: token lacks ` + "`" + `user_info` + "`" + ` write scope
 
+## Race condition warning ⚠️
+The shared state is the follow edge between you and ` + "`" + `<username>` + "`" + ` in
+Gitee's social graph (plus the target's followers count). Two agents
+racing ` + "`" + `user follow` + "`" + ` and ` + "`" + `user unfollow` + "`" + ` on the same target are
+last-write-wins: whichever request lands second decides the final
+state, with no error on either side. A read-back via
+` + "`" + `gitee user following <your-login>` + "`" + ` immediately after this call can
+lag a second or two — do not treat the new edge's absence there as
+failure; trust the 204 this command already received. Retrying after
+a network timeout is SAFE (idempotent no-op — see Idempotency). In
+multi-agent setups, serialize follow/unfollow on the same target.
+
 ## OAuth scope required
 user_info (write)
 

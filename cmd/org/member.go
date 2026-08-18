@@ -149,6 +149,16 @@ None. Pure GET on /orgs/{org}/members.
 - 401 Unauthorized: token missing or expired → ` + "`" + `gitee auth login` + "`" + `
 - 404 Not Found:    org name doesn't exist
 
+## Race condition warning ⚠️
+The org's member roster is live server-side state: admins invite and
+remove members continuously. This output is a snapshot — a ` + "`" + `login` + "`" + `
+picked for issue assignment or notification may no longer be a member
+by the time you act on it. With ` + "`" + `--paginate` + "`" + `, mutations
+mid-traversal can make pages overlap or skip entries — dedupe by
+` + "`" + `login` + "`" + `. Also note the ` + "`" + `state` + "`" + ` field: only ` + "`" + `active` + "`" + `
+members can actually receive assignments. Read-only and always safe
+to retry.
+
 ## Next steps (orchestration hints)
 After listing members, an agent typically wants to:
 1. Pick a ` + "`" + `login` + "`" + ` and run ` + "`" + `gitee user view <login>` + "`" + `

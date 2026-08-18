@@ -101,6 +101,19 @@ Atomic. Either the supplied fields are updated together, or no change.
 - 422 Unprocessable: invalid state value or malformed due_on
 - 403 Forbidden:  token lacks write scope
 
+## Race condition warning ⚠️
+The shared mutable state is the milestone's title / description /
+due_on / state fields. Gitee applies updates last-write-wins with no
+optimistic locking: two concurrent ` + "`" + `gitee milestone edit` + "`" + ` calls on the
+same number silently overwrite each other — the later request wins.
+- view→edit gap: the state you based the edit on (e.g. "still open")
+  may have changed. Re-check with ` + "`" + `gitee milestone view -n N` + "`" + `
+  immediately before a state flip.
+- edit→delete interleave: if another agent deletes the milestone
+  first, this command 404s; if it re-creates one with the same title,
+  your edit lands on a DIFFERENT milestone.
+- Retrying this command with the same flags is safe (see Idempotency).
+
 ## OAuth scope required
 projects (write)
 

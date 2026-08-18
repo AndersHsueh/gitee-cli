@@ -157,6 +157,16 @@ None. Pure GET on /orgs/{org}/repos.
 - 403 Forbidden:    no read access to private repos in the org
 - 404 Not Found:    org name doesn't exist
 
+## Race condition warning ⚠️
+The org's repo set is live server-side state: repos are created,
+deleted, renamed, and flipped between public and private by org
+members at any time. A ` + "`" + `full_name` + "`" + ` picked from this snapshot can
+404 on ` + "`" + `gitee repo view` + "`" + ` or ` + "`" + `gitee repo clone` + "`" + ` moments later
+(rename/delete), and a previously visible repo gone private surfaces
+as 403. Stars/forks counters are point-in-time. With ` + "`" + `--paginate` + "`" + `,
+mutations mid-traversal can make pages overlap or skip entries —
+dedupe by ` + "`" + `full_name` + "`" + `. Read-only and always safe to retry.
+
 ## Next steps (orchestration hints)
 After enumerating repos, an agent typically wants to:
 1. Pick a ` + "`" + `full_name` + "`" + ` and run ` + "`" + `gitee repo view my-org/awesome` + "`" + `

@@ -305,6 +305,21 @@ None.
 - 422 Unprocessable:  <base> / <head> is ambiguous (e.g. short SHA
                      matches multiple commits)
 
+## Race condition warning ⚠️
+The shared mutable state is the pair of refs being compared. Branch
+names and tags resolve server-side AT REQUEST TIME, so the result is a
+snapshot: a push to <head> (or a force-push to <base>) landing right
+after this call changes ahead_by/behind_by and the file diff, while
+your output still shows the old window. Classic failure: you see
+"ahead by 3, behind by 0", decide the branch is merge-ready, and in
+the gap someone pushes a breaking commit to <head> — your ` + "`" + `gitee pr
+create` + "`" + ` / merge then carries code you never reviewed. Mitigation:
+for decisions that must be exact, resolve both refs to full SHAs first
+(` + "`" + `gitee repo commits view --repo owner/repo <ref>` + "`" + `) and compare
+SHA...SHA — immutable inputs give a stable answer; and re-run compare
+immediately before acting if the refs are branches. Retrying THIS
+command is always safe (read-only).
+
 ## Next steps (orchestration hints)
 After comparing, an agent typically wants to:
 1. Open the Gitee web compare view for the same refs:

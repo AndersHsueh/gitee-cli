@@ -20,6 +20,7 @@ func TestReviewAgentHelpContent(t *testing.T) {
 		"## Side effects",
 		"## Post-conditions",
 		"## Common errors",
+		"## Race condition warning ⚠️",
 		"## Next steps (orchestration hints)",
 		"## OAuth scope required",
 		"## Rate limit",
@@ -45,6 +46,22 @@ func TestReviewAgentHelpFlags(t *testing.T) {
 	for _, flag := range mustMention {
 		if !strings.Contains(prReviewAgentHelp, flag) {
 			t.Errorf("pr review --agent-help missing flag %q", flag)
+		}
+	}
+}
+
+// TestReviewAgentHelpRaceCondition asserts the race-condition section
+// is command-specific: a force-push between diff-read and --approve
+// means approving unseen code, and a retry can post a duplicate review.
+func TestReviewAgentHelpRaceCondition(t *testing.T) {
+	mustMention := []string{
+		"force-pushed",
+		"duplicate review",
+		"head SHA",
+	}
+	for _, want := range mustMention {
+		if !strings.Contains(prReviewAgentHelp, want) {
+			t.Errorf("pr review --agent-help race section missing: %q", want)
 		}
 	}
 }

@@ -167,6 +167,18 @@ larger files (use the raw_url to fetch the body).
 - 404 Not Found:     gist id is wrong or was deleted  →  gitee gist list
 - 5xx Server error:  transient                →  retry with backoff
 
+## Race condition warning ⚠️
+Pure read, so nothing here mutates state — but the output is a
+snapshot of a gist others can edit or delete. Two concrete gaps:
+1. The gist can change between this call and any follow-up action
+   (edit / comment / delete). If the decision depends on current
+   content, re-run ` + "`" + `gitee gist view` + "`" + ` immediately before acting.
+2. With --raw (or the truncated fallback), each file body is fetched
+   via its raw_url AFTER the metadata call. An edit landing mid-run
+   means different files can come from different revisions of the
+   same gist. For a consistent single-shot snapshot, use -o json
+   (one API call) or ` + "`" + `gitee gist clone` + "`" + `.
+
 ## Next steps (orchestration hints)
 After viewing, an agent typically wants to:
 1. ` + "`" + `gitee gist clone <id>` + "`" + `   — bring it local for editing

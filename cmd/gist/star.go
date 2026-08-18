@@ -98,6 +98,17 @@ no partial-success state.
 - 404 Not Found:     gist id is wrong or was deleted  →  gitee gist list
 - 5xx Server error:  transient                →  retry; idempotent so safe
 
+## Race condition warning ⚠️
+The star relationship is shared mutable state, but this command is
+idempotent, which defuses most races:
+- If the gist is deleted between your ` + "`" + `gitee gist view` + "`" + ` and this
+  call, star returns 404 — nothing to retry; the target is gone.
+- A concurrent ` + "`" + `gitee gist unstar` + "`" + ` (another session or agent) can
+  flip the state right after your success. If the star must stick,
+  verify afterwards rather than assuming.
+- Retrying after a timeout/5xx is SAFE: starring an already-starred
+  gist is a server-side no-op (see Idempotency).
+
 ## Next steps (orchestration hints)
 After starring, an agent typically wants to:
 1. ` + "`" + `gitee gist view <id>` + "`" + ` — confirm content (if not already read)

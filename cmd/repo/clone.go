@@ -123,6 +123,20 @@ a clean, completed clone.
                           visibility, network access
 - exec fails (missing git): install git or fix PATH
 
+## Race condition warning ⚠️
+Two pieces of shared mutable state. (1) LOCAL: the destination
+directory. Two concurrent clones into the same [directory] interleave
+` + "`" + `git clone` + "`" + `'s non-atomic writes and typically one fails with
+"destination path already exists" — or both corrupt the target. Give
+each agent its own directory. (2) REMOTE: the clone is a SNAPSHOT of
+the repo at fetch time. If the source repo is pushed to, renamed, made
+private, or deleted while (or after) the clone runs, your local copy
+is stale or the clone fails partway with a partial directory on disk
+(see Atomicity). On retry after a failed clone, remove the partial
+target directory first — ` + "`" + `git clone` + "`" + ` will not resume into a
+non-empty dir. If freshness matters, ` + "`" + `git -C <dir> fetch origin` + "`" + `
+after clone before acting on the tree.
+
 ## Next steps (orchestration hints)
 After a successful clone, an agent typically wants to:
 1. ` + "`" + `cd <dir>` + "`" + ` (or ` + "`" + `git -C <dir> ...` + "`" + ` in non-shell contexts)

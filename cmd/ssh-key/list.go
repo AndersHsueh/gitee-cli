@@ -121,6 +121,16 @@ None. Pure GET.
 ## Common errors
 - 401 Unauthorized: token missing or expired → gitee auth login
 
+## Race condition warning ⚠️
+Read-only; the account's key set can change at any time (another
+machine running ` + "`" + `gitee ssh-key add` + "`" + `, a deletion via the web UI).
+This list is a point-in-time snapshot: an id shown here may already be
+gone by the time you act on it (your delete then 404s), and a
+just-added key is missing until you re-list. If you pick an id from
+this output to act on later, re-run this command immediately before
+the action rather than trusting a cached list. Safe to retry freely
+(see Idempotency).
+
 ## OAuth scope required
 user_info
 

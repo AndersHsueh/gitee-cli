@@ -209,6 +209,23 @@ left for the user to inspect.
 - "directory already exists"   -> choose a different name or rm the old dir
 - "name contains invalid char" -> use [a-z0-9_-]
 
+## Race condition warning ⚠️
+The shared mutable state is the CWD filesystem — the ` + "`" + `gitee-<name>/` + "`" + `
+directory this command creates. The "already exists" stat check and
+the mkdir are NOT atomic: two concurrent ` + "`" + `gitee extension create <name>` + "`" + `
+runs can both pass the check, after which one run's writes silently
+overwrite the other's (same executable path, last-writer-wins). In
+multi-agent setups, serialize creates that share a name or give each
+agent a unique name. Retry is safe: rm the partial ` + "`" + `gitee-<name>/` + "`" + ` dir
+and re-run — a second run on an intact existing dir errors out
+instead of merging (see Idempotency above).
+
+## OAuth scope required
+N/A (local command) — no Gitee API request is made; works fully offline.
+
+## Rate limit
+N/A (local command) — no Gitee API request is made.
+
 ## Example
   cd ~/projects
   gitee extension create myext

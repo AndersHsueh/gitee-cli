@@ -20,6 +20,7 @@ func TestReopenAgentHelpContent(t *testing.T) {
 		"## Side effects",
 		"## Post-conditions",
 		"## Common errors",
+		"## Race condition warning ⚠️",
 		"## Next steps (orchestration hints)",
 		"## OAuth scope required",
 		"## Rate limit",
@@ -41,6 +42,22 @@ func TestReopenAgentHelpFlags(t *testing.T) {
 	for _, want := range mustMention {
 		if !strings.Contains(prReopenAgentHelp, want) {
 			t.Errorf("pr reopen --agent-help missing flag %q", want)
+		}
+	}
+}
+
+// TestReopenAgentHelpRaceCondition asserts the race-condition section
+// is command-specific: the head may have been force-pushed while the
+// PR was closed, so the diff must be re-inspected after reopen.
+func TestReopenAgentHelpRaceCondition(t *testing.T) {
+	mustMention := []string{
+		"force-pushed",
+		"already open",
+		"gitee pr diff",
+	}
+	for _, want := range mustMention {
+		if !strings.Contains(prReopenAgentHelp, want) {
+			t.Errorf("pr reopen --agent-help race section missing: %q", want)
 		}
 	}
 }

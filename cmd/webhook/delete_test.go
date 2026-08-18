@@ -17,6 +17,7 @@ func TestDeleteAgentHelpContent(t *testing.T) {
 		"Side effects",
 		"Post-conditions",
 		"Common errors",
+		"Race condition warning ⚠️",
 		"OAuth scope required",
 		"Rate limit",
 		"See also",

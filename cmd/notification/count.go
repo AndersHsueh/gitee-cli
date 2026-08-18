@@ -58,6 +58,17 @@ None.
 - 401 Unauthorized: token missing or expired
 - 403 Forbidden: token lacks ` + "`" + `notifications` + "`" + ` scope
 
+## Race condition warning ⚠️
+The unread counter is shared, mutable server state: it changes when
+new notifications arrive AND when any other session (web UI, another
+agent) marks threads read. The number you print is stale the moment
+it appears — a count of 0 does not guarantee the inbox stays empty,
+and a non-zero count may already have been cleared elsewhere. For
+gates like "block until inbox is clean", re-poll instead of trusting
+one sample; if you need to know WHICH threads are unread, follow up
+with ` + "`" + `gitee notification list --unread` + "`" + ` rather than reasoning from
+the count alone.
+
 ## OAuth scope required
 notifications
 

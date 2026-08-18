@@ -160,6 +160,20 @@ snapshot or fails — no partial-success state.
 - 404 Not Found:    gist id doesn't exist
 - Network timeouts: bump ` + "`" + `--timeout` + "`" + ` and retry
 
+## Race condition warning ⚠️
+The list is a snapshot of a live thread. Specific risks:
+- A comment posted (or deleted) between this call and your follow-up
+  action is not reflected. If you gate a ` + "`" + `gitee gist comment` + "`" + ` on
+  "latest comment says X", re-fetch immediately before posting.
+- With --limit, a busy thread pushes newer comments past the page
+  you fetched; raise --limit or pass --page before concluding
+  "nobody replied".
+- Very fresh comments (1-2 seconds old) may be missing due to
+  indexing lag — don't conclude a ` + "`" + `gitee gist comment` + "`" + ` failed
+  just because the new id isn't here yet.
+- Comment ids are stable; act on the id from THIS output rather
+  than re-listing and picking by position.
+
 ## Next steps (orchestration hints)
 After listing comments, an agent typically wants to:
 1. Decide whether to post a follow-up: ` + "`" + `gitee gist comment <gist_id> --body "..."` + "`" + `

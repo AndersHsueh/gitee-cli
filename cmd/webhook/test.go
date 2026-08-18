@@ -114,6 +114,16 @@ Gitee does not require write scope for the test ping itself.
 Gitee API v5: 1000 req/hour. Avoid looping ` + "`" + `test` + "`" + ` more than a few
 times per minute; receivers may rate-limit you.
 
+## Example (closing the loop)
+  # 1. Fire the test ping
+  gitee webhook test 1234 -R owner/repo
+
+  # 2. Wait for the async delivery to land
+  sleep 3
+
+  # 3. Check what the receiver answered
+  gitee webhook view 1234 -R owner/repo | grep Last
+
 ## See also
 - ` + "`" + `gitee webhook view` + "`" + `    — inspect delivery results
 - ` + "`" + `gitee webhook create` + "`" + `  — register a new hook

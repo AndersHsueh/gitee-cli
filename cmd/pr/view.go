@@ -192,6 +192,18 @@ the call fails — there is no partial state.
 - 422 Unprocessable: <number> was not an integer (caught client-side)
 - Network timeouts:  bump ` + "`" + `--timeout` + "`" + ` (global flag) and retry
 
+## Race condition warning ⚠️
+The returned metadata is a point-in-time snapshot. The shared mutable
+state is the PR itself: state, merged, mergeable, head SHA, and stats
+all change under you. Two agents acting on the same cached view output
+can both attempt ` + "`" + `gitee pr merge <N>` + "`" + ` — one wins, the other gets 422 —
+or approve-then-merge a PR whose head was force-pushed after the view.
+If your next command is a state change (merge / close / reopen /
+review), re-run ` + "`" + `gitee pr view <N> --output json` + "`" + ` immediately before
+it and verify .state == "open" and .merged == false on the FRESH
+output, not on a cached copy. This command is read-only and safe to
+retry.
+
 ## Next steps (orchestration hints)
 After viewing a PR, an agent typically wants to:
 1. Check CI status: ` + "`" + `gitee pr checks <N>` + "`" + `

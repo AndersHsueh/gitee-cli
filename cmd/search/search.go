@@ -526,6 +526,17 @@ None.
 - 401 Unauthorized: token missing or invalid (for private repos)
 - Empty results: no code matching the query was found
 
+## Race condition warning ⚠️
+Read-only, but the shared state behind the results — the code index
+and the repos it indexes — keeps moving. A hit means the code existed
+at index time: the file may have been edited, renamed, or deleted (or
+the repo made private) by the time you follow the URL. Conversely,
+code just pushed may be absent until the index catches up. If a
+follow-up action depends on a match (e.g. patching every file
+containing a symbol), re-fetch the file content immediately before
+acting; do not treat the search hit as current. Safe to retry freely
+(see Idempotency).
+
 ## OAuth scope required
 projects (read) — only if searching private repos
 
@@ -588,6 +599,16 @@ None.
 - 404 Not Found: commit search is not enabled on this Gitee instance
 - 401 Unauthorized: token missing or invalid (for private repos)
 - Empty results: no commits matching the query were found
+
+## Race condition warning ⚠️
+Read-only; the shared mutable state is the commit index plus the repos
+behind it. A commit you just pushed may be absent from results for a
+while (indexing lag) — do not re-search to confirm a commit you just
+created; use the sha from your local git output directly. Conversely,
+a result's repo may have been force-pushed, deleted, or made private
+between this search and a follow-up fetch, leaving the sha
+unreachable. Re-run the search rather than trusting cached results if
+time has passed. Safe to retry freely (see Idempotency).
 
 ## OAuth scope required
 projects (read) — only if searching private repos
@@ -677,6 +698,17 @@ html_url, etc.). Each object is exactly the same shape as
 - 403 Forbidden:     rate limit exceeded for anonymous  →  authenticate
 - 404 Not Found:     malformed query or bad URL        →  check query syntax
 - Empty results:     no repos matched the query         →  try broader terms
+
+## Race condition warning ⚠️
+Read-only, but repo metadata is shared, moving state: stars, forks,
+and rankings shift constantly, and a repo in the results can be
+renamed, deleted, or switched to private between this search and a
+follow-up ` + "`" + `gitee repo view` + "`" + ` / clone — expect occasional 404s and
+re-resolve the slug instead of retrying the old one. A just-created
+repo may also be absent from results due to index lag; use the
+full_name from THIS output (or from the create output) directly rather
+than re-searching to confirm it exists. Safe to retry freely
+(see Idempotency).
 
 ## Next steps (orchestration hints)
 After ` + "`" + `gitee search repos` + "`" + `, an agent typically wants to:
@@ -781,6 +813,17 @@ Returns a JSON array of issue objects with the Gitee v5 schema
 - 404 Not Found:     malformed query or bad URL  →  check query syntax
 - Empty results:     no issues matched the query   →  try broader terms
 
+## Race condition warning ⚠️
+Read-only, but issues are highly mutable shared state. Between this
+search and any follow-up action, an issue's state, labels, or title
+can flip — another agent may have closed it, or someone may already
+be working on it. If your action depends on state (e.g. "only comment
+if still open"), re-check with ` + "`" + `gitee issue view owner/repo#N` + "`" + `
+immediately before acting. Conversely, a just-created issue may be
+absent from results due to search-index lag — do not re-search to
+verify a creation; use the number returned by ` + "`" + `gitee issue create` + "`" + `.
+Safe to retry freely (see Idempotency).
+
 ## Next steps (orchestration hints)
 After ` + "`" + `gitee search issues` + "`" + `, an agent typically wants to:
 1. Pick a candidate issue and call ` + "`" + `gitee issue view owner/repo#N` + "`" + `
@@ -879,6 +922,15 @@ Returns a JSON array of user objects with the Gitee v5 schema
                                                           or wait 60s
 - 404 Not Found:     malformed query  →  check query syntax
 - Empty results:     no users matched the query   →  try broader terms
+
+## Race condition warning ⚠️
+Read-only, but user profiles are mutable: a user can rename their
+login, edit their bio, or make their profile private between this
+search and any follow-up action — after a rename, the old login 404s.
+If a workflow depends on the account (mentioning @USER, listing their
+repos), use the login from THIS output and tolerate 404 by re-searching.
+Newly registered users may not appear in results immediately due to
+index lag. Safe to retry freely (see Idempotency).
 
 ## Next steps (orchestration hints)
 After ` + "`" + `gitee search users` + "`" + `, an agent typically wants to:

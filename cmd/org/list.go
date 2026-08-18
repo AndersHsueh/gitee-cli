@@ -136,6 +136,16 @@ None. Pure GET on /user/orgs.
 - 401 Unauthorized: token missing or expired → ` + "`" + `gitee auth login` + "`" + `
 - 403 Forbidden:    token lacks user scope
 
+## Race condition warning ⚠️
+Your org membership is live server-side state: an org admin can add
+or remove you, and orgs can be renamed, at any time. This output is a
+snapshot — a ` + "`" + `login` + "`" + ` picked from it can 404 on
+` + "`" + `gitee org view <login>` + "`" + ` seconds later if the org was renamed or
+your membership revoked. If a follow-up action depends on membership,
+re-run this list (or ` + "`" + `gitee org view` + "`" + `) immediately before acting
+rather than trusting an older read. Read-only and always safe to
+retry.
+
 ## Next steps (orchestration hints)
 After enumerating orgs, an agent typically wants to:
 1. Pick the ` + "`" + `login` + "`" + ` of the target org

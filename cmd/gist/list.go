@@ -143,6 +143,18 @@ without re-parsing the table.
 - 403 Forbidden:     token lacks gist scope   →  check token permissions
 - 5xx Server error:  transient                →  retry with backoff
 
+## Race condition warning ⚠️
+The list is a point-in-time snapshot of a mutable account:
+- A gist created or deleted between this list and your follow-up
+  action won't match reality. Before a destructive step
+  (` + "`" + `gitee gist delete <id>` + "`" + `), confirm with ` + "`" + `gitee gist view <id>` + "`" + `
+  immediately beforehand — a 404 there means it is already gone.
+- Gists created in the last 1-2 seconds may be missing entirely
+  (indexing lag). Never conclude "create failed" from a list that
+  lacks the new id — trust the id in the create command's stdout.
+- UPDATED ordering shifts as gists change, so never pick a gist by
+  row position across two list calls; use the ID column.
+
 ## Next steps (orchestration hints)
 After listing, an agent typically wants to:
 1. Pick an ` + "`" + `ID` + "`" + ` from the table (or any field in the JSON array)

@@ -21,6 +21,7 @@ func TestTestAgentHelpContent(t *testing.T) {
 		"Next steps",
 		"OAuth scope required",
 		"Rate limit",
+		"## Example",
 		"See also",
 	}
 	for _, want := range required {

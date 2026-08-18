@@ -102,6 +102,19 @@ Atomic. Either the webhook is gone, or no change.
 - 403 Forbidden:    not a repo admin
 - 404 Not Found:    webhook id doesn't exist (was it already deleted?)
 
+## Race condition warning ⚠️
+The webhook set is shared, mutable server state: another agent or a
+repo admin can delete (or recreate) hooks at any time. In a
+` + "`" + `list` + "`" + ` → pick an id → ` + "`" + `delete` + "`" + ` flow the hook may already be gone when
+this call lands and you get a 404 — treat that 404 as "desired end
+state reached", not necessarily as a failure of YOUR call. Ids can
+eventually be recycled, so deleting right after a fresh
+` + "`" + `gitee webhook list` + "`" + ` protects you from killing a newly-created hook
+that reused an old id. With multiple agents cleaning up the same
+repo, serialize deletes and act on ids from a list run that is
+seconds old at most. Retrying a failed delete is safe: worst case is
+a second 404.
+
 ## OAuth scope required
 projects (write)
 

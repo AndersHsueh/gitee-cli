@@ -145,6 +145,16 @@ Use --output json to get the full JSON array, then jq:
 - 404 Not Found: repo does not exist or is private
 - 401 Unauthorized: token missing or expired
 
+## Race condition warning ⚠️
+The output is a snapshot of the repo's release set at fetch time. A
+release created or deleted after this call is not reflected, so do not
+act on stale output: re-check with ` + "`" + `gitee release view <tag>` + "`" + `
+immediately before any follow-up action. Paginating with --page while
+releases are being added can shift page boundaries, producing duplicate
+or skipped entries — prefer a fresh single-page read in scripts. If you
+just created a release, use the tag from the create output instead of
+re-listing; Gitee indexing can lag 1-2 seconds.
+
 ## OAuth scope required
 projects (read)
 

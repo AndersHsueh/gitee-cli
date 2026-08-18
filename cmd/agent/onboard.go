@@ -404,6 +404,18 @@ var onboardAgentHelp = "# gitee agent onboard — Agent Help\n" +
 	"- Disk full / ENOSPC: write fails                            →  free space and retry\n" +
 	"- EROFS: read-only filesystem (e.g. mounted read-only)      →  choose a writable --dir\n" +
 	"\n" +
+	"## Race condition warning ⚠️\n" +
+	"Local-only write; the shared mutable state is <dir>/.gitee/agent.md\n" +
+	"itself. The exists-check-then-write is a TOCTOU window: two agents\n" +
+	"running `gitee agent onboard` in the same directory concurrently can\n" +
+	"both pass the not-exists check and write — last writer wins. That is\n" +
+	"benign for the same gitee-cli version (content is deterministic), but\n" +
+	"a human or agent editing agent.md concurrently with a --force run\n" +
+	"loses their edits without warning. In multi-agent setups, run onboard\n" +
+	"once during repo setup and serialize; do not re-onboard per task.\n" +
+	"Safe to re-run without --force (no-op when the file exists — see\n" +
+	"Idempotency).\n" +
+	"\n" +
 	"## Next steps (orchestration hints)\n" +
 	"After a successful `gitee agent onboard`, an agent typically wants to:\n" +
 	"1. Inspect the generated file: `cat .gitee/agent.md` (verify it landed)\n" +

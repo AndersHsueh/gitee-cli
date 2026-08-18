@@ -152,6 +152,17 @@ stdout or the call fails — there is no partial state on the wire.
   brand-new PR with no commits yet)
 - Network timeouts:   bump ` + "`" + `--timeout` + "`" + ` and retry
 
+## Race condition warning ⚠️
+The diff is a snapshot of head→base at fetch time. The shared mutable
+state is the PR's head branch (and the base tip): a force-push, a
+plain push, or a base-branch advance between your ` + "`" + `gitee pr diff` + "`" + `
+and a subsequent ` + "`" + `gitee pr review <N> --approve` + "`" + ` / ` + "`" + `gitee pr merge <N>` + "`" + `
+means you approved or merged code you never read. Before any
+approve/merge decision based on this output, re-fetch the diff (or at
+minimum compare the head SHA in a fresh ` + "`" + `gitee pr view <N> --output json` + "`" + `)
+if any time has passed. This command itself is read-only and safe to
+retry.
+
 ## Next steps (orchestration hints)
 After reading the diff, an agent typically wants to:
 1. Approve if it looks good: ` + "`" + `gitee pr review <N> --approve` + "`" + `

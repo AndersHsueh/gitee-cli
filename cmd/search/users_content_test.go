@@ -23,6 +23,7 @@ func TestUsersAgentHelpContent(t *testing.T) {
 		"## Output (stdout, table mode)",
 		"## Output (stdout, json mode)",
 		"## Common errors",
+		"## Race condition warning ⚠️",
 		"## Next steps (orchestration hints)",
 		"## OAuth scope required",
 		"## Rate limit",
@@ -35,5 +36,9 @@ func TestUsersAgentHelpContent(t *testing.T) {
 		if !strings.Contains(searchUsersAgentHelp, want) {
 			t.Errorf("search users --agent-help missing section/flag: %q", want)
 		}
+	}
+	// Spot-check the race section mentions the login-rename hazard.
+	if !strings.Contains(searchUsersAgentHelp, "rename their") {
+		t.Error("search users race section missing login-rename guidance")
 	}
 }

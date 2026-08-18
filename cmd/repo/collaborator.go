@@ -401,6 +401,20 @@ response. ` + "`" + `permission` + "`" + ` is one of pull | push | admin.
 - 404 Not Found:     repo does not exist or is private to the caller
 - "invalid --repo format": must contain exactly one '/'
 
+## Race condition warning ⚠️
+The shared mutable state is the repo's collaborator set. This list is
+a point-in-time snapshot: between listing and acting on the result,
+another admin can add, update, or remove the same user. The classic
+failure is list→act: you confirm "alice is not a collaborator" and
+call ` + "`" + `gitee repo collaborator add alice --permission push` + "`" + `, but in
+the gap another admin granted her admin — your add silently DOWNGRADES
+her (add is upsert, not create-or-fail; see its Idempotency section).
+Mitigation: decide the target permission from policy, not from the
+absence of a row; if the current level matters, re-list immediately
+before the write; in multi-agent setups serialize collaborator
+mutations for the same repo. Retrying THIS list command is always
+safe (read-only).
+
 ## Next steps (orchestration hints)
 After listing collaborators, an agent typically wants to:
 1. Check whether a specific user already has access:

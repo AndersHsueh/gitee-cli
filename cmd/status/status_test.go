@@ -24,6 +24,7 @@ func TestStatusAgentHelpContent(t *testing.T) {
 		"## Output (stdout, table mode)",
 		"## Output (stdout, json mode)",
 		"## Common errors",
+		"## Race condition warning ⚠️",
 		"## Known limitations",
 		"## Next steps",
 		"## OAuth scope required",
@@ -35,6 +36,11 @@ func TestStatusAgentHelpContent(t *testing.T) {
 		if !strings.Contains(statusAgentHelp, want) {
 			t.Errorf("agent help missing required section: %q", want)
 		}
+	}
+	// Spot-check the race section: the 3-GET snapshot is not atomic;
+	// state can flip between the /issues and /pulls calls.
+	if !strings.Contains(statusAgentHelp, "NOT atomic") {
+		t.Error("status race section missing non-atomic-snapshot warning")
 	}
 }
 

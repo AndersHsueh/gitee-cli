@@ -14,6 +14,10 @@ func TestDeleteAgentHelpContent(t *testing.T) {
 		"Side effects",
 		"Post-conditions",
 		"Common errors",
+		"Race condition warning ⚠️",
+		"release object attached to the tag",
+		"OAuth scope required",
+		"Rate limit",
 		"See also",
 	}
 	for _, want := range required {

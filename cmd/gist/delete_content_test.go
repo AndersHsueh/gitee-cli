@@ -21,6 +21,7 @@ func TestDeleteAgentHelpContent(t *testing.T) {
 		"## Post-conditions",
 		"## Output (stdout, table mode)",
 		"## Common errors",
+		"## Race condition warning ⚠️",
 		"## Next steps",
 		"## OAuth scope required",
 		"## Rate limit",
@@ -55,5 +56,16 @@ func TestDeleteAgentHelpMentionsIrreversibility(t *testing.T) {
 	}
 	if !strings.Contains(gistDeleteAgentHelp, "no undo") && !strings.Contains(gistDeleteAgentHelp, "NO UNDO") {
 		t.Error("gist delete --agent-help must explicitly mention that there is no undo")
+	}
+}
+
+// TestDeleteAgentHelpRaceSection verifies the Race condition section is
+// command-specific and free of placeholder text.
+func TestDeleteAgentHelpRaceSection(t *testing.T) {
+	if strings.Contains(gistDeleteAgentHelp, "TODO(domain)") {
+		t.Error("gist delete --agent-help still contains TODO(domain) placeholder")
+	}
+	if !strings.Contains(gistDeleteAgentHelp, "retrying a delete is safe") {
+		t.Error("gist delete race section should state concurrent-delete 404 is the desired end state")
 	}
 }

@@ -75,6 +75,30 @@ None.
 ## Common errors
 - (none — empty alias set returns "No aliases defined")
 
+## Race condition warning ⚠️
+None known for corruption — this command only reads
+~/.gitee-cli/aliases.json. But the output is a point-in-time snapshot
+of shared mutable state: a concurrent ` + "`gitee alias set`" + ` or
+` + "`gitee alias delete`" + ` (from you in another shell, or another agent)
+can change the file the instant after you read it. If you plan to act
+on an entry — delete it, or rely on it expanding — re-run this list
+immediately before acting, or just attempt the action and handle
+"is not defined". Do not trust a list captured in an earlier step of
+a long workflow.
+
+## OAuth scope required
+N/A (local command) — no Gitee API request is made; works fully offline.
+
+## Rate limit
+N/A (local command) — no Gitee API request is made.
+
+## Example
+  gitee alias list
+  # NAME    EXPANSION
+  # co      pr checkout
+  gitee alias list -o json
+  # {"co":"pr checkout"}
+
 ## See also
 - ` + "`gitee alias set`" + `    — add or change one
 - ` + "`gitee alias delete`" + ` — remove one

@@ -332,6 +332,21 @@ response. Use ` + "`" + `.name` + "`" + ` as input to other commands (release vi
 - "invalid --repo format": must contain exactly one ` + "`" + `/` + "`" + `
 - Network/timeout:   transient; safe to retry
 
+## Race condition warning ⚠️
+The shared mutable state is the repo's tag set. This listing is a
+point-in-time snapshot: another agent's ` + "`" + `gitee repo tag create` + "`" + ` or
+a ` + "`" + `git push :refs/tags/<name>` + "`" + ` can add/remove tags in the gap
+before you act. Classic failures: (1) you confirm "v1.2.0 is free"
+from this list, then ` + "`" + `gitee repo tag create --name v1.2.0` + "`" + ` fails
+422 because a concurrent release job claimed it — treat the 422 as
+the real availability check and pick the next version; (2) you take
+the tag→commit SHA mapping from this output and base a release or
+diff on it, but a force-push MOVED the tag (native git can move tags;
+Gitee will follow) so your release points at the wrong commit.
+Mitigation: re-run THIS command immediately before acting on a
+specific tag, and prefer pinning the full commit SHA from the JSON
+output over trusting the tag name downstream. Retrying is safe.
+
 ## Next steps (orchestration hints)
 After listing tags, an agent typically wants to:
 1. Pick a tag of interest (e.g. ` + "`" + `v1.0.0` + "`" + `).

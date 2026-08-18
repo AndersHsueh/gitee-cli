@@ -111,6 +111,18 @@ the content back, run ` + "`" + `gitee gist clone <id>` + "`" + ` FIRST.
                      that a retry on a transient failure is safe
                      (idempotent) — the second call just 404s
 
+## Race condition warning ⚠️
+Delete is IRREVERSIBLE and the gist is shared mutable state:
+- An edit or comment landing between your last ` + "`" + `gitee gist view` + "`" + `
+  and this delete is destroyed with the gist. If the content might
+  matter, run ` + "`" + `gitee gist clone <id>` + "`" + ` immediately before deleting.
+- Concurrent deletes (two agents, or agent + web UI): the first
+  succeeds, the rest get 404 — which is the desired end state, so
+  retrying a delete is safe.
+- Do not delete based on a stale ` + "`" + `gitee gist list` + "`" + `: always act on
+  the exact id, and re-run ` + "`" + `gitee gist view <id>` + "`" + ` right before if
+  there is any doubt the gist is still the one you mean.
+
 ## Next steps (orchestration hints)
 After a successful delete, an agent typically wants to:
 1. Verify with ` + "`" + `gitee gist list` + "`" + ` (the deleted id should be gone)

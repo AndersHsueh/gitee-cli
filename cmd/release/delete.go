@@ -127,6 +127,18 @@ Atomic. Either the release is gone, or nothing changed.
 - 404 Not Found: no release for that tag
 - 403 Forbidden:  token lacks admin scope
 
+## Race condition warning ⚠️
+The shared mutable state is the release object attached to the tag. Two
+agents deleting the same tag concurrently: one succeeds, the other gets
+404 — treat that 404 as "already deleted", not as a failure to retry
+(see Idempotency). An asset upload in flight while you delete the
+release will fail or produce an orphaned asset. After a successful
+delete, ` + "`" + `gitee release list` + "`" + ` may still show the release for
+1-2 seconds (indexing lag) — do not re-create the release based on
+stale list output. If the delete depends on current state (e.g. "only
+delete if prerelease"), re-check with ` + "`" + `gitee release view <tag>` + "`" + `
+immediately before this call.
+
 ## OAuth scope required
 projects (admin)
 

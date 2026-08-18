@@ -143,6 +143,18 @@ or the call fails — there is no partial state.
                      cannot be reopened (use a revert PR instead)
 - Network timeouts:  bump ` + "`" + `--timeout` + "`" + ` and retry
 
+## Race condition warning ⚠️
+The shared mutable state is the PR's state field plus its head branch.
+Between your state check and this call, another actor can reopen first
+(your call then 422s — treat that as "already open" after a fresh view
+confirms). More subtly: while the PR was closed, the head branch may
+have been force-pushed or rebased — reopen still succeeds, but the PR
+now contains different code than what earlier reviewers approved.
+After reopen, ALWAYS re-inspect with ` + "`" + `gitee pr diff <N>` + "`" + ` and
+re-run ` + "`" + `gitee pr checks <N>` + "`" + ` before merging. Retry after an
+ambiguous failure (timeout) is safe only after ` + "`" + `gitee pr view <N>` + "`" + `
+shows the state is still "closed".
+
 ## Next steps (orchestration hints)
 After reopening a PR, an agent typically wants to:
 1. Re-check the current state vs. base:

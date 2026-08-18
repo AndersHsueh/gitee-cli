@@ -14,6 +14,12 @@ func TestCreateAgentHelpContent(t *testing.T) {
 		"Side effects",
 		"Post-conditions",
 		"Common errors",
+		"Race condition warning ⚠️",
+		"Do NOT",
+		"re-list to verify creation",
+		"OAuth scope required",
+		"Rate limit",
+		"Example",
 		"See also",
 	}
 	for _, want := range required {

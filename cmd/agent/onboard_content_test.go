@@ -21,6 +21,7 @@ func TestOnboardAgentHelpContent(t *testing.T) {
 		"## Side effects",
 		"## Post-conditions",
 		"## Common errors",
+		"## Race condition warning ⚠️",
 		"## Next steps (orchestration hints)",
 		"## OAuth scope required",
 		"## Rate limit",
@@ -31,6 +32,11 @@ func TestOnboardAgentHelpContent(t *testing.T) {
 		if !strings.Contains(onboardAgentHelp, want) {
 			t.Errorf("agent onboard --agent-help missing section: %q", want)
 		}
+	}
+	// Spot-check the race section: onboard writes a local file, so the
+	// hazard is the exists-check-then-write TOCTOU window, not the API.
+	if !strings.Contains(onboardAgentHelp, "TOCTOU") {
+		t.Error("onboard race section missing local TOCTOU write guidance")
 	}
 }
 

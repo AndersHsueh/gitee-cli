@@ -20,6 +20,7 @@ func TestMergeAgentHelpContent(t *testing.T) {
 		"## Side effects",
 		"## Post-conditions",
 		"## Common errors",
+		"## Race condition warning ⚠️",
 		"## Next steps (orchestration hints)",
 		"## OAuth scope required",
 		"## Rate limit",
@@ -43,6 +44,24 @@ func TestMergeAgentHelpFlags(t *testing.T) {
 	for _, flag := range mustMention {
 		if !strings.Contains(prMergeAgentHelp, flag) {
 			t.Errorf("pr merge --agent-help missing flag %q", flag)
+		}
+	}
+}
+
+// TestMergeAgentHelpRaceCondition asserts the race-condition section is
+// command-specific: mergeability flips between check and merge (head
+// force-pushed, base advanced), 422 is the API protecting you, and an
+// ambiguous failure must be resolved with a fresh view before retry.
+func TestMergeAgentHelpRaceCondition(t *testing.T) {
+	mustMention := []string{
+		"force-pushed",
+		"do NOT blind-retry",
+		".merged",
+		"serialize merges",
+	}
+	for _, want := range mustMention {
+		if !strings.Contains(prMergeAgentHelp, want) {
+			t.Errorf("pr merge --agent-help race section missing: %q", want)
 		}
 	}
 }

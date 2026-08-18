@@ -50,6 +50,7 @@ func TestTagListAgentHelpContent(t *testing.T) {
 		"## Output (stdout, table mode)",
 		"## Output (stdout, json mode)",
 		"## Common errors",
+		"## Race condition warning ⚠️",
 		"## Next steps (orchestration hints)",
 		"## OAuth scope required",
 		"## Rate limit",

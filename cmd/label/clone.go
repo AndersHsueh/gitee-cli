@@ -82,6 +82,21 @@ partially-cloned state; re-running continues from where it stopped
 - 403 Forbidden:  write access missing on target
 - Per-label 409: label already exists on target (counted as failed, does NOT abort)
 
+## Race condition warning ⚠️
+The shared mutable state is BOTH the source repo's label set (read once
+up front) and the target repo's label set (written incrementally).
+- Labels added to the source after the initial list are NOT cloned in
+  this run — re-run the command to converge (duplicates are skipped).
+- A label created on the target between the source list and its POST is
+  counted in the "failed, probably duplicates" tally; read the summary
+  line, not the ✗ count, to judge the outcome.
+- Two agents cloning into the same target concurrently interleave POSTs:
+  each reports the other's successes as failures. The final state still
+  converges, but both summaries over-report failures — serialize clones
+  into the same target repo.
+Safe to re-run after a mid-loop network failure: already-created labels
+are skipped, so the retry continues where it stopped.
+
 ## OAuth scope required
 projects (read on source, write on target)
 

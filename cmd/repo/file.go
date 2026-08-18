@@ -590,6 +590,21 @@ None. Read-only.
 - 403 Forbidden:  repo is private and the token cannot read it
 - 401 Unauthorized: token missing or expired
 
+## Race condition warning ⚠️
+The shared mutable state is the file's blob on the target branch: this
+command always reads the file AT HEAD of the default branch (no
+--branch/--ref flag exists), and the returned ` + "`" + `sha` + "`" + ` is only valid
+for the commit that was HEAD at fetch time. Classic failure is
+view→act: you read README.md, plan an edit, and call ` + "`" + `gitee repo
+file push` + "`" + ` or ` + "`" + `file delete` + "`" + ` with the sha from THIS output — but a
+concurrent push moved the file, so the write fails with 409 Conflict
+(stale SHA). Mitigation: treat the sha as a single-use optimistic-
+concurrency token — pass it to the follow-up write IMMEDIATELY, and
+on 409 re-run THIS command to fetch the fresh sha rather than
+retrying with the old one. Directory listings are likewise a snapshot:
+entries can appear or vanish between your listing and per-entry
+actions. Retrying THIS command itself is always safe (read-only).
+
 ## Next steps (orchestration hints)
 After viewing a file, an agent typically wants to:
 1. Update it:

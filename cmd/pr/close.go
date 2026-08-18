@@ -140,6 +140,17 @@ or the call fails — there is no partial state.
 - 422 Unprocessable: PR is already closed or already merged
 - Network timeouts:  bump ` + "`" + `--timeout` + "`" + ` and retry
 
+## Race condition warning ⚠️
+The shared mutable state is the PR's state field. Between your
+` + "`" + `gitee pr view <N>` + "`" + ` check and this call, a human can merge the PR —
+your close then fails with 422 (merged PRs cannot be closed), which is
+the API protecting you; do NOT blind-retry a 422. Two agents closing
+the same PR concurrently: one succeeds, the other gets 422 — treat
+that 422 as "already closed", not as a retryable failure, and confirm
+with a fresh ` + "`" + `gitee pr view <N>` + "`" + `. Retry after an ambiguous failure
+(network timeout) is safe only if you have not seen the "PR #N closed"
+success line; verify current state with ` + "`" + `gitee pr view <N>` + "`" + ` first.
+
 ## Next steps (orchestration hints)
 After closing a PR, an agent typically wants to:
 1. Optionally clean up the head branch:

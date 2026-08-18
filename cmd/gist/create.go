@@ -225,6 +225,19 @@ partial-success state.
 - "no files provided": none of stdin/--file/positional/--interactive
                      supplied content  →  pass at least one source
 
+## Race condition warning ⚠️
+Each successful call creates a NEW gist — the failure modes are
+duplication and indexing lag, not shared-state corruption:
+- NOT idempotent: retrying after a timeout/5xx where the server
+  actually succeeded creates a DUPLICATE gist. Before a blind retry,
+  run ` + "`" + `gitee gist list --limit 5` + "`" + ` and check for your description.
+- Do NOT call ` + "`" + `gitee gist list` + "`" + ` right after to "find" the new
+  gist — indexing can lag 1-2 seconds and it may not appear yet.
+  Use the id from THIS command's stdout directly.
+- Multiple agents creating in parallel all succeed, producing N
+  near-identical gists. Serialize create calls, or check
+  ` + "`" + `gitee gist list` + "`" + ` for an existing gist first.
+
 ## Next steps (orchestration hints)
 After a successful create, an agent typically wants to:
 1. Record the gist id from stdout (do NOT re-list to find it)
