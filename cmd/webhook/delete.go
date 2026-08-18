@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"gitee-cli/cmd"
-	"gitee-cli/internal/handler"
 	"gitee-cli/internal/utils"
 
 	"github.com/spf13/cobra"
@@ -50,7 +49,11 @@ func runDelete(cobraCmd *cobra.Command, args []string) error {
 	if deleteFlags.force {
 		confirm = "y"
 	}
-	return handler.WebhookDelete(deleteFlags.repo, id, confirm)
+	dc, err := cmd.NewDomainClient()
+	if err != nil {
+		return err
+	}
+	return dc.WebhookDelete(deleteFlags.repo, id, confirm)
 }
 
 const webhookDeleteAgentHelp = `# gitee webhook delete — Agent Help

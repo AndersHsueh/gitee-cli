@@ -2,7 +2,6 @@ package milestone
 
 import (
 	"gitee-cli/cmd"
-	"gitee-cli/internal/handler"
 	"gitee-cli/internal/utils"
 
 	"github.com/spf13/cobra"
@@ -31,7 +30,11 @@ var viewCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		return handler.MilestoneView(viewFlags.repo, int(parsed))
+		dc, err := cmd.NewDomainClient()
+		if err != nil {
+			return err
+		}
+		return dc.MilestoneView(viewFlags.repo, int(parsed))
 	},
 }
 

@@ -52,7 +52,12 @@ func init() {
 }
 
 func runList(cobraCmd *cobra.Command, args []string) error {
-	return cmdkit.RunList[types.Issue](cmdkit.ListSpec[types.Issue]{
+	client, err := cmd.NewAPIClient()
+	if err != nil {
+		return err
+	}
+	opts := cmd.NewCmdkitOptions(client)
+	return cmdkit.RunList[types.Issue](opts, cmdkit.ListSpec[types.Issue]{
 		ResolveOwnerRepo: func() (string, string, error) {
 			return resolveRepo(listFlags.owner, cmd.GlobalRepo)
 		},

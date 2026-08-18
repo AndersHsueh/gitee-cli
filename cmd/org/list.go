@@ -38,7 +38,12 @@ func init() {
 }
 
 func runList(cobraCmd *cobra.Command, args []string) error {
-	return cmdkit.RunList[types.Organization](cmdkit.ListSpec[types.Organization]{
+	client, err := cmd.NewAPIClient()
+	if err != nil {
+		return err
+	}
+	opts := cmd.NewCmdkitOptions(client)
+	return cmdkit.RunList[types.Organization](opts, cmdkit.ListSpec[types.Organization]{
 		// org list lists the authenticated user's orgs — no target repo.
 		ResolveOwnerRepo: func() (string, string, error) {
 			return "", "", nil

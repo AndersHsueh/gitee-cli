@@ -2,7 +2,6 @@ package webhook
 
 import (
 	"gitee-cli/cmd"
-	"gitee-cli/internal/handler"
 	"gitee-cli/internal/utils"
 	"gitee-cli/pkg/types"
 
@@ -74,7 +73,11 @@ func runCreate(cobraCmd *cobra.Command, args []string) error {
 		et := createFlags.encryptionType
 		req.EncryptionType = &et
 	}
-	return handler.WebhookCreate(createFlags.repo, req)
+	dc, err := cmd.NewDomainClient()
+	if err != nil {
+		return err
+	}
+	return dc.WebhookCreate(createFlags.repo, req)
 }
 
 const webhookCreateAgentHelp = `# gitee webhook create — Agent Help

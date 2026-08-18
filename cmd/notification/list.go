@@ -2,7 +2,6 @@ package notification
 
 import (
 	"gitee-cli/cmd"
-	"gitee-cli/internal/handler"
 
 	"github.com/spf13/cobra"
 )
@@ -33,7 +32,11 @@ var listCmd = &cobra.Command{
 		} else if listFlags.readOnly {
 			filter = "false"
 		}
-		return handler.NotificationList(filter, listFlags.limit)
+		dc, err := cmd.NewDomainClient()
+		if err != nil {
+			return err
+		}
+		return dc.NotificationList(filter, listFlags.limit)
 	},
 }
 

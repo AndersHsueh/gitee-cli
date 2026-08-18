@@ -2,7 +2,6 @@ package milestone
 
 import (
 	"gitee-cli/cmd"
-	"gitee-cli/internal/handler"
 	"gitee-cli/internal/utils"
 	"gitee-cli/pkg/types"
 
@@ -41,7 +40,11 @@ var editCmd = &cobra.Command{
 			DueOn:       editFlags.dueOn,
 			State:       editFlags.state,
 		}
-		return handler.MilestoneEdit(editFlags.repo, int(parsed), req)
+		dc, err := cmd.NewDomainClient()
+		if err != nil {
+			return err
+		}
+		return dc.MilestoneEdit(editFlags.repo, int(parsed), req)
 	},
 }
 

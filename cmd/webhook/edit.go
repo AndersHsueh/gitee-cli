@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"gitee-cli/cmd"
-	"gitee-cli/internal/handler"
 	"gitee-cli/internal/utils"
 	"gitee-cli/pkg/types"
 
@@ -93,7 +92,11 @@ func runEdit(cobraCmd *cobra.Command, args []string) error {
 		et := editFlags.encryptionType
 		req.EncryptionType = &et
 	}
-	return handler.WebhookEdit(editFlags.repo, id, req)
+	dc, err := cmd.NewDomainClient()
+	if err != nil {
+		return err
+	}
+	return dc.WebhookEdit(editFlags.repo, id, req)
 }
 
 // boolPtrIfChanged moved to internal/utils/utils.go (utils.BoolPtrIfChanged)

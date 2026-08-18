@@ -1,22 +1,14 @@
-// Package handler — notification subpackage logic.
-//
-// Notifications are user-scoped (no {owner}/{repo} in the URL), so the
-// surface here is smaller than milestone / label: list + count + mark
-// read. Unlike label / ssh-key, the notification verbs have no need
-// for repo resolution or confirmation prompts (mark-read is reversible
-// by re-running with unread=true).
-package handler
+package domain
 
 import (
 	"context"
 	"fmt"
 	"net/url"
 	"strconv"
-	"time"
 
-	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
 	"gitee-cli/internal/cmdkit"
+	"gitee-cli/internal/output"
 	"gitee-cli/internal/utils"
 	"gitee-cli/pkg/types"
 
@@ -30,8 +22,8 @@ import (
 //	""     → all threads
 //	"true" → only unread
 //	"false"→ only read
-func NotificationList(unreadFilter string, limit int) error {
-	return cmdkit.RunList[types.NotificationThread](cmdkit.ListSpec[types.NotificationThread]{
+func (c *Client) NotificationList(unreadFilter string, limit int) error {
+	return cmdkit.RunList[types.NotificationThread](c.opts(), cmdkit.ListSpec[types.NotificationThread]{
 		// notification list is user-scoped — no target repo.
 		ResolveOwnerRepo: func() (string, string, error) {
 			return "", "", nil
@@ -83,29 +75,24 @@ func NotificationList(unreadFilter string, limit int) error {
 			return fmt.Sprintf("\nTotal: %d thread(s) (* = unread)\n", count)
 		},
 		JSON: func(items []types.NotificationThread) error {
-			return PrintJSON(items)
+			return output.PrintJSON(items)
 		},
 	})
 }
 
 // NotificationCount runs the notification-count operation and prints
 // just the unread count. In JSON mode it prints the full count object.
-func NotificationCount() error {
-	client, err := cmd.NewAPIClient()
-	if err != nil {
-		return err
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+func (c *Client) NotificationCount() error {
+	ctx, cancel := c.ctx()
 	defer cancel()
 
 	var resp types.NotificationUnreadCount
-	if err := client.Get(ctx, api.NotificationsCount(), &resp); err != nil {
+	if err := c.API.Get(ctx, api.NotificationsCount(), &resp); err != nil {
 		return fmt.Errorf("getting notification count: %w", err)
 	}
 
-	if cmd.GlobalOutput == "json" {
-		return PrintJSON(resp)
+	if c.IsJSON() {
+		return output.PrintJSON(resp)
 	}
 
 	green := color.New(color.FgGreen).SprintFunc()
@@ -127,7 +114,7 @@ func NotificationCount() error {
 // markUnread, when true, flips state back to UNREAD instead. This
 // satisfies the inverse operation; useful for agents that want to
 // re-surface a thread.
-func NotificationRead(threadID string, all bool, markUnread bool, force bool) error {
+func (c *Client) NotificationRead(threadID string, all bool, markUnread bool, force bool) error {
 	if !all && threadID == "" {
 		return fmt.Errorf("notification id is required (positional argument or use --all)")
 	}
@@ -170,17 +157,12 @@ func NotificationRead(threadID string, all bool, markUnread bool, force bool) er
 		}
 	}
 
-	client, err := cmd.NewAPIClient()
-	if err != nil {
-		return err
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := c.ctx()
 	defer cancel()
 
 	if all {
 		req := types.NotificationMarkAllReadRequest{Unread: markUnread}
-		if err := client.Put(ctx, api.NotificationsMarkAllRead(), req, nil); err != nil {
+		if err := c.API.Put(ctx, api.NotificationsMarkAllRead(), req, nil); err != nil {
 			return fmt.Errorf("marking all notifications read: %w", err)
 		}
 		green := color.New(color.FgGreen).SprintFunc()
@@ -193,7 +175,7 @@ func NotificationRead(threadID string, all bool, markUnread bool, force bool) er
 	}
 
 	req := types.NotificationMarkReadRequest{Unread: markUnread}
-	if err := client.Put(ctx, api.NotificationMarkRead(threadID), req, nil); err != nil {
+	if err := c.API.Put(ctx, api.NotificationMarkRead(threadID), req, nil); err != nil {
 		return fmt.Errorf("marking notification %s read: %w", threadID, err)
 	}
 	green := color.New(color.FgGreen).SprintFunc()

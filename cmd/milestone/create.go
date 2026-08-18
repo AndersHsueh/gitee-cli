@@ -2,7 +2,6 @@ package milestone
 
 import (
 	"gitee-cli/cmd"
-	"gitee-cli/internal/handler"
 	"gitee-cli/pkg/types"
 
 	"github.com/spf13/cobra"
@@ -34,7 +33,11 @@ var createCmd = &cobra.Command{
 			DueOn:       createFlags.dueOn,
 			State:       createFlags.state,
 		}
-		return handler.MilestoneCreate(createFlags.repo, req)
+		dc, err := cmd.NewDomainClient()
+		if err != nil {
+			return err
+		}
+		return dc.MilestoneCreate(createFlags.repo, req)
 	},
 }
 

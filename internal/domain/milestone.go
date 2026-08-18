@@ -1,10 +1,4 @@
-// Package handler — milestone subpackage logic.
-//
-// Milestone handlers follow the same shape as the label / webhook handlers:
-// per-repo, list / view / create / edit / delete. Milestones are addressed
-// by an integer `number` (not a string name like labels), so URL escaping
-// is unnecessary — the only path segment is the number.
-package handler
+package domain
 
 import (
 	"context"
@@ -12,33 +6,21 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
-	"time"
 
-	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
 	"gitee-cli/internal/cmdkit"
+	"gitee-cli/internal/output"
 	"gitee-cli/internal/utils"
 	"gitee-cli/pkg/types"
 
 	"github.com/fatih/color"
 )
 
-// MilestoneResolveRepo resolves --repo flag / global --repo into (owner, repo).
-// Delegates to utils.ResolveRepo so parsing and the git-config fallback are
-// shared across all command groups. The local flag wins; the global --repo is
-// used only when the local flag is empty.
-func MilestoneResolveRepo(repo string) (string, string, error) {
-	if repo == "" {
-		repo = cmd.GlobalRepo
-	}
-	return utils.ResolveRepo("", repo, nil)
-}
-
 // MilestoneList runs the milestone-list operation.
-func MilestoneList(repo, stateFilter string, limit int) error {
-	return cmdkit.RunList[types.Milestone](cmdkit.ListSpec[types.Milestone]{
+func (c *Client) MilestoneList(repo, stateFilter string, limit int) error {
+	return cmdkit.RunList[types.Milestone](c.opts(), cmdkit.ListSpec[types.Milestone]{
 		ResolveOwnerRepo: func() (string, string, error) {
-			return MilestoneResolveRepo(repo)
+			return c.ResolveRepo(repo)
 		},
 		Path: func(owner, repoName string) string {
 			path := api.MilestonesList(owner, repoName)
@@ -80,39 +62,34 @@ func MilestoneList(repo, stateFilter string, limit int) error {
 			return fmt.Sprintf("\nTotal: %d milestone(s)\n", count)
 		},
 		JSON: func(items []types.Milestone) error {
-			return PrintJSON(items)
+			return output.PrintJSON(items)
 		},
 	})
 }
 
 // MilestoneView runs the milestone-view operation.
-func MilestoneView(repo string, number int) error {
+func (c *Client) MilestoneView(repo string, number int) error {
 	if number <= 0 {
 		return fmt.Errorf("milestone number is required (positional or --number)")
 	}
-	owner, repoName, err := MilestoneResolveRepo(repo)
+	owner, repoName, err := c.ResolveRepo(repo)
 	if err != nil {
 		return err
 	}
 
-	client, err := cmd.NewAPIClient()
-	if err != nil {
-		return err
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := c.ctx()
 	defer cancel()
 
 	var m types.Milestone
-	if err := client.Get(ctx, api.MilestoneGet(owner, repoName, number), &m); err != nil {
+	if err := c.API.Get(ctx, api.MilestoneGet(owner, repoName, number), &m); err != nil {
 		if api.IsNotFound(err) {
 			return fmt.Errorf("milestone #%d not found in %s/%s", number, owner, repoName)
 		}
 		return fmt.Errorf("getting milestone: %w", err)
 	}
 
-	if cmd.GlobalOutput == "json" {
-		return PrintJSON(m)
+	if c.IsJSON() {
+		return output.PrintJSON(m)
 	}
 
 	green := color.New(color.FgGreen).SprintFunc()
@@ -139,28 +116,23 @@ func MilestoneView(repo string, number int) error {
 }
 
 // MilestoneCreate runs the milestone-create operation.
-func MilestoneCreate(repo string, req types.MilestoneCreateRequest) error {
+func (c *Client) MilestoneCreate(repo string, req types.MilestoneCreateRequest) error {
 	if strings.TrimSpace(req.Title) == "" {
 		return fmt.Errorf("milestone title is required (use --title or -t)")
 	}
 	if req.State != "" && req.State != "open" && req.State != "closed" {
 		return fmt.Errorf("invalid --state %q: must be 'open' or 'closed'", req.State)
 	}
-	owner, repoName, err := MilestoneResolveRepo(repo)
+	owner, repoName, err := c.ResolveRepo(repo)
 	if err != nil {
 		return err
 	}
 
-	client, err := cmd.NewAPIClient()
-	if err != nil {
-		return err
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := c.ctx()
 	defer cancel()
 
 	var m types.Milestone
-	if err := client.Post(ctx, api.MilestoneCreate(owner, repoName), req, &m); err != nil {
+	if err := c.API.Post(ctx, api.MilestoneCreate(owner, repoName), req, &m); err != nil {
 		return fmt.Errorf("creating milestone: %w", err)
 	}
 
@@ -181,7 +153,7 @@ func MilestoneCreate(repo string, req types.MilestoneCreateRequest) error {
 // MilestoneEdit runs the milestone-update operation (Gitee API uses PATCH).
 // At least one updatable field must be supplied; otherwise there is nothing
 // for the server to change.
-func MilestoneEdit(repo string, number int, req types.MilestoneUpdateRequest) error {
+func (c *Client) MilestoneEdit(repo string, number int, req types.MilestoneUpdateRequest) error {
 	if number <= 0 {
 		return fmt.Errorf("milestone number is required (positional or --number)")
 	}
@@ -191,21 +163,16 @@ func MilestoneEdit(repo string, number int, req types.MilestoneUpdateRequest) er
 	if req.State != "" && req.State != "open" && req.State != "closed" {
 		return fmt.Errorf("invalid --state %q: must be 'open' or 'closed'", req.State)
 	}
-	owner, repoName, err := MilestoneResolveRepo(repo)
+	owner, repoName, err := c.ResolveRepo(repo)
 	if err != nil {
 		return err
 	}
 
-	client, err := cmd.NewAPIClient()
-	if err != nil {
-		return err
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := c.ctx()
 	defer cancel()
 
 	var m types.Milestone
-	if err := client.Patch(ctx, api.MilestoneUpdate(owner, repoName, number), req, &m); err != nil {
+	if err := c.API.Patch(ctx, api.MilestoneUpdate(owner, repoName, number), req, &m); err != nil {
 		return fmt.Errorf("updating milestone: %w", err)
 	}
 
@@ -224,11 +191,11 @@ func MilestoneEdit(repo string, number int, req types.MilestoneUpdateRequest) er
 // label-delete / webhook-delete convention: pass "y" (or set --force) to
 // skip the y/N prompt. Deletion is permanent; issues that referenced the
 // milestone are simply detached (not deleted).
-func MilestoneDelete(repo string, number int, confirm string) error {
+func (c *Client) MilestoneDelete(repo string, number int, confirm string) error {
 	if number <= 0 {
 		return fmt.Errorf("milestone number is required (positional or --number)")
 	}
-	owner, repoName, err := MilestoneResolveRepo(repo)
+	owner, repoName, err := c.ResolveRepo(repo)
 	if err != nil {
 		return err
 	}
@@ -247,15 +214,10 @@ func MilestoneDelete(repo string, number int, confirm string) error {
 		}
 	}
 
-	client, err := cmd.NewAPIClient()
-	if err != nil {
-		return err
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := c.ctx()
 	defer cancel()
 
-	if err := client.Delete(ctx, api.MilestoneDelete(owner, repoName, number)); err != nil {
+	if err := c.API.Delete(ctx, api.MilestoneDelete(owner, repoName, number)); err != nil {
 		return fmt.Errorf("deleting milestone: %w", err)
 	}
 

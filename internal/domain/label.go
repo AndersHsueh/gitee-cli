@@ -1,40 +1,20 @@
-// Package handler contains the business logic shared by multiple command
-// packages (e.g. cmd/label/ and cmd/issue/ both call the same label
-// handler functions). Putting the logic here means a single behavior
-// for "list labels", "create label", etc., and lets the top-level
-// `gitee label` command coexist with the legacy `gitee issue label`
-// command without code duplication.
-package handler
+package domain
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/url"
 	"os"
 	"strings"
-	"time"
 
-	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
 	"gitee-cli/internal/cmdkit"
+	"gitee-cli/internal/output"
 	"gitee-cli/internal/utils"
 	"gitee-cli/pkg/types"
 
 	"github.com/fatih/color"
 )
-
-// LabelResolveRepo resolves --repo flag / global --repo into (owner, repo).
-// Returns a clear error if neither is set or the format is invalid.
-// Delegates to utils.ResolveRepo so parsing and the git-config fallback are
-// shared across all command groups (label, release, webhook). The local flag
-// wins; the global --repo is used only when the local flag is empty.
-func LabelResolveRepo(repo string) (string, string, error) {
-	if repo == "" {
-		repo = cmd.GlobalRepo
-	}
-	return utils.ResolveRepo("", repo, nil)
-}
 
 // IsValidHexColor checks if s is exactly 6 lowercase hex digits.
 func IsValidHexColor(s string) bool {
@@ -49,21 +29,11 @@ func IsValidHexColor(s string) bool {
 	return true
 }
 
-// PrintJSON marshals v and writes it to stdout.
-func PrintJSON(v any) error {
-	b, err := json.MarshalIndent(v, "", "  ")
-	if err != nil {
-		return err
-	}
-	fmt.Println(string(b))
-	return nil
-}
-
 // LabelList runs the label-list operation.
-func LabelList(repo, filter string, limit int) error {
-	return cmdkit.RunList[types.Label](cmdkit.ListSpec[types.Label]{
+func (c *Client) LabelList(repo, filter string, limit int) error {
+	return cmdkit.RunList[types.Label](c.opts(), cmdkit.ListSpec[types.Label]{
 		ResolveOwnerRepo: func() (string, string, error) {
-			return LabelResolveRepo(repo)
+			return c.ResolveRepo(repo)
 		},
 		Path: func(owner, repoName string) string {
 			path := api.LabelList(owner, repoName)
@@ -98,22 +68,17 @@ func LabelList(repo, filter string, limit int) error {
 			return fmt.Sprintf("\nTotal: %d label(s)\n", count)
 		},
 		JSON: func(items []types.Label) error {
-			return PrintJSON(items)
+			return output.PrintJSON(items)
 		},
 	})
 }
 
 // LabelView runs the label-view operation.
-func LabelView(repo, name string) error {
+func (c *Client) LabelView(repo, name string) error {
 	if name == "" {
 		return fmt.Errorf("label name is required (use --name or -n)")
 	}
-	owner, repoName, err := LabelResolveRepo(repo)
-	if err != nil {
-		return err
-	}
-
-	client, err := cmd.NewAPIClient()
+	owner, repoName, err := c.ResolveRepo(repo)
 	if err != nil {
 		return err
 	}
@@ -121,19 +86,19 @@ func LabelView(repo, name string) error {
 	encodedName := url.QueryEscape(name)
 	path := api.LabelGet(owner, repoName, encodedName)
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := c.ctx()
 	defer cancel()
 
 	var label types.Label
-	if err := client.Get(ctx, path, &label); err != nil {
+	if err := c.API.Get(ctx, path, &label); err != nil {
 		if strings.Contains(err.Error(), "404") || strings.Contains(err.Error(), "not found") {
 			return fmt.Errorf("label %q not found in %s", name, repoName)
 		}
 		return fmt.Errorf("getting label: %w", err)
 	}
 
-	if cmd.GlobalOutput == "json" {
-		return PrintJSON(label)
+	if c.IsJSON() {
+		return output.PrintJSON(label)
 	}
 
 	green := color.New(color.FgGreen).SprintFunc()
@@ -158,16 +123,11 @@ func LabelView(repo, name string) error {
 }
 
 // LabelCreate runs the label-create operation.
-func LabelCreate(repo, name, labelColor string) error {
+func (c *Client) LabelCreate(repo, name, labelColor string) error {
 	if name == "" {
 		return fmt.Errorf("label name is required (use --name or -n)")
 	}
-	owner, repoName, err := LabelResolveRepo(repo)
-	if err != nil {
-		return err
-	}
-
-	client, err := cmd.NewAPIClient()
+	owner, repoName, err := c.ResolveRepo(repo)
 	if err != nil {
 		return err
 	}
@@ -183,11 +143,11 @@ func LabelCreate(repo, name, labelColor string) error {
 	}
 
 	path := api.LabelCreate(owner, repoName)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := c.ctx()
 	defer cancel()
 
 	var label types.Label
-	if err := client.Post(ctx, path, req, &label); err != nil {
+	if err := c.API.Post(ctx, path, req, &label); err != nil {
 		return fmt.Errorf("creating label: %w", err)
 	}
 
@@ -210,19 +170,14 @@ func LabelCreate(repo, name, labelColor string) error {
 }
 
 // LabelEdit runs the label-update operation (Gitee API uses PATCH).
-func LabelEdit(repo, currentName, newName, labelColor string) error {
+func (c *Client) LabelEdit(repo, currentName, newName, labelColor string) error {
 	if currentName == "" {
 		return fmt.Errorf("label name is required (use --name or -n)")
 	}
 	if newName == "" && labelColor == "" {
 		return fmt.Errorf("at least one of --new-name or --color is required")
 	}
-	owner, repoName, err := LabelResolveRepo(repo)
-	if err != nil {
-		return err
-	}
-
-	client, err := cmd.NewAPIClient()
+	owner, repoName, err := c.ResolveRepo(repo)
 	if err != nil {
 		return err
 	}
@@ -243,11 +198,11 @@ func LabelEdit(repo, currentName, newName, labelColor string) error {
 	encodedName := url.QueryEscape(currentName)
 	path := api.LabelGet(owner, repoName, encodedName)
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := c.ctx()
 	defer cancel()
 
 	var label types.Label
-	if err := client.Patch(ctx, path, req, &label); err != nil {
+	if err := c.API.Patch(ctx, path, req, &label); err != nil {
 		return fmt.Errorf("updating label: %w", err)
 	}
 
@@ -272,11 +227,11 @@ func LabelEdit(repo, currentName, newName, labelColor string) error {
 // LabelDelete runs the label-delete operation. If confirm is non-empty and
 // the user typed "y"/"yes", the delete proceeds. Otherwise it is cancelled.
 // In non-interactive mode (e.g. piped stdin), pass confirm="y" to skip.
-func LabelDelete(repo, name, confirm string) error {
+func (c *Client) LabelDelete(repo, name, confirm string) error {
 	if name == "" {
 		return fmt.Errorf("label name is required (use --name or -n)")
 	}
-	owner, repoName, err := LabelResolveRepo(repo)
+	owner, repoName, err := c.ResolveRepo(repo)
 	if err != nil {
 		return err
 	}
@@ -295,18 +250,13 @@ func LabelDelete(repo, name, confirm string) error {
 		}
 	}
 
-	client, err := cmd.NewAPIClient()
-	if err != nil {
-		return err
-	}
-
 	encodedName := url.QueryEscape(name)
 	path := api.LabelDelete(owner, repoName, encodedName)
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := c.ctx()
 	defer cancel()
 
-	if err := client.Delete(ctx, path); err != nil {
+	if err := c.API.Delete(ctx, path); err != nil {
 		return fmt.Errorf("deleting label: %w", err)
 	}
 
@@ -317,7 +267,7 @@ func LabelDelete(repo, name, confirm string) error {
 
 // LabelClone copies the entire label set from srcRepo to dstRepo.
 // Useful for bootstrapping a new repo with a consistent taxonomy.
-func LabelClone(srcRepo, dstRepo string) error {
+func (c *Client) LabelClone(srcRepo, dstRepo string) error {
 	if srcRepo == "" || dstRepo == "" {
 		return fmt.Errorf("both --source and --target are required (owner/repo)")
 	}
@@ -330,19 +280,12 @@ func LabelClone(srcRepo, dstRepo string) error {
 		return fmt.Errorf("invalid --target: %w", err)
 	}
 
-	client, err := cmd.NewAPIClient()
-	if err != nil {
-		return err
-	}
-
 	// Per-call context: each label POST gets its own timeout so a long clone
-	// of 50+ labels doesn't blow through one shared deadline. The previous
-	// version used one shared context, which caused the second half of large
-	// clones to fail with "context deadline exceeded" before completing.
+	// of 50+ labels doesn't blow through one shared deadline.
 	{
-		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+		ctx, cancel := c.ctx()
 		var srcLabels []types.Label
-		err := client.Get(ctx, api.LabelList(srcOwner, srcName), &srcLabels)
+		err := c.API.Get(ctx, api.LabelList(srcOwner, srcName), &srcLabels)
 		cancel()
 		if err != nil {
 			return fmt.Errorf("listing source labels: %w", err)
@@ -356,10 +299,10 @@ func LabelClone(srcRepo, dstRepo string) error {
 		created, failed := 0, 0
 		for _, l := range srcLabels {
 			// Fresh context per label so the deadline doesn't expire mid-loop.
-			ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+			ctx, cancel := c.ctx()
 			req := types.LabelCreateRequest{Name: l.Name, Color: l.Color}
 			var createdLabel types.Label
-			err := client.Post(ctx, api.LabelCreate(dstOwner, dstName), req, &createdLabel)
+			err := c.API.Post(ctx, api.LabelCreate(dstOwner, dstName), req, &createdLabel)
 			cancel()
 			if err != nil {
 				// Likely 409 (label already exists on target). Don't abort; tally.

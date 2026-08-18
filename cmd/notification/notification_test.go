@@ -11,7 +11,6 @@ import (
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
-	"gitee-cli/internal/handler"
 	"gitee-cli/pkg/types"
 
 	"github.com/stretchr/testify/assert"
@@ -387,7 +386,9 @@ func TestNotificationReadUnreadDirectionOutput(t *testing.T) {
 	defer restore()
 
 	restoreOut, drain := captureStdout(t)
-	err := handler.NotificationRead("1234", false, true /*markUnread*/, true /*force*/)
+	dc, err := cmd.NewDomainClient()
+	require.NoError(t, err)
+	err = dc.NotificationRead("1234", false, true /*markUnread*/, true /*force*/)
 	out := drain()
 	restoreOut()
 
@@ -408,7 +409,9 @@ func TestNotificationReadDefaultDirectionOutput(t *testing.T) {
 	defer restore()
 
 	restoreOut, drain := captureStdout(t)
-	err := handler.NotificationRead("1234", false, false /*markUnread*/, true /*force*/)
+	dc, err := cmd.NewDomainClient()
+	require.NoError(t, err)
+	err = dc.NotificationRead("1234", false, false /*markUnread*/, true /*force*/)
 	out := drain()
 	restoreOut()
 
@@ -428,7 +431,9 @@ func TestNotificationReadAllUnreadDirectionOutput(t *testing.T) {
 	defer restore()
 
 	restoreOut, drain := captureStdout(t)
-	err := handler.NotificationRead("", true /*all*/, true /*markUnread*/, true /*force*/)
+	dc, err := cmd.NewDomainClient()
+	require.NoError(t, err)
+	err = dc.NotificationRead("", true /*all*/, true /*markUnread*/, true /*force*/)
 	out := drain()
 	restoreOut()
 

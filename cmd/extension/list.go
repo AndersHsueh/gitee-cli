@@ -5,7 +5,6 @@ import (
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/extension"
-	"gitee-cli/internal/handler"
 	"gitee-cli/internal/output"
 
 	"github.com/spf13/cobra"
@@ -32,7 +31,7 @@ var listCmd = &cobra.Command{
 			return nil
 		}
 		if cmd.GlobalOutput == "json" {
-			return handler.PrintJSON(manifests)
+			return output.PrintJSON(manifests)
 		}
 		w := output.NewTableWriter()
 		fmt.Fprintln(w, "NAME\tSOURCE\tINSTALLED")

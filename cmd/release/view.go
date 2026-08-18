@@ -7,7 +7,7 @@ import (
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
-	"gitee-cli/internal/handler"
+	"gitee-cli/internal/output"
 	"gitee-cli/pkg/types"
 
 	"github.com/fatih/color"
@@ -69,7 +69,7 @@ func runView(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	if cmd.GlobalOutput == "json" {
-		return handler.PrintJSON(release)
+		return output.PrintJSON(release)
 	}
 
 	green := color.New(color.FgGreen).SprintFunc()

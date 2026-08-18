@@ -2,7 +2,6 @@ package label
 
 import (
 	"gitee-cli/cmd"
-	"gitee-cli/internal/handler"
 
 	"github.com/spf13/cobra"
 )
@@ -25,7 +24,11 @@ var listCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(c *cobra.Command, args []string) error {
-		return handler.LabelList(listFlags.repo, listFlags.filter, listFlags.limit)
+		dc, err := cmd.NewDomainClient()
+		if err != nil {
+			return err
+		}
+		return dc.LabelList(listFlags.repo, listFlags.filter, listFlags.limit)
 	},
 }
 

@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"gitee-cli/cmd"
-	"gitee-cli/internal/handler"
 
 	"github.com/spf13/cobra"
 )
@@ -53,7 +52,11 @@ look at later.`,
 		if threadID != "" && readFlags.all {
 			return fmt.Errorf("--all and a positional id are mutually exclusive")
 		}
-		return handler.NotificationRead(threadID, readFlags.all, readFlags.unread, readFlags.force)
+		dc, err := cmd.NewDomainClient()
+		if err != nil {
+			return err
+		}
+		return dc.NotificationRead(threadID, readFlags.all, readFlags.unread, readFlags.force)
 	},
 }
 
