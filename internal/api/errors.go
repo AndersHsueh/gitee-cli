@@ -20,6 +20,14 @@ const projectOrEnterpriseSignature = "project or enterprise"
 type APIError struct {
 	StatusCode int
 	Message    string `json:"message"`
+	// GiteeError carries the Gitee v5 "error" field, which some endpoints
+	// use instead of "message". The canonical example is a locked-comments
+	// issue: POST .../comments returns HTTP 401 with body
+	// {"error":"当前issue已关闭评论功能"} even though the token is valid.
+	// Prefer GiteeError over Message so the concrete reason is surfaced
+	// rather than the generic 401 "authentication failed" hint that would
+	// otherwise mislead the user into chasing a token problem.
+	GiteeError string `json:"error"`
 }
 
 func (e *APIError) Error() string {
@@ -44,6 +52,13 @@ func checkStatus(resp *resty.Response) error {
 	var apiErr APIError
 	apiErr.StatusCode = code
 	_ = json.Unmarshal(resp.Body(), &apiErr)
+	if apiErr.GiteeError != "" {
+		// Gitee v5 sometimes reports the real reason in the "error" field
+		// while the HTTP status code is misleading (e.g. 401 for a
+		// locked-comments issue). Surface that concrete message and only
+		// fall back to the generic status hint when there is no body.
+		apiErr.Message = apiErr.GiteeError
+	}
 	if apiErr.Message == "" {
 		apiErr.Message = httpStatusMessage(code)
 	}

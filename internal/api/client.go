@@ -94,6 +94,35 @@ func (c *Client) Post(ctx context.Context, path string, body, result interface{}
 	return c.do(ctx, resty.MethodPost, path, body, result)
 }
 
+// PostForm issues a POST request with an application/x-www-form-urlencoded
+// body built from the supplied url.Values. Use this for Gitee v5 endpoints
+// that accept only form-encoded input — the issue comment endpoint
+// /repos/{owner}/{repo}/issues/{number}/comments is the canonical caller:
+// it REJECTS JSON bodies with HTTP 401 before reaching the business layer,
+// while the same endpoint accepts form-encoded bodies. Mirrors PatchForm
+// (see its doc comment for the shared rationale); the only difference is
+// the HTTP verb.
+func (c *Client) PostForm(ctx context.Context, path string, form url.Values, result interface{}) error {
+	req := c.r.R().SetContext(ctx).SetHeader("Content-Type", "application/x-www-form-urlencoded")
+	if len(form) > 0 {
+		flat := make(map[string]string, len(form))
+		for k, vs := range form {
+			if len(vs) > 0 {
+				flat[k] = vs[0]
+			}
+		}
+		req = req.SetFormData(flat)
+	}
+	if result != nil {
+		req = req.SetResult(result)
+	}
+	resp, err := req.Post(path)
+	if err != nil {
+		return err
+	}
+	return checkStatus(resp)
+}
+
 // Patch issues a PATCH request.
 func (c *Client) Patch(ctx context.Context, path string, body, result interface{}) error {
 	return c.do(ctx, resty.MethodPatch, path, body, result)

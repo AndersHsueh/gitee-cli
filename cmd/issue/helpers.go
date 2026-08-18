@@ -328,12 +328,18 @@ func runComment(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	req := types.IssueCommentRequest{Body: commentFlags.body}
+	form := url.Values{}
+	form.Set("body", commentFlags.body)
 	path := api.IssuesComment(owner, repoName, issueNum)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
 	defer cancel()
 
-	if err := client.Post(ctx, path, req, nil); err != nil {
+	// Gitee v5 issue comment endpoint takes formData (NOT JSON). Sending a
+	// JSON body here is rejected with HTTP 401 before reaching the business
+	// layer — see the IssuesComment builder doc. The same formData contract
+	// that v0.12.6 applied to issue close/reopen/edit applies here.
+	var comment types.IssueComment
+	if err := client.PostForm(ctx, path, form, &comment); err != nil {
 		return fmt.Errorf("commenting on issue: %w", err)
 	}
 	fmt.Printf("Comment added to issue #%s\n", issueNum)
