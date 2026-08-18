@@ -1,15 +1,13 @@
 package repo
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
 	"net/url"
-	"time"
+	"strconv"
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
-	"gitee-cli/internal/output"
+	"gitee-cli/internal/cmdkit"
 	"gitee-cli/internal/utils"
 	"gitee-cli/pkg/types"
 
@@ -67,58 +65,44 @@ func runList(cobraCmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid --direction %q: use asc or desc", listFlags.direction)
 	}
 
-	client, err := cmd.NewAPIClient()
-	if err != nil {
-		return err
-	}
-
-	// Build the base query (visibility/sort/direction). page/per_page are
-	// handled by FetchListOrAll, which also clamps per_page to 1-100,
-	// dispatches on --paginate, honors --page, and treats a 404 as an empty
-	// result — the shared pagination contract every other list command uses.
-	path := api.ReposList(listFlags.owner)
-	q := url.Values{}
-	q.Set("visibility", listFlags.visibility)
-	q.Set("sort", listFlags.sort)
-	q.Set("direction", listFlags.direction)
-	path += "?" + q.Encode()
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
-	defer cancel()
-
-	repos, err := api.FetchListOrAll[types.Repository](ctx, client, path,
-		cmd.GlobalPaginate, cmd.GlobalPerPage, listFlags.limit, cmd.GlobalPage,
-		"listing repositories")
-	if err != nil {
-		return err
-	}
-
-	if cmd.GlobalOutput == "json" {
-		b, _ := json.MarshalIndent(repos, "", "  ")
-		fmt.Println(string(b))
-		return nil
-	}
-
-	if len(repos) == 0 {
-		fmt.Println("No repositories found")
-		return nil
-	}
-
-	w := output.NewTableWriter()
-	fmt.Fprintln(w, "NAME\tVISIBILITY\tLANGUAGE\tSTARS\tFORKS\tUPDATED")
-	for _, r := range repos {
-		vis := "public"
-		if r.Private {
-			vis = "private"
-		}
-		lang := r.Language
-		if lang == "" {
-			lang = "-"
-		}
-		fmt.Fprintf(w, "%s\t%s\t%s\t%d\t%d\t%s\n",
-			r.FullName, vis, lang, r.StarsCount, r.ForksCount, utils.TruncateDate(r.UpdatedAt))
-	}
-	return w.Flush()
+	return cmdkit.RunList[types.Repository](cmdkit.ListSpec[types.Repository]{
+		// repo list has no target repo — it lists by --owner (or the
+		// authenticated user). Return empty owner/repo; Path ignores them.
+		ResolveOwnerRepo: func() (string, string, error) {
+			return "", "", nil
+		},
+		Path: func(_, _ string) string {
+			path := api.ReposList(listFlags.owner)
+			q := url.Values{}
+			q.Set("visibility", listFlags.visibility)
+			q.Set("sort", listFlags.sort)
+			q.Set("direction", listFlags.direction)
+			return path + "?" + q.Encode()
+		},
+		// repo list caps at listFlags.limit (default 30), not GlobalLimit.
+		Limit:   func() int { return listFlags.limit },
+		Columns: []string{"NAME", "VISIBILITY", "LANGUAGE", "STARS", "FORKS", "UPDATED"},
+		Row: func(r types.Repository) []string {
+			vis := "public"
+			if r.Private {
+				vis = "private"
+			}
+			lang := r.Language
+			if lang == "" {
+				lang = "-"
+			}
+			return []string{
+				r.FullName, vis, lang,
+				strconv.Itoa(r.StarsCount),
+				strconv.Itoa(r.ForksCount),
+				utils.TruncateDate(r.UpdatedAt),
+			}
+		},
+		EmptyText: func(_, _ string) string {
+			return "No repositories found"
+		},
+		ErrCtx: "listing repositories",
+	})
 }
 
 const repoListAgentHelp = `# gitee repo list — Agent Help

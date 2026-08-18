@@ -1,16 +1,13 @@
 package issue
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
 	"net/url"
 	"strings"
-	"time"
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
-	"gitee-cli/internal/output"
+	"gitee-cli/internal/cmdkit"
 	"gitee-cli/internal/utils"
 	"gitee-cli/pkg/types"
 
@@ -55,71 +52,49 @@ func init() {
 }
 
 func runList(cobraCmd *cobra.Command, args []string) error {
-	owner, repoName, err := resolveRepo(listFlags.owner, cmd.GlobalRepo)
-	if err != nil {
-		return err
-	}
-
-	client, err := cmd.NewAPIClient()
-	if err != nil {
-		return err
-	}
-
-	// Build base query (without page/per_page — FetchAllPages handles those)
-	qv := url.Values{}
-	qv.Set("state", listFlags.state)
-	if listFlags.labels != "" {
-		qv.Set("labels", listFlags.labels)
-	}
-	if listFlags.assignee != "" {
-		qv.Set("assignee", listFlags.assignee)
-	}
-	if listFlags.milestone != "" {
-		qv.Set("milestone", listFlags.milestone)
-	}
-	basePath := api.IssuesList(owner, repoName) + "?" + qv.Encode()
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
-	defer cancel()
-
-	// FetchListOrAll handles perPage clamp (1-100), --paginate dispatch, and
-	// treats a 404 as an empty result (previously issue list errored on 404
-	// while pr list returned empty — now consistent).
-	issues, err := api.FetchListOrAll[types.Issue](ctx, client, basePath,
-		cmd.GlobalPaginate, cmd.GlobalPerPage, cmd.GlobalLimit, cmd.GlobalPage,
-		"listing issues")
-	if err != nil {
-		return err
-	}
-
-	if cmd.GlobalOutput == "json" {
-		b, _ := json.MarshalIndent(issues, "", "  ")
-		fmt.Println(string(b))
-		return nil
-	}
-
-	if len(issues) == 0 {
-		fmt.Printf("No %s issues found in %s/%s\n", listFlags.state, owner, repoName)
-		return nil
-	}
-
-	w := output.NewTableWriter()
-	fmt.Fprintln(w, "#\tTITLE\tSTATE\tLABELS\tUPDATED")
-	for _, i := range issues {
-		lbls := make([]string, 0, len(i.Labels))
-		for _, l := range i.Labels {
-			lbls = append(lbls, l.Name)
-		}
-		labelStr := strings.Join(lbls, ",")
-		if labelStr == "" {
-			labelStr = "-"
-		}
-		title := utils.Truncate(i.Title, 60)
-		updated := i.UpdatedAt.Format("2006-01-02")
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", i.Number, title, i.State, labelStr, updated)
-	}
-	_ = w.Flush()
-	return nil
+	return cmdkit.RunList[types.Issue](cmdkit.ListSpec[types.Issue]{
+		ResolveOwnerRepo: func() (string, string, error) {
+			return resolveRepo(listFlags.owner, cmd.GlobalRepo)
+		},
+		Path: func(owner, repoName string) string {
+			// Build base query (without page/per_page — the skeleton's
+			// FetchListOrAll handles those).
+			qv := url.Values{}
+			qv.Set("state", listFlags.state)
+			if listFlags.labels != "" {
+				qv.Set("labels", listFlags.labels)
+			}
+			if listFlags.assignee != "" {
+				qv.Set("assignee", listFlags.assignee)
+			}
+			if listFlags.milestone != "" {
+				qv.Set("milestone", listFlags.milestone)
+			}
+			return api.IssuesList(owner, repoName) + "?" + qv.Encode()
+		},
+		Columns: []string{"#", "TITLE", "STATE", "LABELS", "UPDATED"},
+		Row: func(i types.Issue) []string {
+			lbls := make([]string, 0, len(i.Labels))
+			for _, l := range i.Labels {
+				lbls = append(lbls, l.Name)
+			}
+			labelStr := strings.Join(lbls, ",")
+			if labelStr == "" {
+				labelStr = "-"
+			}
+			return []string{
+				i.Number,
+				utils.Truncate(i.Title, 60),
+				i.State,
+				labelStr,
+				i.UpdatedAt.Format("2006-01-02"),
+			}
+		},
+		EmptyText: func(o, r string) string {
+			return fmt.Sprintf("No %s issues found in %s/%s", listFlags.state, o, r)
+		},
+		ErrCtx: "listing issues",
+	})
 }
 
 // issueListAgentHelp is the agent-targeted help for `gitee issue list`.

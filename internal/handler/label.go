@@ -17,7 +17,7 @@ import (
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
-	"gitee-cli/internal/output"
+	"gitee-cli/internal/cmdkit"
 	"gitee-cli/internal/utils"
 	"gitee-cli/pkg/types"
 
@@ -61,53 +61,46 @@ func PrintJSON(v any) error {
 
 // LabelList runs the label-list operation.
 func LabelList(repo, filter string, limit int) error {
-	owner, repoName, err := LabelResolveRepo(repo)
-	if err != nil {
-		return err
-	}
-
-	client, err := cmd.NewAPIClient()
-	if err != nil {
-		return err
-	}
-
-	path := api.LabelList(owner, repoName)
-	q := url.Values{}
-	q.Set("per_page", fmt.Sprintf("%d", limit))
-	if filter != "" {
-		q.Set("color", filter)
-	}
-	fullPath := path + "?" + q.Encode()
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
-	defer cancel()
-
-	var labels []types.Label
-	if err := client.Get(ctx, fullPath, &labels); err != nil {
-		return fmt.Errorf("listing labels: %w", err)
-	}
-
-	if cmd.GlobalOutput == "json" {
-		return PrintJSON(labels)
-	}
-
-	if len(labels) == 0 {
-		fmt.Println("No labels found in this repository")
-		return nil
-	}
-
-	w := output.NewTableWriter()
-	fmt.Fprintln(w, "NAME\tCOLOR\tURL")
-	for _, l := range labels {
-		colorHex := l.Color
-		if !strings.HasPrefix(colorHex, "#") {
-			colorHex = "#" + colorHex
-		}
-		fmt.Fprintf(w, "%s\t%s\t%s\n", l.Name, colorHex, l.URL)
-	}
-	_ = w.Flush()
-	fmt.Printf("\nTotal: %d label(s)\n", len(labels))
-	return nil
+	return cmdkit.RunList[types.Label](cmdkit.ListSpec[types.Label]{
+		ResolveOwnerRepo: func() (string, string, error) {
+			return LabelResolveRepo(repo)
+		},
+		Path: func(owner, repoName string) string {
+			path := api.LabelList(owner, repoName)
+			q := url.Values{}
+			q.Set("per_page", fmt.Sprintf("%d", limit))
+			if filter != "" {
+				q.Set("color", filter)
+			}
+			return path + "?" + q.Encode()
+		},
+		// label list caps per_page with --limit and does a single GET — no
+		// --paginate support.
+		Fetch: func(ctx context.Context, client *api.Client, path string) ([]types.Label, error) {
+			var labels []types.Label
+			if err := client.Get(ctx, path, &labels); err != nil {
+				return nil, fmt.Errorf("listing labels: %w", err)
+			}
+			return labels, nil
+		},
+		Columns: []string{"NAME", "COLOR", "URL"},
+		Row: func(l types.Label) []string {
+			colorHex := l.Color
+			if !strings.HasPrefix(colorHex, "#") {
+				colorHex = "#" + colorHex
+			}
+			return []string{l.Name, colorHex, l.URL}
+		},
+		EmptyText: func(_, _ string) string {
+			return "No labels found in this repository"
+		},
+		Footer: func(count int) string {
+			return fmt.Sprintf("\nTotal: %d label(s)\n", count)
+		},
+		JSON: func(items []types.Label) error {
+			return PrintJSON(items)
+		},
+	})
 }
 
 // LabelView runs the label-view operation.

@@ -16,7 +16,7 @@ import (
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
-	"gitee-cli/internal/output"
+	"gitee-cli/internal/cmdkit"
 	"gitee-cli/internal/utils"
 	"gitee-cli/pkg/types"
 
@@ -31,63 +31,61 @@ import (
 //	"true" → only unread
 //	"false"→ only read
 func NotificationList(unreadFilter string, limit int) error {
-	client, err := cmd.NewAPIClient()
-	if err != nil {
-		return err
-	}
-
-	path := api.NotificationsList()
-	q := url.Values{}
-	if unreadFilter == "true" || unreadFilter == "false" {
-		q.Set("unread", unreadFilter)
-	}
-	if limit > 0 {
-		q.Set("per_page", strconv.Itoa(limit))
-	}
-	if encoded := q.Encode(); encoded != "" {
-		path = path + "?" + encoded
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
-	defer cancel()
-
-	var threads []types.NotificationThread
-	if err := client.Get(ctx, path, &threads); err != nil {
-		return fmt.Errorf("listing notifications: %w", err)
-	}
-
-	if cmd.GlobalOutput == "json" {
-		return PrintJSON(threads)
-	}
-
-	if len(threads) == 0 {
-		if unreadFilter == "true" {
-			fmt.Println("No unread notifications. You're all caught up.")
-		} else {
-			fmt.Println("No notifications.")
-		}
-		return nil
-	}
-
-	w := output.NewTableWriter()
-	fmt.Fprintln(w, "ID\tREPO\tTYPE\tSUBJECT\tWHEN")
-	for _, t := range threads {
-		marker := " "
-		if t.Unread {
-			marker = "*"
-		}
-		subject := utils.Truncate(t.Subject.Title, 50)
-		when := t.UpdatedAt.Format("2006-01-02 15:04")
-		repoName := t.Repository.FullName
-		if repoName == "" {
-			repoName = "-"
-		}
-		fmt.Fprintf(w, "%s%s\t%s\t%s\t%s\t%s\n",
-			marker, t.ID, repoName, t.Subject.Type, subject, when)
-	}
-	_ = w.Flush()
-	fmt.Printf("\nTotal: %d thread(s) (* = unread)\n", len(threads))
-	return nil
+	return cmdkit.RunList[types.NotificationThread](cmdkit.ListSpec[types.NotificationThread]{
+		// notification list is user-scoped — no target repo.
+		ResolveOwnerRepo: func() (string, string, error) {
+			return "", "", nil
+		},
+		Path: func(_, _ string) string {
+			path := api.NotificationsList()
+			q := url.Values{}
+			if unreadFilter == "true" || unreadFilter == "false" {
+				q.Set("unread", unreadFilter)
+			}
+			if limit > 0 {
+				q.Set("per_page", strconv.Itoa(limit))
+			}
+			if encoded := q.Encode(); encoded != "" {
+				path = path + "?" + encoded
+			}
+			return path
+		},
+		// notification list caps per_page with --limit and does a single GET
+		// — no --paginate support.
+		Fetch: func(ctx context.Context, client *api.Client, path string) ([]types.NotificationThread, error) {
+			var threads []types.NotificationThread
+			if err := client.Get(ctx, path, &threads); err != nil {
+				return nil, fmt.Errorf("listing notifications: %w", err)
+			}
+			return threads, nil
+		},
+		Columns: []string{"ID", "REPO", "TYPE", "SUBJECT", "WHEN"},
+		Row: func(t types.NotificationThread) []string {
+			marker := " "
+			if t.Unread {
+				marker = "*"
+			}
+			subject := utils.Truncate(t.Subject.Title, 50)
+			when := t.UpdatedAt.Format("2006-01-02 15:04")
+			repoName := t.Repository.FullName
+			if repoName == "" {
+				repoName = "-"
+			}
+			return []string{marker + t.ID, repoName, t.Subject.Type, subject, when}
+		},
+		EmptyText: func(_, _ string) string {
+			if unreadFilter == "true" {
+				return "No unread notifications. You're all caught up."
+			}
+			return "No notifications."
+		},
+		Footer: func(count int) string {
+			return fmt.Sprintf("\nTotal: %d thread(s) (* = unread)\n", count)
+		},
+		JSON: func(items []types.NotificationThread) error {
+			return PrintJSON(items)
+		},
+	})
 }
 
 // NotificationCount runs the notification-count operation and prints

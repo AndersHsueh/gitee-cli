@@ -2,14 +2,13 @@ package org
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/url"
-	"time"
+	"strconv"
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
-	"gitee-cli/internal/output"
+	"gitee-cli/internal/cmdkit"
 	"gitee-cli/internal/utils"
 	"gitee-cli/pkg/types"
 
@@ -39,50 +38,45 @@ func init() {
 }
 
 func runList(cobraCmd *cobra.Command, args []string) error {
-	client, err := cmd.NewAPIClient()
-	if err != nil {
-		return err
-	}
-
-	perPage := listFlags.limit
-	if perPage < 1 {
-		perPage = 30
-	}
-	if perPage > 100 {
-		perPage = 100
-	}
-	qv := url.Values{}
-	qv.Set("per_page", fmt.Sprintf("%d", perPage))
-	path := api.OrgsList() + "?" + qv.Encode()
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
-	defer cancel()
-
-	var orgs []types.Organization
-	if err := client.Get(ctx, path, &orgs); err != nil {
-		return fmt.Errorf("listing orgs: %w", err)
-	}
-
-	if cmd.GlobalOutput == "json" {
-		b, _ := json.MarshalIndent(orgs, "", "  ")
-		fmt.Println(string(b))
-		return nil
-	}
-
-	if len(orgs) == 0 {
-		fmt.Println("No organizations found")
-		return nil
-	}
-
-	w := output.NewTableWriter()
-	fmt.Fprintln(w, "LOGIN\tNAME\tDESCRIPTION\tPUBLIC REPOS")
-	for _, o := range orgs {
-		desc := utils.Truncate(o.Description, 50)
-		if desc == "" {
-			desc = "-"
-		}
-		fmt.Fprintf(w, "%s\t%s\t%s\t%d\n", o.Login, o.Name, desc, o.PublicRepos)
-	}
-	return w.Flush()
+	return cmdkit.RunList[types.Organization](cmdkit.ListSpec[types.Organization]{
+		// org list lists the authenticated user's orgs — no target repo.
+		ResolveOwnerRepo: func() (string, string, error) {
+			return "", "", nil
+		},
+		Path: func(_, _ string) string {
+			// Clamp per_page to Gitee v5's 1-100 range before sending it.
+			perPage := listFlags.limit
+			if perPage < 1 {
+				perPage = 30
+			}
+			if perPage > 100 {
+				perPage = 100
+			}
+			qv := url.Values{}
+			qv.Set("per_page", fmt.Sprintf("%d", perPage))
+			return api.OrgsList() + "?" + qv.Encode()
+		},
+		// org list caps per_page with --limit and does a single GET — no
+		// --paginate support.
+		Fetch: func(ctx context.Context, client *api.Client, path string) ([]types.Organization, error) {
+			var orgs []types.Organization
+			if err := client.Get(ctx, path, &orgs); err != nil {
+				return nil, fmt.Errorf("listing orgs: %w", err)
+			}
+			return orgs, nil
+		},
+		Columns: []string{"LOGIN", "NAME", "DESCRIPTION", "PUBLIC REPOS"},
+		Row: func(o types.Organization) []string {
+			desc := utils.Truncate(o.Description, 50)
+			if desc == "" {
+				desc = "-"
+			}
+			return []string{o.Login, o.Name, desc, strconv.Itoa(o.PublicRepos)}
+		},
+		EmptyText: func(_, _ string) string {
+			return "No organizations found"
+		},
+	})
 }
 
 // orgListAgentHelp is the agent-targeted help for `gitee org list`.
