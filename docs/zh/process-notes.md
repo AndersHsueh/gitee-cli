@@ -35,14 +35,14 @@
 
 - **状态**：已提交 PR #15，等待人工审核合并
 - **修复 PR**：[#15](https://gitee.com/andershsueh/gitee-cli/pulls/15)
-- **测试结果**：internal/cmdkit/list_test.go 6 个 httptest 边界单测通过；test/test-IK923U-cmdkit-list-skeleton.sh 全绿（8 通过）；现有 issue/pr *_test.go 全部继续通过（输出逐字节一致）；go build/vet/test ./... 全绿；golangci-lint 0 issues
+- **测试结果**：internal/cmdkit/list_test.go 8 个 httptest 边界单测通过（分页合并/limit截断/json-table分派/空结果/404→空/Footer/CustomJSON）；test/test-IK923U-cmdkit-list-skeleton.sh 全绿（11 通过）；现有各模块 *_test.go 全部继续通过（输出逐字节一致）；go build/vet/test ./... 全绿；golangci-lint 0 issues
 - **原则校验**：跳过（原则文档不存在，用户确认跳过）
 - **决策**：
   - 新增 `internal/cmdkit` 深模块骨架（`RunList` + `ListSpec`），统一 repo 解析、client 构造、超时、分页（--paginate/--page/--per-page/--limit）、json/table 输出分派、空结果提示、404→空列表。
-  - 业务差异通过 `ListSpec` 声明式配置：`ResolveOwnerRepo` / `Path` / `Limit` / `Columns` / `Row` / `EmptyText`。
-  - 迁移 `issue list` + `pr list` 作为试点，runList 从约 110 行降为约 40 行声明式配置。
+  - 业务差异通过 `ListSpec` 声明式配置：`ResolveOwnerRepo` / `Path` / `Limit` / `Columns` / `Row` / `EmptyText`，以及扩展的 `Fetch`（自定义数据获取）/ `Footer`（表尾 Total 行）/ `JSON`（自定义输出）。
+  - **扩展迁移（用户要求彻底完成）**：全部 11 个 API list 命令迁移到骨架——issue/pr/repo/gist/release/label/milestone/webhook/org/notification/ssh-key。runList 从约 110 行降为约 40 行声明式配置。
   - 全局行为不变，现有测试全部继续通过（输出逐字节一致）。
+- **保留原样**：alias list、extension list（本地数据源 + map JSON 输出，无 client/超时/分页样板，不适用 API 骨架）。
 - **遗留问题**：
-  - 改动超过 300 行（新增 570 行，主要来自骨架实现与配套测试），已在 PR 描述注明建议先做设计评审再合并。Gitee CLI 无给 PR 打标签的命令，故以描述提示代替 large-change-needs-design-review 标签。
-  - 仅迁移 issue list + pr list 作为试点；repo/gist 等 list 命令留待后续迁移（避免一次改动过大）。
+  - 改动超过 300 行（骨架实现 + 配套测试），已在 PR 描述注明建议先做设计评审再合并。Gitee CLI 无给 PR 打标签的命令，故以描述提示代替 large-change-needs-design-review 标签。
 - **特殊依赖**：无
