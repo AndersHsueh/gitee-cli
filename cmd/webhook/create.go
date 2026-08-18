@@ -30,7 +30,8 @@ var createCmd = &cobra.Command{
   gitee webhook create -R owner/repo -u https://x.example.com/hook \
       --password s3cret --encryption-type 0`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(webhookCreateAgentHelp)
 		}
 		return nil
@@ -54,6 +55,7 @@ func init() {
 }
 
 func runCreate(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	// Cobra's BoolVar doesn't have a "Changed()" sentinel for "user explicitly
 	// passed --flag=false", so we treat the default (push=true) as a suggestion
 	// and let the user override with --push-events=false. All other events
@@ -73,7 +75,7 @@ func runCreate(cobraCmd *cobra.Command, args []string) error {
 		et := createFlags.encryptionType
 		req.EncryptionType = &et
 	}
-	dc, err := cmd.NewDomainClient()
+	dc, err := cmd.NewDomainClientFrom(rt)
 	if err != nil {
 		return err
 	}

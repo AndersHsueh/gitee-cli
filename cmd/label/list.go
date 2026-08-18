@@ -18,13 +18,15 @@ var listCmd = &cobra.Command{
 	Example: `  gitee label list --repo owner/repo
   gitee label list -R owner/repo --limit 50`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(labelListAgentHelp)
 		}
 		return nil
 	},
 	RunE: func(c *cobra.Command, args []string) error {
-		dc, err := cmd.NewDomainClient()
+	rt := cmd.RuntimeFromCmd(c)
+		dc, err := cmd.NewDomainClientFrom(rt)
 		if err != nil {
 			return err
 		}

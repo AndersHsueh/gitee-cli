@@ -29,7 +29,8 @@ existing clones — you must update your local remotes after a rename.`,
 	Example: `  gitee repo rename owner/old-name new-name
   gitee repo rename --repo owner/old-name --new-name new-name`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoRenameAgentHelp)
 		}
 		return nil
@@ -44,6 +45,7 @@ func init() {
 }
 
 func runRename(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	// Two ways to invoke:
 	//   1. `gitee repo rename owner/old new`       (positional)
 	//   2. `gitee repo rename --repo owner/old --new-name new`
@@ -52,7 +54,7 @@ func runRename(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
@@ -62,7 +64,7 @@ func runRename(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	path := api.ReposRename(oldOwner, oldName)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	var repo types.Repository

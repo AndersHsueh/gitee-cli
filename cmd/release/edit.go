@@ -28,7 +28,8 @@ var editCmd = &cobra.Command{
 	Example: `  gitee release edit v1.0.0 --repo owner/repo --name "1.0.0 Stable"
   gitee release edit v1.0.0 -R owner/repo --body "Updated release notes"`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(releaseEditAgentHelp)
 		}
 		return nil
@@ -47,6 +48,7 @@ func init() {
 }
 
 func runEdit(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	tag := editFlags.tag
 	if tag == "" && len(args) >= 1 {
 		tag = args[0]
@@ -60,7 +62,7 @@ func runEdit(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
@@ -83,7 +85,7 @@ func runEdit(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	path := api.ReleaseEdit(owner, repoName, tag)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	var release types.Release

@@ -12,13 +12,15 @@ var countCmd = &cobra.Command{
 	Example: `  gitee notification count
   gitee notification count --output json`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(notificationCountAgentHelp)
 		}
 		return nil
 	},
 	RunE: func(c *cobra.Command, args []string) error {
-		dc, err := cmd.NewDomainClient()
+	rt := cmd.RuntimeFromCmd(c)
+		dc, err := cmd.NewDomainClientFrom(rt)
 		if err != nil {
 			return err
 		}

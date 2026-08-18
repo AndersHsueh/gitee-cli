@@ -57,7 +57,8 @@ repos to inspect.`,
   gitee pr status --limit 100
   gitee pr status --output json`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(prStatusAgentHelp)
 		}
 		return nil
@@ -73,11 +74,12 @@ func init() {
 }
 
 func runPRStatus(cobraCmd *cobra.Command, args []string) error {
-	client, err := cmd.NewAPIClient()
+	rt := cmd.RuntimeFromCmd(cobraCmd)
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	username, err := cmd.ResolveCurrentUsername(ctx, client)
@@ -164,7 +166,7 @@ func runPRStatus(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	// Render.
-	if cmd.GlobalOutput == "json" {
+	if rt.Output == "json" {
 		out := map[string]prStatusSection{
 			"awaiting_your_review": {
 				Title: "Pull requests awaiting your review",

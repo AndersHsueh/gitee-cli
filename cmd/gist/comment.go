@@ -24,7 +24,8 @@ var commentCmd = &cobra.Command{
   gitee gist comment abc123def -b "Thanks for the fix!"`,
 	Args:    cmd.AgentHelpAwareArgs(cobra.ExactArgs(1)),
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(gistCommentAgentHelp)
 		}
 		return nil
@@ -39,16 +40,17 @@ func init() {
 }
 
 func runGistComment(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	gistID := args[0]
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
 
 	req := types.GistCommentRequest{Body: commentFlags.body}
 	path := api.GistCommentCreate(gistID)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	var created types.GistComment

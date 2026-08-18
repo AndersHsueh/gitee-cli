@@ -26,7 +26,8 @@ var readyCmd = &cobra.Command{
 	Example: `  gitee pr ready 42 --repo owner/repo
   gitee pr ready 42 -R owner/repo`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(prReadyAgentHelp)
 		}
 		return nil
@@ -42,6 +43,7 @@ func init() {
 }
 
 func runReady(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	prNum, err := utils.ParseInt64Arg(readyFlags.id, args, "PR")
 	if err != nil {
 		return err
@@ -55,7 +57,7 @@ func runReady(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
@@ -66,7 +68,7 @@ func runReady(cobraCmd *cobra.Command, args []string) error {
 	req := types.PREditRequest{Draft: utils.BoolPtr(false)}
 
 	path := api.PRsEdit(owner, repoName, int(prNum))
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	var pr types.PullRequest

@@ -24,7 +24,8 @@ var listCmd = &cobra.Command{
 	Example: `  gitee gist list
   gitee gist list --limit 20`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(gistListAgentHelp)
 		}
 		return nil
@@ -38,11 +39,12 @@ func init() {
 }
 
 func runList(cobraCmd *cobra.Command, args []string) error {
-	client, err := cmd.NewAPIClient()
+	rt := cmd.RuntimeFromCmd(cobraCmd)
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
-	opts := cmd.NewCmdkitOptions(client)
+	opts := cmd.NewCmdkitOptionsFrom(rt, client)
 	return cmdkit.RunList[types.Gist](opts, cmdkit.ListSpec[types.Gist]{
 		// gist list lists the authenticated user's gists — no target repo.
 		ResolveOwnerRepo: func() (string, string, error) {

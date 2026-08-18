@@ -55,7 +55,8 @@ use gitee repo watch to receive notifications about its activity.`,
   gitee repo star list
   gitee repo star list --limit 50`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoStarAgentHelp)
 		}
 		return nil
@@ -72,7 +73,8 @@ var starStarCmd = &cobra.Command{
 	Example: `  gitee repo star myorg/myrepo
   gitee repo star --repo myorg/myrepo`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoStarStarAgentHelp)
 		}
 		return nil
@@ -86,7 +88,8 @@ var starUnstarCmd = &cobra.Command{
 	Example: `  gitee repo unstar myorg/myrepo
   gitee repo unstar --repo myorg/myrepo`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoStarUnstarAgentHelp)
 		}
 		return nil
@@ -100,7 +103,8 @@ var starListCmd = &cobra.Command{
 	Example: `  gitee repo star list
   gitee repo star list --limit 50`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoStarListAgentHelp)
 		}
 		return nil
@@ -139,6 +143,7 @@ func resolveStarRepoArg(args []string) ([2]string, error) {
 }
 
 func runRepoStar(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	// --agent-help handling is in PreRunE (runs before required-flag validation).
 
 	repo, err := resolveStarRepoArg(args)
@@ -147,13 +152,13 @@ func runRepoStar(cobraCmd *cobra.Command, args []string) error {
 	}
 	owner, repoName := repo[0], repo[1]
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
 
 	path := api.RepoStar(owner, repoName)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	// PUT returns 204 No Content; we don't decode a body.
@@ -169,6 +174,7 @@ func runRepoStar(cobraCmd *cobra.Command, args []string) error {
 }
 
 func runRepoUnstar(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	// --agent-help handling is in PreRunE (runs before required-flag validation).
 
 	repo, err := resolveStarRepoArg(args)
@@ -177,13 +183,13 @@ func runRepoUnstar(cobraCmd *cobra.Command, args []string) error {
 	}
 	owner, repoName := repo[0], repo[1]
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
 
 	path := api.RepoUnstar(owner, repoName)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	if err := client.Delete(ctx, path); err != nil {
@@ -197,9 +203,10 @@ func runRepoUnstar(cobraCmd *cobra.Command, args []string) error {
 }
 
 func runRepoStarList(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	// --agent-help handling is in PreRunE (runs before required-flag validation).
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
@@ -207,7 +214,7 @@ func runRepoStarList(cobraCmd *cobra.Command, args []string) error {
 	path := fmt.Sprintf("%s?sort=%s&per_page=%d",
 		api.UserStarredList(), starFlags.sort, starFlags.limit)
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	var repos []types.Repository
@@ -215,7 +222,7 @@ func runRepoStarList(cobraCmd *cobra.Command, args []string) error {
 		return fmt.Errorf("listing starred repositories: %w", err)
 	}
 
-	if cmd.GlobalOutput == "json" {
+	if rt.Output == "json" {
 		b, _ := json.MarshalIndent(repos, "", "  ")
 		fmt.Println(string(b))
 		return nil

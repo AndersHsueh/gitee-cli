@@ -23,7 +23,8 @@ var viewCmd = &cobra.Command{
 	Short:   "View organization details",
 	Example: `  gitee org view my-org`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(orgViewAgentHelp)
 		}
 		return nil
@@ -37,6 +38,7 @@ func init() {
 }
 
 func runView(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	org := viewFlags.org
 	if len(args) > 0 {
 		org = args[0]
@@ -45,13 +47,13 @@ func runView(cobraCmd *cobra.Command, args []string) error {
 		return fmt.Errorf("organization name is required")
 	}
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
 
 	path := api.OrgGet(org)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	var o types.Organization
@@ -59,7 +61,7 @@ func runView(cobraCmd *cobra.Command, args []string) error {
 		return fmt.Errorf("viewing org: %w", err)
 	}
 
-	if cmd.GlobalOutput == "json" {
+	if rt.Output == "json" {
 		b, _ := json.MarshalIndent(o, "", "  ")
 		fmt.Println(string(b))
 		return nil

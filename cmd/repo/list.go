@@ -35,7 +35,8 @@ var listCmd = &cobra.Command{
   gitee repo list --owner gitee --visibility public
   gitee repo list --sort stars --direction desc`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoListAgentHelp)
 		}
 		return nil
@@ -53,6 +54,7 @@ func init() {
 }
 
 func runList(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	// --agent-help handling is in PreRunE (runs before required-flag validation).
 
 	if !validRepoVisibilities[listFlags.visibility] {
@@ -65,11 +67,11 @@ func runList(cobraCmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid --direction %q: use asc or desc", listFlags.direction)
 	}
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
-	opts := cmd.NewCmdkitOptions(client)
+	opts := cmd.NewCmdkitOptionsFrom(rt, client)
 	return cmdkit.RunList[types.Repository](opts, cmdkit.ListSpec[types.Repository]{
 		// repo list has no target repo — it lists by --owner (or the
 		// authenticated user). Return empty owner/repo; Path ignores them.

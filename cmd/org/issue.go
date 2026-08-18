@@ -30,7 +30,8 @@ var issueCmd = &cobra.Command{
 	Example: `  gitee org issues my-org
   gitee org issues my-org --state closed --labels bug`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(orgIssueAgentHelp)
 		}
 		return nil
@@ -47,6 +48,7 @@ func init() {
 }
 
 func runOrgIssues(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	org := orgIssueFlags.org
 	if len(args) > 0 {
 		org = args[0]
@@ -55,7 +57,7 @@ func runOrgIssues(cobraCmd *cobra.Command, args []string) error {
 		return fmt.Errorf("organization name is required")
 	}
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
@@ -68,7 +70,7 @@ func runOrgIssues(cobraCmd *cobra.Command, args []string) error {
 	}
 	path := api.OrgIssues(org) + "?" + qv.Encode()
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	var issues []types.Issue
@@ -76,7 +78,7 @@ func runOrgIssues(cobraCmd *cobra.Command, args []string) error {
 		return fmt.Errorf("listing org issues: %w", err)
 	}
 
-	if cmd.GlobalOutput == "json" {
+	if rt.Output == "json" {
 		b, _ := json.MarshalIndent(issues, "", "  ")
 		fmt.Println(string(b))
 		return nil

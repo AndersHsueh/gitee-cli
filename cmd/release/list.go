@@ -27,7 +27,8 @@ var listCmd = &cobra.Command{
 	Example: `  gitee release list --repo owner/repo
   gitee release list --repo owner/repo --limit 50`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(releaseListAgentHelp)
 		}
 		return nil
@@ -43,11 +44,12 @@ func init() {
 }
 
 func runList(cobraCmd *cobra.Command, args []string) error {
-	client, err := cmd.NewAPIClient()
+	rt := cmd.RuntimeFromCmd(cobraCmd)
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
-	opts := cmd.NewCmdkitOptions(client)
+	opts := cmd.NewCmdkitOptionsFrom(rt, client)
 	return cmdkit.RunList[types.Release](opts, cmdkit.ListSpec[types.Release]{
 		ResolveOwnerRepo: func() (string, string, error) {
 			return resolveReleaseRepo(listFlags.repo)

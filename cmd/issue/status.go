@@ -53,7 +53,8 @@ rather than iterating each repo individually.`,
   gitee issue status --output json
   gitee issue status --limit 200`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(issueStatusAgentHelp)
 		}
 		return nil
@@ -69,7 +70,8 @@ func init() {
 }
 
 func runIssueStatus(cobraCmd *cobra.Command, args []string) error {
-	client, err := cmd.NewAPIClient()
+	rt := cmd.RuntimeFromCmd(cobraCmd)
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}

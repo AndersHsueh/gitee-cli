@@ -18,13 +18,15 @@ var listCmd = &cobra.Command{
 	Example: `  gitee milestone list --repo owner/repo
   gitee milestone list -R owner/repo --state closed --limit 50`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(milestoneListAgentHelp)
 		}
 		return nil
 	},
 	RunE: func(c *cobra.Command, args []string) error {
-		dc, err := cmd.NewDomainClient()
+	rt := cmd.RuntimeFromCmd(c)
+		dc, err := cmd.NewDomainClientFrom(rt)
 		if err != nil {
 			return err
 		}

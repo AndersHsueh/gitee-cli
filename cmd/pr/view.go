@@ -28,7 +28,8 @@ var viewCmd = &cobra.Command{
 	// PreRunE fires BEFORE the cobra arg check, so an agent can request
 	// --agent-help even when <number> is missing.
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(prViewAgentHelp)
 		}
 		return nil
@@ -43,6 +44,7 @@ func init() {
 }
 
 func runView(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	if len(args) < 1 {
 		return fmt.Errorf("PR number is required")
 	}
@@ -52,7 +54,7 @@ func runView(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
@@ -63,7 +65,7 @@ func runView(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	path := api.PRsGet(owner, repoName, prNum)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	var pr types.PullRequest
@@ -71,7 +73,7 @@ func runView(cobraCmd *cobra.Command, args []string) error {
 		return fmt.Errorf("viewing PR: %w", err)
 	}
 
-	if cmd.GlobalOutput == "json" {
+	if rt.Output == "json" {
 		b, _ := json.MarshalIndent(pr, "", "  ")
 		fmt.Println(string(b))
 		return nil

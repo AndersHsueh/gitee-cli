@@ -30,7 +30,8 @@ var checksCmd = &cobra.Command{
 	Example: `  gitee pr checks 42 --repo owner/repo
   gitee pr checks 42 -R owner/repo --output json`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(prChecksAgentHelp)
 		}
 		return nil
@@ -47,6 +48,7 @@ func init() {
 }
 
 func runChecks(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	prNum, err := utils.ParseInt64Arg(checksFlags.id, args, "PR")
 	if err != nil {
 		return err
@@ -60,14 +62,14 @@ func runChecks(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
 
 	// Step 1: fetch the PR to get the head ref (branch name). Gitee's
 	// check-runs endpoint is keyed by commit ref, not PR number.
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	var pr types.PullRequest
@@ -95,7 +97,7 @@ func runChecks(cobraCmd *cobra.Command, args []string) error {
 		return fmt.Errorf("fetching check-runs: %w", err)
 	}
 
-	if cmd.GlobalOutput == "json" {
+	if rt.Output == "json" {
 		b, _ := json.MarshalIndent(checkRuns, "", "  ")
 		fmt.Println(string(b))
 		return nil

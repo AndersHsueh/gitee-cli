@@ -35,7 +35,8 @@ If the file already exists, use --force to overwrite.`,
   gitee agent onboard --dir ./my-project
   gitee agent onboard --force`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(onboardAgentHelp)
 		}
 		return nil

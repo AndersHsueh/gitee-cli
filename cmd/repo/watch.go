@@ -50,7 +50,8 @@ The watch verb accepts a --type flag with three values:
   gitee repo watch myorg/myrepo --type releases_only
   gitee repo unwatch myorg/myrepo`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoWatchAgentHelp)
 		}
 		return nil
@@ -67,7 +68,8 @@ var watchWatchCmd = &cobra.Command{
 	Example: `  gitee repo watch myorg/myrepo
   gitee repo watch myorg/myrepo --type releases_only`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoWatchWatchAgentHelp)
 		}
 		return nil
@@ -80,7 +82,8 @@ var watchUnwatchCmd = &cobra.Command{
 	Short: "Unsubscribe from a repository (no notifications)",
 	Example: `  gitee repo unwatch myorg/myrepo`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoWatchUnwatchAgentHelp)
 		}
 		return nil
@@ -121,6 +124,7 @@ func resolveWatchRepoArg(args []string) ([2]string, error) {
 }
 
 func runRepoWatch(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	// --agent-help handling is in PreRunE (runs before required-flag validation).
 
 	repo, err := resolveWatchRepoArg(args)
@@ -134,7 +138,7 @@ func runRepoWatch(cobraCmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid --type %q: must be one of watching, releases_only, ignoring", watchFlags.typ)
 	}
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
@@ -144,7 +148,7 @@ func runRepoWatch(cobraCmd *cobra.Command, args []string) error {
 	// a body of nil + ?watch_type=... gives us idempotent semantics.
 	path := fmt.Sprintf("%s?watch_type=%s", api.RepoWatch(owner, repoName), typ)
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	if err := client.Put(ctx, path, nil, nil); err != nil {
@@ -160,6 +164,7 @@ func runRepoWatch(cobraCmd *cobra.Command, args []string) error {
 }
 
 func runRepoUnwatch(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	// --agent-help handling is in PreRunE (runs before required-flag validation).
 
 	repo, err := resolveWatchRepoArg(args)
@@ -168,13 +173,13 @@ func runRepoUnwatch(cobraCmd *cobra.Command, args []string) error {
 	}
 	owner, repoName := repo[0], repo[1]
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
 
 	path := api.RepoUnwatch(owner, repoName)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	if err := client.Delete(ctx, path); err != nil {

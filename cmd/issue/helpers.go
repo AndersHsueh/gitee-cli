@@ -52,7 +52,8 @@ var editCmd = &cobra.Command{
 	Short:   "Edit an issue",
 	Example: `  gitee issue edit 42 --repo owner/repo --title "New title"`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(issueEditAgentHelp)
 		}
 		return nil
@@ -65,7 +66,8 @@ var closeCmd = &cobra.Command{
 	Short:   "Close an issue",
 	Example: `  gitee issue close 42 --repo owner/repo`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(issueCloseAgentHelp)
 		}
 		return nil
@@ -78,7 +80,8 @@ var reopenCmd = &cobra.Command{
 	Short:   "Reopen an issue",
 	Example: `  gitee issue reopen 42 --repo owner/repo`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(issueReopenAgentHelp)
 		}
 		return nil
@@ -91,7 +94,8 @@ var commentCmd = &cobra.Command{
 	Short:   "Add a comment to an issue",
 	Example: `  gitee issue comment 42 --repo owner/repo --body "Comment text"`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(issueCommentAgentHelp)
 		}
 		return nil
@@ -125,6 +129,7 @@ func init() {
 }
 
 func runEdit(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	if len(args) < 1 {
 		return fmt.Errorf("issue number is required")
 	}
@@ -134,7 +139,7 @@ func runEdit(cobraCmd *cobra.Command, args []string) error {
 	}
 	issueNum := args[0]
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
@@ -172,6 +177,7 @@ func runEdit(cobraCmd *cobra.Command, args []string) error {
 }
 
 func runClose(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	if len(args) < 1 {
 		return fmt.Errorf("issue number is required")
 	}
@@ -181,7 +187,7 @@ func runClose(cobraCmd *cobra.Command, args []string) error {
 	}
 	issueNum := args[0]
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
@@ -207,6 +213,7 @@ func runClose(cobraCmd *cobra.Command, args []string) error {
 }
 
 func runReopen(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	if len(args) < 1 {
 		return fmt.Errorf("issue number is required")
 	}
@@ -216,7 +223,7 @@ func runReopen(cobraCmd *cobra.Command, args []string) error {
 	}
 	issueNum := args[0]
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
@@ -314,6 +321,7 @@ const projectOrEnterprise404Note = `- 404 Not Found:     body says "project or e
                      "Gitee v5 cannot toggle the state".`
 
 func runComment(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	if len(args) < 1 {
 		return fmt.Errorf("issue number is required")
 	}
@@ -323,7 +331,7 @@ func runComment(cobraCmd *cobra.Command, args []string) error {
 	}
 	issueNum := args[0]
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}

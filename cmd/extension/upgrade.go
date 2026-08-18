@@ -27,7 +27,8 @@ var upgradeCmd = &cobra.Command{
   gitee extension upgrade --all
   gitee extension upgrade --all --dry-run`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(extensionUpgradeAgentHelp)
 		}
 		return nil

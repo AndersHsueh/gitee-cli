@@ -52,7 +52,8 @@ var searchReposCmd = &cobra.Command{
 	Short: "Search repositories",
 	Args:  cmd.AgentHelpAwareArgs(cobra.MinimumNArgs(1)),
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(searchReposAgentHelp)
 		}
 		return nil
@@ -100,6 +101,7 @@ func init() {
 }
 
 func runSearchRepos(c *cobra.Command, args []string) error {
+		_ = cmd.RuntimeFromCmd(c)
 	q := args[0]
 	client := newSearchClient()
 
@@ -141,7 +143,8 @@ var searchIssuesCmd = &cobra.Command{
 	Short: "Search issues across repositories",
 	Args:  cmd.AgentHelpAwareArgs(cobra.MinimumNArgs(1)),
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(searchIssuesAgentHelp)
 		}
 		return nil
@@ -150,6 +153,7 @@ var searchIssuesCmd = &cobra.Command{
 }
 
 func runSearchIssues(c *cobra.Command, args []string) error {
+		_ = cmd.RuntimeFromCmd(c)
 	q := args[0]
 	client := newSearchClient()
 
@@ -186,7 +190,8 @@ var searchUsersCmd = &cobra.Command{
 	Short: "Search users",
 	Args:  cmd.AgentHelpAwareArgs(cobra.MinimumNArgs(1)),
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(searchUsersAgentHelp)
 		}
 		return nil
@@ -195,6 +200,7 @@ var searchUsersCmd = &cobra.Command{
 }
 
 func runSearchUsers(c *cobra.Command, args []string) error {
+		_ = cmd.RuntimeFromCmd(c)
 	q := args[0]
 	client := newSearchClient()
 
@@ -232,7 +238,8 @@ var searchCodeCmd = &cobra.Command{
 Note: Code search availability depends on your Gitee instance.
 If the API returns a 404, code search is not enabled for that instance.`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(searchCodeAgentHelp)
 		}
 		return nil
@@ -241,6 +248,7 @@ If the API returns a 404, code search is not enabled for that instance.`,
 }
 
 func runSearchCode(c *cobra.Command, args []string) error {
+	_ = cmd.RuntimeFromCmd(c)
 	if len(args) < 1 {
 		return fmt.Errorf("query is required (usage: gitee search code <query>)")
 	}
@@ -292,7 +300,8 @@ var searchCommitsCmd = &cobra.Command{
 Note: Commit search availability depends on your Gitee instance.
 If the API returns a 404, commit search is not enabled for that instance.`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(searchCommitsAgentHelp)
 		}
 		return nil
@@ -301,6 +310,7 @@ If the API returns a 404, commit search is not enabled for that instance.`,
 }
 
 func runSearchCommits(c *cobra.Command, args []string) error {
+	_ = cmd.RuntimeFromCmd(c)
 	if len(args) < 1 {
 		return fmt.Errorf("query is required (usage: gitee search commits <query>)")
 	}

@@ -44,7 +44,8 @@ API response.`,
 	Aliases: []string{"co"},
 	// PreRunE fires BEFORE ValidateRequiredFlags so --agent-help works.
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(prCheckoutAgentHelp)
 		}
 		return nil
@@ -64,6 +65,7 @@ func init() {
 }
 
 func runCheckout(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	if len(args) < 1 {
 		return fmt.Errorf("PR number is required (pass it as the first argument)")
 	}
@@ -83,7 +85,7 @@ func runCheckout(cobraCmd *cobra.Command, args []string) error {
 		localBranch = fmt.Sprintf("pr-%d", prNum)
 	}
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
@@ -93,7 +95,7 @@ func runCheckout(cobraCmd *cobra.Command, args []string) error {
 	// `pull/<N>/head` is computed from the PR number — we don't need
 	// source branch info unless the user wants to know.
 	// However we DO need to know if the local branch already exists.
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	var pr types.PullRequest

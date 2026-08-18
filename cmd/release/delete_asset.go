@@ -33,7 +33,8 @@ the confirmation prompt.`,
 	Example: `  gitee release delete-asset v1.0.0 --repo owner/repo --asset-name app.tar.gz
   gitee release delete-asset v1.0.0 -R owner/repo --asset-id 12345 --force`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(releaseDeleteAssetAgentHelp)
 		}
 		return nil
@@ -53,6 +54,7 @@ func init() {
 }
 
 func runDeleteAsset(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	tag := deleteAssetFlags.tag
 	if tag == "" && len(args) >= 1 {
 		tag = args[0]
@@ -69,11 +71,11 @@ func runDeleteAsset(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	// Get release to find numeric ID + assets.

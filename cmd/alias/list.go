@@ -17,6 +17,7 @@ var listCmd = &cobra.Command{
   gitee alias list --output json`,
 	PreRunE: preRunAgentHelp(aliasListAgentHelp),
 	RunE: func(c *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(c)
 		keys, m, err := alias.Sorted()
 		if err != nil {
 			return fmt.Errorf("listing aliases: %w", err)
@@ -25,7 +26,7 @@ var listCmd = &cobra.Command{
 			fmt.Println("No aliases defined. Use 'gitee alias set <name> <expansion>' to add one.")
 			return nil
 		}
-		if cmd.GlobalOutput == "json" {
+		if rt.Output == "json" {
 			// Emit the map itself, not the sorted-keys slice, so the
 			// JSON output is the canonical storage shape.
 			return output.PrintJSON(m)

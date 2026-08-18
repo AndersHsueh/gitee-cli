@@ -33,7 +33,8 @@ var listCmd = &cobra.Command{
 	// PreRunE fires BEFORE ValidateRequiredFlags, so an agent can request
 	// --agent-help even when --repo is missing.
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(prListAgentHelp)
 		}
 		return nil
@@ -55,11 +56,12 @@ func init() {
 }
 
 func runList(cobraCmd *cobra.Command, args []string) error {
-	client, err := cmd.NewAPIClient()
+	rt := cmd.RuntimeFromCmd(cobraCmd)
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
-	opts := cmd.NewCmdkitOptions(client)
+	opts := cmd.NewCmdkitOptionsFrom(rt, client)
 	return cmdkit.RunList[types.PullRequest](opts, cmdkit.ListSpec[types.PullRequest]{
 		ResolveOwnerRepo: func() (string, string, error) {
 			return resolvePRRepo(listFlags.owner, listFlags.repo)

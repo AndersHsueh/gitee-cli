@@ -24,7 +24,8 @@ var listCmd = &cobra.Command{
 	Short:   "List your organizations",
 	Example: `  gitee org list`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(orgListAgentHelp)
 		}
 		return nil
@@ -38,11 +39,12 @@ func init() {
 }
 
 func runList(cobraCmd *cobra.Command, args []string) error {
-	client, err := cmd.NewAPIClient()
+	rt := cmd.RuntimeFromCmd(cobraCmd)
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
-	opts := cmd.NewCmdkitOptions(client)
+	opts := cmd.NewCmdkitOptionsFrom(rt, client)
 	return cmdkit.RunList[types.Organization](opts, cmdkit.ListSpec[types.Organization]{
 		// org list lists the authenticated user's orgs — no target repo.
 		ResolveOwnerRepo: func() (string, string, error) {

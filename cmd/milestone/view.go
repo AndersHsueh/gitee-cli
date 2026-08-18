@@ -18,19 +18,21 @@ var viewCmd = &cobra.Command{
 	Example: `  gitee milestone view --repo owner/repo --number 1
   gitee milestone view -R owner/repo 2`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(milestoneViewAgentHelp)
 		}
 		return nil
 	},
 	RunE: func(c *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(c)
 		// Accept the milestone number as either the flag value or the
 		// first positional argument (gh-style "view 2").
 		parsed, err := utils.ParseInt64Arg(viewFlags.number, args, "milestone")
 		if err != nil {
 			return err
 		}
-		dc, err := cmd.NewDomainClient()
+		dc, err := cmd.NewDomainClientFrom(rt)
 		if err != nil {
 			return err
 		}

@@ -25,7 +25,8 @@ var commentsCmd = &cobra.Command{
   gitee gist comments abc123def --output json`,
 	Args:    cmd.AgentHelpAwareArgs(cobra.ExactArgs(1)),
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(gistCommentsAgentHelp)
 		}
 		return nil
@@ -40,9 +41,10 @@ func init() {
 }
 
 func runGistComments(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	gistID := args[0]
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
@@ -59,7 +61,7 @@ func runGistComments(cobraCmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("listing gist comments: %w", err)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	var comments []types.GistComment
@@ -73,7 +75,7 @@ func runGistComments(cobraCmd *cobra.Command, args []string) error {
 		comments = comments[:commentsFlags.limit]
 	}
 
-	if cmd.GlobalOutput == "json" {
+	if rt.Output == "json" {
 		b, _ := json.MarshalIndent(comments, "", "  ")
 		fmt.Println(string(b))
 		return nil

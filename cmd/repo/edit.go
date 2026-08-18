@@ -31,7 +31,8 @@ var editCmd = &cobra.Command{
   gitee repo edit --repo owner/repo --private
   gitee repo edit --repo owner/repo --public`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoEditAgentHelp)
 		}
 		return nil
@@ -61,6 +62,7 @@ func registerEditFlags(c *cobra.Command) {
 }
 
 func runEdit(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	// --agent-help handling is in PreRunE (runs before required-flag validation).
 
 	owner, repoName, err := resolveRepo(editFlags.owner, editFlags.repo, args)
@@ -68,7 +70,7 @@ func runEdit(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
@@ -95,7 +97,7 @@ func runEdit(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	path := api.ReposEdit(owner, repoName)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	var repo types.Repository

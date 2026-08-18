@@ -24,7 +24,8 @@ var forkCmd = &cobra.Command{
 	Example: `  gitee repo fork owner/repo
   gitee repo fork --repo owner/repo`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoForkAgentHelp)
 		}
 		return nil
@@ -39,6 +40,7 @@ func init() {
 }
 
 func runFork(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	// --agent-help handling is in PreRunE (runs before required-flag validation).
 
 	owner, repoName, err := resolveRepo(forkFlags.owner, forkFlags.repo, args)
@@ -46,13 +48,13 @@ func runFork(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
 
 	path := api.ReposFork(owner, repoName)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	var repo types.Repository

@@ -19,7 +19,8 @@ var commentDeleteCmd = &cobra.Command{
   gitee gist comment-delete abc123def 12345 --yes`,
 	Args:    cmd.AgentHelpAwareArgs(cobra.ExactArgs(2)),
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(gistCommentDeleteAgentHelp)
 		}
 		return nil
@@ -36,6 +37,7 @@ var gistCommentDeleteFlags = struct {
 }{}
 
 func runGistCommentDelete(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	gistID := args[0]
 	commentID, err := strconv.ParseInt(args[1], 10, 64)
 	if err != nil {
@@ -45,13 +47,13 @@ func runGistCommentDelete(cobraCmd *cobra.Command, args []string) error {
 		return fmt.Errorf("comment id must be positive")
 	}
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
 
 	path := api.GistCommentDelete(gistID, commentID)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	if err := client.Delete(ctx, path); err != nil {

@@ -20,19 +20,21 @@ var listCmd = &cobra.Command{
   gitee notification list --unread --output json
   gitee notification list --limit 50`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(notificationListAgentHelp)
 		}
 		return nil
 	},
 	RunE: func(c *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(c)
 		filter := ""
 		if listFlags.unreadOnly {
 			filter = "true"
 		} else if listFlags.readOnly {
 			filter = "false"
 		}
-		dc, err := cmd.NewDomainClient()
+		dc, err := cmd.NewDomainClientFrom(rt)
 		if err != nil {
 			return err
 		}

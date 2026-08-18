@@ -62,7 +62,8 @@ the target branch.
   gitee repo file push ./README.md README.md --repo owner/repo -m "update readme"
   gitee repo file delete --repo owner/repo docs/old.md -m "remove obsolete"`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoFileAgentHelp)
 		}
 		return nil
@@ -80,7 +81,8 @@ var fileViewCmd = &cobra.Command{
   gitee repo file view -R owner/repo src/main.go
   gitee repo file view --repo owner/repo docs/`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoFileViewAgentHelp)
 		}
 		return nil
@@ -94,7 +96,8 @@ var filePushCmd = &cobra.Command{
 	Example: `  gitee repo file push ./README.md README.md --repo owner/repo -m "update"
   gitee repo file push ./docs/api.md docs/api.md -R owner/repo -m "doc fix"`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoFilePushAgentHelp)
 		}
 		return nil
@@ -108,7 +111,8 @@ var fileDeleteCmd = &cobra.Command{
 	Example: `  gitee repo file delete --repo owner/repo docs/old.md -m "remove"
   gitee repo file delete README.md -R owner/repo -m "wipe" --force`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoFileDeleteAgentHelp)
 		}
 		return nil
@@ -145,6 +149,7 @@ func init() {
 // as a positional argument; --repo supplies the target repo. The GET
 // response is either a single ContentEntry (file) or an array (dir).
 func runFileView(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	// --agent-help handling is in PreRunE (runs before required-flag validation).
 
 	if len(args) < 1 || args[0] == "" {
@@ -163,7 +168,7 @@ func runFileView(cobraCmd *cobra.Command, args []string) error {
 		cleanPath = "."
 	}
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
@@ -261,6 +266,7 @@ func printFileEntry(owner, repoName string, entry *types.ContentEntry, showBody 
 //  3. POST to create (404 on GET) or PUT to update (sha present).
 //  4. Print the resulting commit + content URL.
 func runFilePush(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	// --agent-help handling is in PreRunE (runs before required-flag validation).
 
 	if len(args) < 2 || args[0] == "" || args[1] == "" {
@@ -286,7 +292,7 @@ func runFilePush(cobraCmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid remote path %q", remotePath)
 	}
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
@@ -381,6 +387,7 @@ func probeFileSHA(ctx context.Context, client *api.Client, owner, repoName, path
 // required by Gitee; if --sha is not provided, we issue a GET to fetch
 // the current SHA (one extra round-trip).
 func runFileDelete(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	// --agent-help handling is in PreRunE (runs before required-flag validation).
 
 	if len(args) < 1 || args[0] == "" {
@@ -416,7 +423,7 @@ func runFileDelete(cobraCmd *cobra.Command, args []string) error {
 	// A single client + ctx serves both the optional auto-fetch of the
 	// blob SHA and the actual DELETE. Previously each branch built its
 	// own client, duplicating NewAPIClient (which re-reads token/config).
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}

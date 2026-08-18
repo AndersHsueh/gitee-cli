@@ -25,7 +25,8 @@ var repoCmd = &cobra.Command{
 	Short:   "List organization repositories",
 	Example: `  gitee org repos my-org`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(orgRepoAgentHelp)
 		}
 		return nil
@@ -40,6 +41,7 @@ func init() {
 }
 
 func runOrgRepos(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	org := orgRepoFlags.org
 	if len(args) > 0 {
 		org = args[0]
@@ -48,7 +50,7 @@ func runOrgRepos(cobraCmd *cobra.Command, args []string) error {
 		return fmt.Errorf("organization name is required")
 	}
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
@@ -63,7 +65,7 @@ func runOrgRepos(cobraCmd *cobra.Command, args []string) error {
 	qv := url.Values{}
 	qv.Set("per_page", fmt.Sprintf("%d", perPage))
 	path := api.OrgRepos(org) + "?" + qv.Encode()
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	var repos []types.Repository
@@ -71,7 +73,7 @@ func runOrgRepos(cobraCmd *cobra.Command, args []string) error {
 		return fmt.Errorf("listing org repos: %w", err)
 	}
 
-	if cmd.GlobalOutput == "json" {
+	if rt.Output == "json" {
 		b, _ := json.MarshalIndent(repos, "", "  ")
 		fmt.Println(string(b))
 		return nil

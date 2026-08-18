@@ -31,7 +31,8 @@ Use this after the upstream has new commits you want to integrate.`,
   gitee repo sync --repo owner/my-fork
   gitee repo sync my-fork --branch develop`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoSyncAgentHelp)
 		}
 		return nil
@@ -47,6 +48,7 @@ func init() {
 }
 
 func runSync(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	owner, repoName, err := resolveRepo("", syncFlags.repo, args)
 	if err != nil {
 		return err
@@ -70,13 +72,13 @@ func runSync(cobraCmd *cobra.Command, args []string) error {
 		}
 	}
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
 
 	path := api.ReposSync(owner, repoName)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	if err := client.Post(ctx, path, nil, nil); err != nil {

@@ -30,7 +30,8 @@ var reviewCmd = &cobra.Command{
 	// PreRunE fires BEFORE the cobra arg check, so an agent can request
 	// --agent-help even when <number> is missing.
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(prReviewAgentHelp)
 		}
 		return nil
@@ -49,6 +50,7 @@ func init() {
 }
 
 func runReview(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	if len(args) < 1 {
 		return fmt.Errorf("PR number is required")
 	}
@@ -71,7 +73,7 @@ func runReview(cobraCmd *cobra.Command, args []string) error {
 		event = "request_changes"
 	}
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
@@ -82,7 +84,7 @@ func runReview(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	path := api.PRsReview(owner, repoName, prNum)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	if err := client.Post(ctx, path, req, nil); err != nil {

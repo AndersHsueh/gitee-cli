@@ -30,7 +30,8 @@ var commentsCmd = &cobra.Command{
   gitee issue comments 42 -R owner/repo --output json`,
 	Args: cmd.AgentHelpAwareArgs(cobra.ExactArgs(1)),
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(issueCommentsAgentHelp)
 		}
 		return nil
@@ -46,12 +47,13 @@ func init() {
 }
 
 func runComments(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	owner, repoName, err := resolveRepo(commentsFlags.owner, commentsFlags.repo)
 	if err != nil {
 		return err
 	}
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
@@ -61,7 +63,7 @@ func runComments(cobraCmd *cobra.Command, args []string) error {
 	q.Set("per_page", fmt.Sprintf("%d", commentsFlags.limit))
 	fullPath := path + "?" + q.Encode()
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	var comments []types.IssueComment
@@ -69,7 +71,7 @@ func runComments(cobraCmd *cobra.Command, args []string) error {
 		return fmt.Errorf("listing issue comments: %w", err)
 	}
 
-	if cmd.GlobalOutput == "json" {
+	if rt.Output == "json" {
 		b, _ := json.MarshalIndent(comments, "", "  ")
 		fmt.Println(string(b))
 		return nil

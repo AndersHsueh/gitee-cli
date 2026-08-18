@@ -42,7 +42,8 @@ var editCmd = &cobra.Command{
   # Mark ready (use 'gitee pr ready' for this — same effect)
   gitee pr edit 42 -R owner/repo --no-draft`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(prEditAgentHelp)
 		}
 		return nil
@@ -62,6 +63,7 @@ func init() {
 }
 
 func runEdit(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	prNum, err := utils.ParseInt64Arg(editFlags.id, args, "PR")
 	if err != nil {
 		return err
@@ -85,7 +87,7 @@ func runEdit(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
@@ -105,7 +107,7 @@ func runEdit(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	path := api.PRsEdit(owner, repoName, int(prNum))
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	var pr types.PullRequest

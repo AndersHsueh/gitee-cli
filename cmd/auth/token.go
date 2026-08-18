@@ -15,9 +15,10 @@ var tokenCmd = &cobra.Command{
 	Short:    "Print the auth token",
 	PreRunE:  cmd.AgentHelpNA("auth token"),
 	RunE: func(cobraCmd *cobra.Command, args []string) error {
-		token := cmd.GlobalToken
+	rt := cmd.RuntimeFromCmd(cobraCmd)
+		token := rt.Token
 		if token == "" {
-			token = config.GetToken(cmd.ResolveHostname())
+			token = config.GetToken(rt.Hostname)
 		}
 		if token == "" {
 			return fmt.Errorf("not authenticated")
