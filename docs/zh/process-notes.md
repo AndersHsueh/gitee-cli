@@ -46,3 +46,18 @@
 - **遗留问题**：
   - 改动超过 300 行（骨架实现 + 配套测试），已在 PR 描述注明建议先做设计评审再合并。Gitee CLI 无给 PR 打标签的命令，故以描述提示代替 large-change-needs-design-review 标签。
 - **特殊依赖**：无
+### IK923T — 统一命令组织模式：消除 internal/handler 分层倒置与双轨制
+
+- **状态**：已提交 PR #16，等待人工审核合并
+- **修复 PR**：[#16](https://gitee.com/andershsueh/gitee-cli/pulls/16)
+- **测试结果**：grep '"gitee-cli/cmd"' internal/ 为空（internal 不再 import cmd）；go build/test ./... 全绿；golangci-lint 0 issues；gofmt 通过；notification_test.go 迁移后 3 个用例继续通过
+- **原则校验**：已核对（纯架构重构，无冲突）
+- **决策**：
+  - 新增 `internal/domain` 包：`Client` 结构（`API`/`Timeout`/`Output`/`Repo` 显式依赖）+ label/milestone/notification/webhook 四个 domain 文件（原 handler 业务逻辑迁移，Git 识别为 rename 68%/67%/76%/66%）。
+  - `internal/cmdkit` 解耦：`RunList` 改为接受显式 `Options`（Client/Timeout/Output/Paginate/PerPage/Limit/Page/Repo），不再读取 cmd 全局状态；11 个 list 命令调用方更新。
+  - `internal/output` 新增 `PrintJSON`（原 handler.PrintJSON 迁移，cmd 层与 domain 共用）。
+  - cmd 层新增 `NewDomainClient()`/`NewCmdkitOptions()` 依赖注入辅助，cmd 成为唯一读取全局状态的层。
+  - 删除 `internal/handler` 4 个文件，消除 internal → cmd 逆向依赖。
+- **遗留问题**：
+  - 改动 39 文件超阈值，PR 描述已注明建议先做设计评审再合并（Gitee CLI 无打标签命令，以描述提示代替）。
+- **特殊依赖**：无
