@@ -7,6 +7,8 @@
 set -euo pipefail
 
 BINARY="${GITEE_CLI_BINARY:-./gitee}"
+# 调试旁路: 设 GITEE_KEEP_TEST_REPO=1 跳过删除, 保留仓库供排查
+KEEP_TEST_REPO="${GITEE_KEEP_TEST_REPO:-}"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -15,6 +17,47 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 passed=0; failed=0; skipped=0
+# leaked: 本脚本产生的临时仓库未能在退出前清理掉的数量
+leaked=0
+
+# ---------------------------------------------------------------------------
+# 临时测试仓库 cleanup
+# 风格沿用 test/auth.sh:37-43 与 test/config.sh:28-33 (命名函数 + trap EXIT)
+# 解决: test/api.sh 在 DELETE 失败 / Ctrl-C / set -e 提前退出时残留
+#       gitee-cli-api-test-* 私有仓库到 Gitee 的问题
+# ---------------------------------------------------------------------------
+TEST_REPO_NAME=""
+TEST_REPO_OWNER=""
+
+cleanup_test_repo() {
+    local owner="${TEST_REPO_OWNER:-}"
+    local name="${TEST_REPO_NAME:-}"
+    # 已经在第一次 trap 调用时清理过 (例如脚本正常结束时), 直接返回
+    [[ -z "$name" ]] && return 0
+
+    if [[ -n "$KEEP_TEST_REPO" ]]; then
+        echo -e "  ${YELLOW}⊘${NC} 保留测试仓库 $owner/$name (GITEE_KEEP_TEST_REPO=$KEEP_TEST_REPO)" >&2
+        TEST_REPO_NAME=""
+        return 0
+    fi
+
+    # 重试 3 次: 私有仓库建好后索引可能未传播, 第一次 DELETE 偶尔 404
+    local i out
+    for i in 1 2 3; do
+        out=$("$BINARY" repo delete "$owner/$name" --yes 2>&1) && {
+            TEST_REPO_NAME=""
+            return 0
+        }
+        sleep 2
+    done
+
+    # 重试仍失败: 增加泄露计数 (汇总块据此 exit 1)
+    leaked=$((leaked + 1))
+    echo -e "  ${RED}✗${NC} 清理失败, 请手动删除 $owner/$name: $out" >&2
+    TEST_REPO_NAME=""
+}
+
+trap cleanup_test_repo EXIT
 
 pass()    { passed=$((passed+1)); echo -e "  ${GREEN}✓${NC} $*"; }
 fail()    { failed=$((failed+1)); echo -e "  ${RED}✗${NC} $*" >&2; }
@@ -95,7 +138,11 @@ fi
 # api --field 参数构造 POST 请求（测试用临时仓库，用后删除）
 # ---------------------------------------------------------------------------
 section "gitee api POST --field 参数（创建并删除测试仓库）"
-TEST_REPO_NAME="gitee-cli-api-test-$(date +%s)"
+TEST_REPO_NAME="gitee-cli-api-test-$(date +%s)-$$"
+
+# 提前解析当前用户名 (失败也不阻塞, cleanup 时再重试拿)
+TEST_REPO_OWNER=$("$BINARY" api raw GET https://gitee.com/api/v5/user 2>&1 \
+    | grep '"login"' | head -1 | sed 's/.*"login": *"\([^"]*\)".*/\1/')
 
 # 创建仓库
 create_output=$("$BINARY" api raw POST https://gitee.com/api/v5/user/repos \
@@ -108,22 +155,32 @@ create_output=$("$BINARY" api raw POST https://gitee.com/api/v5/user/repos \
 if echo "$create_output" | grep -q "\"full_name\""; then
     pass "api POST /user/repos --field 创建仓库成功"
 
-    # 获取当前用户名
-    user_login=$("$BINARY" api raw GET https://gitee.com/api/v5/user 2>&1 | grep '"login"' | head -1 | sed 's/.*"login": *"\([^"]*\)".*/\1/')
-
-    if [[ -n "$user_login" ]]; then
-        # 删除测试仓库
-        delete_output=$("$BINARY" api raw DELETE "/repos/$user_login/$TEST_REPO_NAME" 2>&1 || true)
-        if [[ -z "$delete_output" ]] || echo "$delete_output" | grep -qvE "error|Error|错误"; then
-            pass "api DELETE /repos 删除测试仓库成功"
+    # happy path: 立即尝试删除 (保留现有 'api DELETE /repos' 测试断言)
+    # 用 cli wrapper 而不是 api raw, 因为 wrapper 是稳定的 repo delete 入口
+    # 即便这里失败, EXIT trap 还会兜底重试
+    if [[ -n "$TEST_REPO_OWNER" ]]; then
+        if [[ -n "$KEEP_TEST_REPO" ]]; then
+            # 调试旁路: 保留仓库, 同时记录 leaked +1 让 self-check 失败
+            pass "api POST /user/repos --field 创建仓库成功 (GITEE_KEEP_TEST_REPO=$KEEP_TEST_REPO 保留)"
+            leaked=$((leaked + 1))
         else
-            skip "api DELETE 清理失败，请手动删除 $user_login/$TEST_REPO_NAME: $delete_output"
+            delete_output=$("$BINARY" repo delete "$TEST_REPO_OWNER/$TEST_REPO_NAME" --yes 2>&1 || true)
+            if echo "$delete_output" | grep -q "deleted"; then
+                pass "api DELETE /repos 删除测试仓库成功"
+                TEST_REPO_NAME=""  # 立即清理成功, 不让 trap 再删
+            else
+                # 留给 trap 兜底重试, 这里不再 skip (会污染 skipped 计数)
+                echo -e "  ${YELLOW}⊘${NC} 立即删除失败, 留给 EXIT trap 兜底: $delete_output" >&2
+            fi
         fi
     else
-        skip "无法获取用户名，请手动删除仓库 $TEST_REPO_NAME"
+        # user_login 解析失败, 全权交给 trap 处理
+        echo -e "  ${YELLOW}⊘${NC} 解析当前用户名失败, 留给 EXIT trap 兜底" >&2
     fi
 else
     fail "api POST /user/repos --field 创建仓库失败: ${create_output:0:300}"
+    # 创建失败, TEST_REPO_NAME 不指向任何实际仓库, 清空避免 trap 误删别的
+    TEST_REPO_NAME=""
 fi
 
 # ---------------------------------------------------------------------------
@@ -182,14 +239,40 @@ fi
 # ---------------------------------------------------------------------------
 echo ""
 echo "────────────────────────────────────────"
-echo -e "  ${GREEN}通过: $passed${NC}  ${RED}失败: $failed${NC}  ${YELLOW}跳过: $skipped${NC}"
+echo -e "  ${GREEN}通过: $passed${NC}  ${RED}失败: $failed${NC}  ${YELLOW}跳过: $skipped${NC}  ${RED}泄露: $leaked${NC}"
 echo "────────────────────────────────────────"
 
-if [[ $failed -eq 0 ]]; then
+# Leak self-check: 扫账号下所有 gitee-cli-api-test-* 残留仓库
+# (覆盖本次跑出来的 + 其他来源积累的). 不依赖本脚本的计数器.
+remaining_leaks=0
+if leaks_json=$("$BINARY" repo list --paginate --limit 200 -o json 2>/dev/null); then
+    remaining_leaks=$(echo "$leaks_json" | python3 -c "
+import json,sys
+try:
+    repos=json.load(sys.stdin)
+    print(sum(1 for r in repos if 'gitee-cli-api-test' in (r.get('full_name') or '')))
+except Exception:
+    print(0)" 2>/dev/null || echo 0)
+fi
+
+if [[ $failed -eq 0 && $leaked -eq 0 && $remaining_leaks -eq 0 ]]; then
     echo -e "${GREEN}✓ api 模块测试全部通过${NC}"
     exit 0
 else
-    echo -e "${RED}✗ api 模块测试有失败项${NC}"
+    [[ $failed -gt 0 ]] && echo -e "${RED}✗ api 模块测试有失败项${NC}"
+    [[ $leaked -gt 0 ]] && echo -e "${RED}✗ 本次运行有 $leaked 个测试仓库清理失败${NC}"
+    if [[ $remaining_leaks -gt 0 ]]; then
+        echo -e "${RED}✗ 账号下仍有 $remaining_leaks 个 gitee-cli-api-test-* 残留仓库 (历史或本次)${NC}"
+        if [[ -n "$leaks_json" ]]; then
+            echo "$leaks_json" | python3 -c "
+import json,sys
+for r in json.load(sys.stdin):
+    fn=r.get('full_name','')
+    if 'gitee-cli-api-test' in fn:
+        print(f'    - {fn} (created {r.get(\"created_at\",\"?\")})')" 2>/dev/null || true
+        fi
+        echo -e "  手动清理: for r in \$(gitee repo list --paginate --limit 200 -o json | jq -r '.[] | select(.full_name | contains(\"gitee-cli-api-test\")) | .full_name'); do gitee repo delete \"\$r\" --yes; done"
+    fi
     exit 1
 fi
 ""
