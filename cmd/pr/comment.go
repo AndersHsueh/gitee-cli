@@ -27,7 +27,8 @@ var commentCmd = &cobra.Command{
 	Example: `  gitee pr comment 42 --repo owner/repo --body "LGTM, merging"
   gitee pr comment 42 -R owner/repo -b "Thanks for the fix!"`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(prCommentAgentHelp)
 		}
 		return nil
@@ -45,6 +46,7 @@ func init() {
 }
 
 func runComment(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	prNum, err := utils.ParseInt64Arg(commentFlags.id, args, "PR")
 	if err != nil {
 		return err
@@ -58,14 +60,14 @@ func runComment(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
 
 	req := types.PRCommentRequest{Body: commentFlags.body}
 	path := api.PRsComments(owner, repoName, int(prNum))
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	if err := client.Post(ctx, path, req, nil); err != nil {

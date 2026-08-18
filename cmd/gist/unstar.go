@@ -17,7 +17,8 @@ var unstarCmd = &cobra.Command{
 	Example: `  gitee gist unstar <gistID>`,
 	Args:    cmd.AgentHelpAwareArgs(cobra.ExactArgs(1)),
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(gistUnstarAgentHelp)
 		}
 		return nil
@@ -26,15 +27,16 @@ var unstarCmd = &cobra.Command{
 }
 
 func runUnstar(c *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(c)
 	gistID := args[0]
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
 
 	path := api.GistUnstar(gistID)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	if err := client.Delete(ctx, path); err != nil {

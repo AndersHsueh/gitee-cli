@@ -25,7 +25,8 @@ var deleteCmd = &cobra.Command{
 	Example: `  gitee release delete v0.1.0 --repo owner/repo
   gitee release delete v0.1.0 -R owner/repo --force`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(releaseDeleteAgentHelp)
 		}
 		return nil
@@ -41,6 +42,7 @@ func init() {
 }
 
 func runDelete(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	tag := deleteFlags.tag
 	if tag == "" && len(args) >= 1 {
 		tag = args[0]
@@ -68,13 +70,13 @@ func runDelete(cobraCmd *cobra.Command, args []string) error {
 		}
 	}
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
 
 	path := api.ReleaseDelete(owner, repoName, tag)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	if err := client.Delete(ctx, path); err != nil {

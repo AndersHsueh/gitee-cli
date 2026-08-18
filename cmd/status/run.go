@@ -96,17 +96,18 @@ type sectionItem struct {
 }
 
 func runStatus(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	owner, repoName, err := resolveCurrentRepo()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return nil // exit 0 — see resolveCurrentRepo doc comment
 	}
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	username, err := cmd.ResolveCurrentUsername(ctx, client)

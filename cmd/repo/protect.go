@@ -46,7 +46,8 @@ break it, and to unlock it again when you intentionally need to.
 	Example: `  gitee repo protect main --repo owner/repo
   gitee repo unprotect main --repo owner/repo`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoProtectAgentHelp)
 		}
 		return nil
@@ -63,7 +64,8 @@ var protectProtectCmd = &cobra.Command{
 	Example: `  gitee repo protect main --repo owner/repo
   gitee repo protect release/v1 --repo owner/repo`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoProtectProtectAgentHelp)
 		}
 		return nil
@@ -77,7 +79,8 @@ var protectUnprotectCmd = &cobra.Command{
 	Example: `  gitee repo unprotect main --repo owner/repo
   gitee repo unprotect release/v1 --repo owner/repo`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoProtectUnprotectAgentHelp)
 		}
 		return nil
@@ -95,7 +98,8 @@ var repoUnprotectCmd = &cobra.Command{
 	Example: `  gitee repo unprotect main --repo owner/repo
   gitee repo unprotect release/v1 --repo owner/repo`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoProtectUnprotectAgentHelp)
 		}
 		return nil
@@ -134,6 +138,7 @@ func resolveProtectBranchArg(args []string) (string, error) {
 }
 
 func runRepoProtect(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	// --agent-help handling is in PreRunE (runs before required-flag validation).
 
 	repo, err := resolveRepoArg(protectFlags.repo)
@@ -147,13 +152,13 @@ func runRepoProtect(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
 
 	path := api.RepoBranchProtection(owner, repoName, branch)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	// PUT returns 204 No Content; we don't decode a body.
@@ -169,6 +174,7 @@ func runRepoProtect(cobraCmd *cobra.Command, args []string) error {
 }
 
 func runRepoUnprotect(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	// --agent-help handling is in PreRunE (runs before required-flag validation).
 
 	repo, err := resolveRepoArg(protectFlags.repo)
@@ -182,13 +188,13 @@ func runRepoUnprotect(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
 
 	path := api.RepoUnprotectBranch(owner, repoName, branch)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	if err := client.Delete(ctx, path); err != nil {

@@ -120,7 +120,7 @@ func TestRepoTagFlagsCoveredInAgentHelp(t *testing.T) {
 }
 
 // TestResolveRepoArg validates the helper that the tag subcommands use
-// to turn the local --repo flag (or the global cmd.GlobalRepo fallback)
+// to turn the local --repo flag (or the global rt.Repo fallback)
 // into an owner/repo pair.
 func TestResolveRepoArg(t *testing.T) {
 	cases := []struct {

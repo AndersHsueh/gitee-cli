@@ -18,7 +18,8 @@ var browseCmd = &cobra.Command{
 	Example: `  gitee repo browse owner/repo
   gitee repo browse --repo owner/repo`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoBrowseAgentHelp)
 		}
 		return nil
@@ -27,6 +28,7 @@ var browseCmd = &cobra.Command{
 }
 
 func runBrowse(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	// --agent-help handling is in PreRunE (runs before required-flag validation).
 
 	var owner, repoName string
@@ -41,7 +43,7 @@ func runBrowse(cobraCmd *cobra.Command, args []string) error {
 		}
 	}
 
-	url := fmt.Sprintf("https://%s/%s/%s", cmd.GlobalHostname, owner, repoName)
+	url := fmt.Sprintf("https://%s/%s/%s", rt.Hostname, owner, repoName)
 
 	// Try to open browser
 	browser := os.Getenv("BROWSER")

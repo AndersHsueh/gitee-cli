@@ -35,7 +35,8 @@ var createCmd = &cobra.Command{
   gitee gist create --file readme.md="README content" --file main.go="package main"
   gitee gist create --interactive`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(gistCreateAgentHelp)
 		}
 		return nil
@@ -53,7 +54,8 @@ func init() {
 }
 
 func runCreate(cobraCmd *cobra.Command, args []string) error {
-	client, err := cmd.NewAPIClient()
+	rt := cmd.RuntimeFromCmd(cobraCmd)
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
@@ -141,7 +143,7 @@ func runCreate(cobraCmd *cobra.Command, args []string) error {
 		Files:       files,
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	var gist types.Gist

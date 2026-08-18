@@ -26,7 +26,8 @@ var viewCmd = &cobra.Command{
   gitee user view --user bob
   gitee user view alice --output json`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(userViewAgentHelp)
 		}
 		return nil
@@ -40,12 +41,13 @@ func init() {
 }
 
 func runView(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	username := viewFlags.username
 	if len(args) > 0 {
 		username = args[0]
 	}
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
@@ -58,7 +60,7 @@ func runView(cobraCmd *cobra.Command, args []string) error {
 		path = api.UserGet(username)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	var u types.User
@@ -66,7 +68,7 @@ func runView(cobraCmd *cobra.Command, args []string) error {
 		return fmt.Errorf("viewing user: %w", err)
 	}
 
-	if cmd.GlobalOutput == "json" {
+	if rt.Output == "json" {
 		b, _ := json.MarshalIndent(u, "", "  ")
 		fmt.Println(string(b))
 		return nil

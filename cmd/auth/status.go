@@ -29,8 +29,9 @@ func init() {
 }
 
 func runStatus(cobraCmd *cobra.Command, args []string) error {
-	hostname := cmd.ResolveHostname()
-	token := cmd.GlobalToken
+	rt := cmd.RuntimeFromCmd(cobraCmd)
+	hostname := rt.Hostname
+	token := rt.Token
 	showToken, _ := cobraCmd.Flags().GetBool("show-token")
 
 	if token == "" {
@@ -40,12 +41,12 @@ func runStatus(cobraCmd *cobra.Command, args []string) error {
 		return fmt.Errorf("not authenticated. Run 'gitee auth login' to authenticate")
 	}
 
-	apiClient, err := cmd.NewAPIClient()
+	apiClient, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	var user types.User
@@ -100,7 +101,7 @@ func runStatus(cobraCmd *cobra.Command, args []string) error {
 	// os.Getenv. Check the flag first (flag > env > config precedence), then
 	// the env var; config file is the fallback.
 	tokenSource := "config file"
-	if cmd.GlobalToken != "" {
+	if rt.Token != "" {
 		tokenSource = "--token flag"
 	} else if os.Getenv("GITEE_TOKEN") != "" {
 		tokenSource = "GITEE_TOKEN environment variable"

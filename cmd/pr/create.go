@@ -32,7 +32,8 @@ var createCmd = &cobra.Command{
 	// --agent-help even when required flags (e.g. --title, --source, --target)
 	// are missing.
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(prCreateAgentHelp)
 		}
 		return nil
@@ -55,6 +56,7 @@ func init() {
 }
 
 func runCreate(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	// --agent-help handling is in PreRunE (runs before required-flag validation).
 
 	owner, repoName, err := resolvePRRepo(createFlags.owner, createFlags.repo)
@@ -62,7 +64,7 @@ func runCreate(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
@@ -76,7 +78,7 @@ func runCreate(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	path := api.PRsCreate(owner, repoName)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	var pr types.PullRequest

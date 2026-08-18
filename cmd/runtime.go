@@ -51,6 +51,9 @@ func SetContext(ctx context.Context, rt *Runtime) context.Context {
 // RuntimeFrom returns the frozen Runtime carried in ctx, or nil when the
 // caller did not go through PersistentPreRunE (e.g. direct test calls).
 func RuntimeFrom(ctx context.Context) *Runtime {
+	if ctx == nil {
+		return nil
+	}
 	rt, _ := ctx.Value(runtimeKey{}).(*Runtime)
 	return rt
 }
@@ -92,8 +95,13 @@ func NewRuntime(hostname string) *Runtime {
 //	rt := cmd.RuntimeFromCmd(cobraCmd)
 //	client, err := cmd.NewAPIClientFrom(rt)
 func RuntimeFromCmd(c *cobra.Command) *Runtime {
-	if rt := RuntimeFrom(c.Context()); rt != nil {
-		return rt
+	if c != nil {
+		ctx := c.Context()
+		if ctx != nil {
+			if rt := RuntimeFrom(ctx); rt != nil {
+				return rt
+			}
+		}
 	}
 	return NewRuntime(ResolveHostname())
 }

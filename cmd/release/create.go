@@ -29,7 +29,8 @@ var createCmd = &cobra.Command{
   gitee release create -R owner/repo -t v0.2.0 --body "Initial beta" --prerelease`,
 	// PreRunE fires BEFORE ValidateRequiredFlags so --agent-help works without --tag.
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(releaseCreateAgentHelp)
 		}
 		return nil
@@ -49,12 +50,13 @@ func init() {
 }
 
 func runCreate(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	owner, repoName, err := resolveReleaseRepo(createFlags.repo)
 	if err != nil {
 		return err
 	}
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
@@ -68,7 +70,7 @@ func runCreate(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	path := api.ReleaseCreate(owner, repoName)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	var release types.Release

@@ -22,7 +22,8 @@ var unfollowCmd = &cobra.Command{
 	Example: `  gitee user unfollow alice
   gitee user unfollow --user bob`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(userUnfollowAgentHelp)
 		}
 		return nil
@@ -36,6 +37,7 @@ func init() {
 }
 
 func runUnfollow(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	username := unfollowFlags.username
 	if len(args) > 0 {
 		username = args[0]
@@ -44,12 +46,12 @@ func runUnfollow(cobraCmd *cobra.Command, args []string) error {
 		return fmt.Errorf("username is required (positional or --user)")
 	}
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	if err := client.Delete(ctx, api.UserUnfollow(username)); err != nil {

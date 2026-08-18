@@ -18,7 +18,8 @@ var testCmd = &cobra.Command{
 	Example: `  gitee webhook test 1234 --repo owner/repo
   gitee webhook test -R owner/repo 1234`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(webhookTestAgentHelp)
 		}
 		return nil
@@ -33,11 +34,12 @@ func init() {
 }
 
 func runTest(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	id, err := utils.ParseInt64Arg(testFlags.id, args, "webhook")
 	if err != nil {
 		return err
 	}
-	dc, err := cmd.NewDomainClient()
+	dc, err := cmd.NewDomainClientFrom(rt)
 	if err != nil {
 		return err
 	}

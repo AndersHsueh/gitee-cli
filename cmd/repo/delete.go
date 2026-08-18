@@ -25,7 +25,8 @@ var deleteCmd = &cobra.Command{
 	Example: `  gitee repo delete owner/repo
   gitee repo delete --repo owner/repo --yes`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoDeleteAgentHelp)
 		}
 		return nil
@@ -41,6 +42,7 @@ func init() {
 }
 
 func runDelete(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	// --agent-help handling is in PreRunE (runs before required-flag validation).
 
 	owner, repoName, err := resolveRepo(deleteFlags.owner, deleteFlags.repo, args)
@@ -62,13 +64,13 @@ func runDelete(cobraCmd *cobra.Command, args []string) error {
 		}
 	}
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
 
 	path := api.ReposDelete(owner, repoName)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	if err := client.Delete(ctx, path); err != nil {

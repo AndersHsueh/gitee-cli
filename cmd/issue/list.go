@@ -30,7 +30,8 @@ var listCmd = &cobra.Command{
   gitee issue list --repo owner/repo --paginate          # fetch ALL open issues
   gitee issue list --repo owner/repo --paginate --limit 0  # same, explicit`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(issueListAgentHelp)
 		}
 		return nil
@@ -52,14 +53,15 @@ func init() {
 }
 
 func runList(cobraCmd *cobra.Command, args []string) error {
-	client, err := cmd.NewAPIClient()
+	rt := cmd.RuntimeFromCmd(cobraCmd)
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
-	opts := cmd.NewCmdkitOptions(client)
+	opts := cmd.NewCmdkitOptionsFrom(rt, client)
 	return cmdkit.RunList[types.Issue](opts, cmdkit.ListSpec[types.Issue]{
 		ResolveOwnerRepo: func() (string, string, error) {
-			return resolveRepo(listFlags.owner, cmd.GlobalRepo)
+			return resolveRepo(listFlags.owner, rt.Repo)
 		},
 		Path: func(owner, repoName string) string {
 			// Build base query (without page/per_page — the skeleton's

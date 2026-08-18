@@ -30,7 +30,8 @@ var createCmd = &cobra.Command{
   gitee repo create --name my-repo --private --org my-org
   gitee repo create --name my-repo --gitignore Go --license MIT`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoCreateAgentHelp)
 		}
 		return nil
@@ -51,9 +52,10 @@ func init() {
 }
 
 func runCreate(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	// --agent-help handling is in PreRunE (runs before required-flag validation).
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
@@ -75,7 +77,7 @@ func runCreate(cobraCmd *cobra.Command, args []string) error {
 		path = api.ReposCreate()
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	var repo types.Repository

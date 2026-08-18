@@ -33,7 +33,8 @@ just hidden from the main repo list and protected from new pushes.`,
   gitee repo archive --repo owner/repo
   gitee repo archive owner/repo --unarchive`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoArchiveAgentHelp)
 		}
 		return nil
@@ -49,6 +50,7 @@ func init() {
 }
 
 func runArchive(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	owner, repoName, err := resolveRepo("", archiveFlags.repo, args)
 	if err != nil {
 		return err
@@ -73,7 +75,7 @@ func runArchive(cobraCmd *cobra.Command, args []string) error {
 		}
 	}
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
@@ -88,7 +90,7 @@ func runArchive(cobraCmd *cobra.Command, args []string) error {
 	}
 
 	path := api.ReposArchive(owner, repoName)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	var repo types.Repository

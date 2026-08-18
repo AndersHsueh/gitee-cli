@@ -32,7 +32,8 @@ can be set for the asset's display name.`,
 	Example: `  gitee release upload v1.0.0 --repo owner/repo --file ./dist/app.tar.gz
   gitee release upload v1.0.0 -R owner/repo --file ./dist/app.tar.gz --label "Linux binary"`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(releaseUploadAgentHelp)
 		}
 		return nil
@@ -51,6 +52,7 @@ func init() {
 }
 
 func runUpload(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	tag := uploadFlags.tag
 	if tag == "" && len(args) >= 1 {
 		tag = args[0]
@@ -71,12 +73,12 @@ func runUpload(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	// Step 1: Get release to resolve its numeric ID.

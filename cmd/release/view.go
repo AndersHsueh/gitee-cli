@@ -25,7 +25,8 @@ var viewCmd = &cobra.Command{
 	Example: `  gitee release view v1.0.0 --repo owner/repo
   gitee release view v1.0.0 -R owner/repo --output json`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(releaseViewAgentHelp)
 		}
 		return nil
@@ -40,6 +41,7 @@ func init() {
 }
 
 func runView(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	tag := viewFlags.tag
 	if tag == "" && len(args) >= 1 {
 		tag = args[0]
@@ -53,14 +55,14 @@ func runView(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
 
 	path := api.ReleasesGet(owner, repoName, tag)
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	var release types.Release
@@ -68,7 +70,7 @@ func runView(cobraCmd *cobra.Command, args []string) error {
 		return fmt.Errorf("getting release %s: %w", tag, err)
 	}
 
-	if cmd.GlobalOutput == "json" {
+	if rt.Output == "json" {
 		return output.PrintJSON(release)
 	}
 

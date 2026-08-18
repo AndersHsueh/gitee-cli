@@ -36,7 +36,8 @@ The default target directory is the gist id itself.`,
   gitee gist clone abc123def --dir ./my-snippet`,
 	Args:    cmd.AgentHelpAwareArgs(cobra.RangeArgs(1, 2)),
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(gistCloneAgentHelp)
 		}
 		return nil
@@ -50,6 +51,7 @@ func init() {
 }
 
 func runClone(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	gistID := args[0]
 
 	dir := cloneFlags.dir
@@ -60,7 +62,7 @@ func runClone(cobraCmd *cobra.Command, args []string) error {
 		dir = gistID
 	}
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}

@@ -41,7 +41,8 @@ specify a repository explicitly.`,
   # JSON output
   gitee status --repo owner/repo --output json`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(statusAgentHelp)
 		}
 		return nil

@@ -24,12 +24,14 @@ var editCmd = &cobra.Command{
   gitee milestone edit -R owner/repo 2 --state closed
   gitee milestone edit -R owner/repo 3 --due-on 2027-02-28 --description "Updated scope"`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(milestoneEditAgentHelp)
 		}
 		return nil
 	},
 	RunE: func(c *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(c)
 		parsed, err := utils.ParseInt64Arg(editFlags.number, args, "milestone")
 		if err != nil {
 			return err
@@ -40,7 +42,7 @@ var editCmd = &cobra.Command{
 			DueOn:       editFlags.dueOn,
 			State:       editFlags.state,
 		}
-		dc, err := cmd.NewDomainClient()
+		dc, err := cmd.NewDomainClientFrom(rt)
 		if err != nil {
 			return err
 		}

@@ -24,7 +24,8 @@ var deleteCmd = &cobra.Command{
 	Example: `  gitee ssh-key delete 12345
   gitee ssh-key delete 12345 --force`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(sshKeyDeleteAgentHelp)
 		}
 		return nil
@@ -39,6 +40,7 @@ func init() {
 }
 
 func runDelete(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	id, err := utils.ParseInt64Arg(deleteFlags.id, args, "SSH key")
 	if err != nil {
 		return err
@@ -61,12 +63,12 @@ func runDelete(cobraCmd *cobra.Command, args []string) error {
 		}
 	}
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	if err := client.Delete(ctx, api.SSHKeyDelete(id)); err != nil {

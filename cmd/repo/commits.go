@@ -63,7 +63,8 @@ ISO-8601 timestamps (e.g. ` + "`" + `2026-01-01T00:00:00Z` + "`" + `).`,
   gitee repo commits view --repo owner/repo a1b2c3d4
   gitee repo commits view --repo owner/repo main`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoCommitsAgentHelp)
 		}
 		return nil
@@ -81,7 +82,8 @@ var commitsListCmd = &cobra.Command{
   gitee repo commits list -R owner/repo --author alice
   gitee repo commits list --repo owner/repo --path src/main.go --since 2026-01-01`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoCommitsListAgentHelp)
 		}
 		return nil
@@ -96,7 +98,8 @@ var commitsViewCmd = &cobra.Command{
   gitee repo commits view --repo owner/repo main
   gitee repo commits view -R owner/repo v1.0.0`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoCommitsViewAgentHelp)
 		}
 		return nil
@@ -128,6 +131,7 @@ func init() {
 // --paginate / --limit pair: when --paginate is set, FetchAllPages
 // walks pages until --limit (or all pages when --limit 0).
 func runCommitsList(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	// --agent-help handling is in PreRunE (runs before required-flag validation).
 
 	owner, repoName, err := resolveRepoFromFlags(commitsFlags.repo)
@@ -157,24 +161,24 @@ func runCommitsList(cobraCmd *cobra.Command, args []string) error {
 		basePath = basePath + "?" + encoded
 	}
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	// FetchListOrAll handles perPage clamp (1-100), --paginate dispatch, and
 	// treats a 404 as an empty result (unified with issue list / pr list).
 	commits, err := api.FetchListOrAll[types.Commit](ctx, client, basePath,
-		cmd.GlobalPaginate, cmd.GlobalPerPage, cmd.GlobalLimit, cmd.GlobalPage,
+		rt.Paginate, rt.PerPage, rt.Limit, rt.Page,
 		"listing commits")
 	if err != nil {
 		return err
 	}
 
-	if cmd.GlobalOutput == "json" {
+	if rt.Output == "json" {
 		b, _ := json.MarshalIndent(commits, "", "  ")
 		fmt.Println(string(b))
 		return nil
@@ -203,6 +207,7 @@ func runCommitsList(cobraCmd *cobra.Command, args []string) error {
 // `stats` and `files` block. We surface the summary in plaintext and
 // the per-file diff table.
 func runCommitsView(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	// --agent-help handling is in PreRunE (runs before required-flag validation).
 
 	if len(args) < 1 || args[0] == "" {
@@ -215,13 +220,13 @@ func runCommitsView(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
 
 	path := api.RepoCommitGet(owner, repoName, sha)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	var cm types.Commit
@@ -229,7 +234,7 @@ func runCommitsView(cobraCmd *cobra.Command, args []string) error {
 		return fmt.Errorf("viewing commit: %w", err)
 	}
 
-	if cmd.GlobalOutput == "json" {
+	if rt.Output == "json" {
 		b, _ := json.MarshalIndent(cm, "", "  ")
 		fmt.Println(string(b))
 		return nil

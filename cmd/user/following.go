@@ -26,7 +26,8 @@ var followingCmd = &cobra.Command{
   gitee user following --user bob
   gitee user following --limit 100 --output json`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(userFollowingAgentHelp)
 		}
 		return nil
@@ -41,6 +42,7 @@ func init() {
 }
 
 func runFollowing(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	username := followingFlags.username
 	if len(args) > 0 {
 		username = args[0]
@@ -49,13 +51,13 @@ func runFollowing(cobraCmd *cobra.Command, args []string) error {
 		return fmt.Errorf("username is required (positional or --user)")
 	}
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
 
 	path := fmt.Sprintf("%s?per_page=%d", api.UserFollowing(username), followingFlags.limit)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	var users []types.User
@@ -63,7 +65,7 @@ func runFollowing(cobraCmd *cobra.Command, args []string) error {
 		return fmt.Errorf("listing users %s follows: %w", username, err)
 	}
 
-	if cmd.GlobalOutput == "json" {
+	if rt.Output == "json" {
 		b, _ := json.MarshalIndent(users, "", "  ")
 		fmt.Println(string(b))
 		return nil

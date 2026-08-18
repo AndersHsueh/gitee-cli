@@ -35,7 +35,8 @@ var createCmd = &cobra.Command{
 	// PreRunE fires BEFORE ValidateRequiredFlags, so an agent can request
 	// --agent-help even when required flags (e.g. --title) are missing.
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(issueCreateAgentHelp)
 		}
 		return nil
@@ -55,12 +56,13 @@ func init() {
 }
 
 func runCreate(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	// --agent-help handling is in PreRunE (runs before required-flag validation).
 
 	// Resolve --repo: local flag > global --repo
 	repo := createFlags.repo
 	if repo == "" {
-		repo = cmd.GlobalRepo
+		repo = rt.Repo
 	}
 	if repo == "" {
 		return fmt.Errorf("--repo is required (e.g. --repo owner/repo)")
@@ -72,7 +74,7 @@ func runCreate(cobraCmd *cobra.Command, args []string) error {
 	}
 	owner, repoName := parts[0], parts[1]
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
@@ -100,7 +102,7 @@ func runCreate(cobraCmd *cobra.Command, args []string) error {
 
 	fmt.Printf("Creating issue in %s/%s...\n", owner, repoName)
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	if err := client.Post(ctx, path, payload, &issue); err != nil {

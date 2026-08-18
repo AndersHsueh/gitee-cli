@@ -54,7 +54,8 @@ level, or remove an existing one.
   gitee repo collaborator add alice --repo owner/repo --permission push
   gitee repo collaborator remove alice --repo owner/repo`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoCollaboratorAgentHelp)
 		}
 		return nil
@@ -71,7 +72,8 @@ var collaboratorListCmd = &cobra.Command{
 	Example: `  gitee repo collaborator list --repo owner/repo
   gitee repo collaborator list -R owner/repo -o json`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoCollaboratorListAgentHelp)
 		}
 		return nil
@@ -85,7 +87,8 @@ var collaboratorAddCmd = &cobra.Command{
 	Example: `  gitee repo collaborator add alice --repo owner/repo --permission push
   gitee repo collaborator add bob -R owner/repo --permission admin`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoCollaboratorAddAgentHelp)
 		}
 		return nil
@@ -99,7 +102,8 @@ var collaboratorRemoveCmd = &cobra.Command{
 	Example: `  gitee repo collaborator remove alice --repo owner/repo
   gitee repo collaborator remove bob -R owner/repo`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoCollaboratorRemoveAgentHelp)
 		}
 		return nil
@@ -138,6 +142,7 @@ var validPermissions = map[string]bool{
 }
 
 func runCollaboratorList(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	// --agent-help handling is in PreRunE (runs before required-flag validation).
 
 	repo, err := resolveRepoArg(collaboratorFlags.repo)
@@ -146,13 +151,13 @@ func runCollaboratorList(cobraCmd *cobra.Command, args []string) error {
 	}
 	owner, repoName := repo[0], repo[1]
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
 
 	path := api.CollaboratorsList(owner, repoName)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	var collabs []types.Collaborator
@@ -160,7 +165,7 @@ func runCollaboratorList(cobraCmd *cobra.Command, args []string) error {
 		return fmt.Errorf("listing collaborators: %w", err)
 	}
 
-	if cmd.GlobalOutput == "json" {
+	if rt.Output == "json" {
 		b, _ := json.MarshalIndent(collabs, "", "  ")
 		fmt.Println(string(b))
 		return nil
@@ -205,6 +210,7 @@ func resolveCollaboratorUsername(args []string) (string, error) {
 }
 
 func runCollaboratorAdd(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	// --agent-help handling is in PreRunE (runs before required-flag validation).
 
 	repo, err := resolveRepoArg(collaboratorFlags.repo)
@@ -223,7 +229,7 @@ func runCollaboratorAdd(cobraCmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid --permission %q: must be one of pull, push, admin", collaboratorFlags.permission)
 	}
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
@@ -231,7 +237,7 @@ func runCollaboratorAdd(cobraCmd *cobra.Command, args []string) error {
 	payload := types.CollaboratorAddRequest{Permission: permission}
 	path := api.CollaboratorAdd(owner, repoName, username)
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	// Gitee v5 PUT for collaborator returns 204 No Content on success;
@@ -249,6 +255,7 @@ func runCollaboratorAdd(cobraCmd *cobra.Command, args []string) error {
 }
 
 func runCollaboratorRemove(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	// --agent-help handling is in PreRunE (runs before required-flag validation).
 
 	repo, err := resolveRepoArg(collaboratorFlags.repo)
@@ -262,13 +269,13 @@ func runCollaboratorRemove(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
 
 	path := api.CollaboratorRemove(owner, repoName, username)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	if err := client.Delete(ctx, path); err != nil {

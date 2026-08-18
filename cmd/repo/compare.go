@@ -52,7 +52,8 @@ them for you.`,
   gitee repo compare --repo owner/repo v1.0.0...v2.0.0
   gitee repo compare --repo owner/repo a1b2c3d...main`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoCompareAgentHelp)
 		}
 		return nil
@@ -68,6 +69,7 @@ func init() {
 }
 
 func runCompare(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	// --agent-help handling is in PreRunE (runs before required-flag validation).
 
 	if len(args) < 1 || args[0] == "" {
@@ -88,13 +90,13 @@ func runCompare(cobraCmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
 
 	path := api.ReposCompare(owner, repoName, base, head)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	var result types.CompareResult
@@ -102,7 +104,7 @@ func runCompare(cobraCmd *cobra.Command, args []string) error {
 		return fmt.Errorf("comparing %s...%s: %w", base, head, err)
 	}
 
-	if cmd.GlobalOutput == "json" {
+	if rt.Output == "json" {
 		b, _ := json.MarshalIndent(result, "", "  ")
 		fmt.Println(string(b))
 		return nil

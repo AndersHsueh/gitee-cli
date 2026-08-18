@@ -27,7 +27,8 @@ var listCmd = &cobra.Command{
   gitee ssh-key list --limit 50
   gitee ssh-key list --output json`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(sshKeyListAgentHelp)
 		}
 		return nil

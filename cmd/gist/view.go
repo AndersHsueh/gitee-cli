@@ -26,7 +26,8 @@ var viewCmd = &cobra.Command{
   gitee gist view abc123def --raw`,
 	Args:    cmd.AgentHelpAwareArgs(cobra.ExactArgs(1)),
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(gistViewAgentHelp)
 		}
 		return nil
@@ -39,15 +40,16 @@ func init() {
 }
 
 func runView(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	gistID := args[0]
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
 
 	path := api.GistGet(gistID)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	var gist types.Gist
@@ -55,7 +57,7 @@ func runView(cobraCmd *cobra.Command, args []string) error {
 		return fmt.Errorf("viewing gist: %w", err)
 	}
 
-	if cmd.GlobalOutput == "json" {
+	if rt.Output == "json" {
 		b, _ := json.MarshalIndent(gist, "", "  ")
 		fmt.Println(string(b))
 		return nil

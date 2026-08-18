@@ -26,7 +26,8 @@ var rawCmd = &cobra.Command{
 	Short: "Make raw API request",
 	Args:  cmd.AgentHelpAwareArgs(cobra.ExactArgs(2)),
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(apiRawAgentHelp)
 		}
 		return nil
@@ -46,7 +47,8 @@ Useful for testing or accessing endpoints not yet covered by dedicated commands.
   gitee api GET /search/repositories?q=gitee --paginate`,
 	Args: cmd.AgentHelpAwareArgs(cobra.ExactArgs(2)),
 	PreRunE: func(c *cobra.Command, args []string) error {
-		if cmd.GlobalAgentHelp {
+	rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
 			cmd.PrintAgentHelp(apiRawAgentHelp)
 		}
 		return nil
@@ -78,6 +80,7 @@ func init() {
 }
 
 func runAPI(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 	method := strings.ToUpper(args[0])
 	path := args[1]
 
@@ -86,12 +89,12 @@ func runAPI(cobraCmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid method: %s (valid: GET, POST, PUT, PATCH, DELETE)", method)
 	}
 
-	client, err := cmd.NewAPIClient()
+	client, err := cmd.NewAPIClientFrom(rt)
 	if err != nil {
 		return err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(rt.Timeout)*time.Second)
 	defer cancel()
 
 	// Parse fields into body map

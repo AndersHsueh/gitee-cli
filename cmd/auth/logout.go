@@ -14,13 +14,14 @@ var logoutCmd = &cobra.Command{
 	Short:    "Log out and remove stored token",
 	PreRunE:  cmd.AgentHelpNA("auth logout"),
 	RunE: func(cobraCmd *cobra.Command, args []string) error {
+	rt := cmd.RuntimeFromCmd(cobraCmd)
 		s, err := config.Load()
 		if err != nil {
 			// If settings file doesn't exist, treat as already logged out
 			fmt.Printf("Logged out (no credentials found)\n")
 			return nil
 		}
-		hostname := cmd.ResolveHostname()
+		hostname := rt.Hostname
 		if _, ok := s.Hosts[hostname]; !ok {
 			fmt.Printf("Not logged in to %s\n", hostname)
 			return nil
