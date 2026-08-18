@@ -1,15 +1,13 @@
 package pr
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
 	"net/url"
-	"time"
+	"strconv"
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
-	"gitee-cli/internal/output"
+	"gitee-cli/internal/cmdkit"
 	"gitee-cli/internal/utils"
 	"gitee-cli/pkg/types"
 
@@ -57,65 +55,47 @@ func init() {
 }
 
 func runList(cobraCmd *cobra.Command, args []string) error {
-	owner, repoName, err := resolvePRRepo(listFlags.owner, listFlags.repo)
-	if err != nil {
-		return err
-	}
-
-	client, err := cmd.NewAPIClient()
-	if err != nil {
-		return err
-	}
-
-	// Build base query (without page/per_page — FetchAllPages handles those)
-	qv := url.Values{}
-	qv.Set("state", listFlags.state)
-	if listFlags.head != "" {
-		qv.Set("head", listFlags.head)
-	}
-	if listFlags.base != "" {
-		qv.Set("base", listFlags.base)
-	}
-	basePath := api.PRsList(owner, repoName) + "?" + qv.Encode()
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
-	defer cancel()
-
-	// FetchListOrAll handles perPage clamp (1-100), --paginate dispatch, and
-	// treats a 404 as an empty result (unified with issue list / commits).
-	prs, err := api.FetchListOrAll[types.PullRequest](ctx, client, basePath,
-		cmd.GlobalPaginate, cmd.GlobalPerPage, cmd.GlobalLimit, cmd.GlobalPage,
-		"listing PRs")
-	if err != nil {
-		return err
-	}
-
-	if cmd.GlobalOutput == "json" {
-		b, _ := json.MarshalIndent(prs, "", "  ")
-		fmt.Println(string(b))
-		return nil
-	}
-
-	if len(prs) == 0 {
-		fmt.Println("No pull requests found")
-		return nil
-	}
-
-	w := output.NewTableWriter()
-	fmt.Fprintln(w, "#\tTITLE\tSTATE\tHEAD→BASE\tAUTHOR\tUPDATED")
-	for _, pr := range prs {
-		headToBase := ""
-		if pr.Head != nil && pr.Base != nil {
-			headToBase = fmt.Sprintf("%s→%s", pr.Head.Ref, pr.Base.Ref)
-		}
-		state := pr.State
-		if pr.Merged {
-			state = "merged"
-		}
-		fmt.Fprintf(w, "%d\t%s\t%s\t%s\t%s\t%s\n",
-			pr.Number, pr.Title, state, headToBase, pr.User.Login, utils.TruncateDate(pr.UpdatedAt))
-	}
-	return w.Flush()
+	return cmdkit.RunList[types.PullRequest](cmdkit.ListSpec[types.PullRequest]{
+		ResolveOwnerRepo: func() (string, string, error) {
+			return resolvePRRepo(listFlags.owner, listFlags.repo)
+		},
+		Path: func(owner, repoName string) string {
+			// Build base query (without page/per_page — the skeleton's
+			// FetchListOrAll handles those).
+			qv := url.Values{}
+			qv.Set("state", listFlags.state)
+			if listFlags.head != "" {
+				qv.Set("head", listFlags.head)
+			}
+			if listFlags.base != "" {
+				qv.Set("base", listFlags.base)
+			}
+			return api.PRsList(owner, repoName) + "?" + qv.Encode()
+		},
+		Columns: []string{"#", "TITLE", "STATE", "HEAD→BASE", "AUTHOR", "UPDATED"},
+		Row: func(pr types.PullRequest) []string {
+			headToBase := ""
+			if pr.Head != nil && pr.Base != nil {
+				headToBase = fmt.Sprintf("%s→%s", pr.Head.Ref, pr.Base.Ref)
+			}
+			state := pr.State
+			if pr.Merged {
+				state = "merged"
+			}
+			return []string{
+				strconv.Itoa(pr.Number),
+				pr.Title,
+				state,
+				headToBase,
+				pr.User.Login,
+				utils.TruncateDate(pr.UpdatedAt),
+			}
+		},
+		EmptyText: func(_, _ string) string {
+			return "No pull requests found"
+		},
+		ErrCtx: "listing PRs",
+	})
 }
 
 func resolvePRRepo(owner, repo string) (string, string, error) {
