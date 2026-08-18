@@ -1,6 +1,7 @@
 package sshkey
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -57,32 +58,29 @@ func TestListSendsPerPageAndPage(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	origAPIURL := cmd.GlobalAPIURL
-	origToken := cmd.GlobalToken
-	origTimeout := cmd.GlobalTimeout
 	origLimit := listFlags.limit
 	origPage := listFlags.page
 	defer func() {
-		cmd.GlobalAPIURL = origAPIURL
-		cmd.GlobalToken = origToken
-		cmd.GlobalTimeout = origTimeout
 		listFlags.limit = origLimit
 		listFlags.page = origPage
 	}()
-	cmd.GlobalAPIURL = ts.URL
-	cmd.GlobalToken = "test-token"
-	cmd.GlobalTimeout = 30
 	listFlags.limit = 50
 	listFlags.page = 2
+
+	listCmd.SetContext(cmd.SetContext(context.Background(), &cmd.Runtime{
+		APIURL:  ts.URL,
+		Token:   "test-token",
+		Timeout: 30,
+	}))
 
 	if err := runList(listCmd, nil); err != nil {
 		t.Fatalf("runList failed: %v", err)
 	}
 	if gotPath != "/user/keys" {
-		t.Errorf("expected path /user/keys, got %s", gotPath)
+		t.Errorf("expected path /user/keys, got %q", gotPath)
 	}
 	if gotPerPage != "50" {
-		t.Errorf("expected per_page=50, got %q", gotPerPage)
+		t.Errorf("expected per_page=50, got %q (see --limit)", gotPerPage)
 	}
 	if gotPage != "2" {
 		t.Errorf("expected page=2, got %q", gotPage)
@@ -100,23 +98,17 @@ func TestListClampsPerPageTo100(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	origAPIURL := cmd.GlobalAPIURL
-	origToken := cmd.GlobalToken
-	origTimeout := cmd.GlobalTimeout
 	origLimit := listFlags.limit
-	origPage := listFlags.page
 	defer func() {
-		cmd.GlobalAPIURL = origAPIURL
-		cmd.GlobalToken = origToken
-		cmd.GlobalTimeout = origTimeout
 		listFlags.limit = origLimit
-		listFlags.page = origPage
 	}()
-	cmd.GlobalAPIURL = ts.URL
-	cmd.GlobalToken = "test-token"
-	cmd.GlobalTimeout = 30
 	listFlags.limit = 200
-	listFlags.page = 1
+
+	listCmd.SetContext(cmd.SetContext(context.Background(), &cmd.Runtime{
+		APIURL:  ts.URL,
+		Token:   "test-token",
+		Timeout: 30,
+	}))
 
 	if err := runList(listCmd, nil); err != nil {
 		t.Fatalf("runList failed: %v", err)

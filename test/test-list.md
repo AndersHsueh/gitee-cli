@@ -10,3 +10,4 @@
 | test/test-IK923V-converge-repo-resolve.sh | repo 解析入口收敛：死代码包/冗余入口无引用 + 唯一入口三种路径解析 | repo/utils | #14 | 红（修复前 ResolveRepoFromFlag 存在） |
 | internal/cmdkit/list_test.go | list 命令骨架边界：分页合并/limit截断/json-table分派/空结果/404→空/Footer/CustomJSON（httptest 单测） | cmdkit | #15 | 红（骨架不存在时无法编译） |
 | test/test-IK923U-cmdkit-list-skeleton.sh | list 骨架迁移：cmdkit 包存在 + 11 个 API list 命令迁移 + alias/extension 保留 + CLI 级输出验证 | cmdkit/issue/pr/repo/gist/release/label/milestone/webhook/org/notification/ssh-key | #15 | 红（修复前无 cmdkit 包） |
+| test-case/test-IK923S-runtime-context.sh | Runtime 上下文基础设施：类型存在、From 构造器可用、ssh-key 参考实现已迁移、编译测试全绿 | cmd/runtime | 待定 | 红（修复前 Runtime 类型不存在、save/restore 仪式代码 74 处） |
