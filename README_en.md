@@ -5,7 +5,7 @@
 [![Go Version](https://img.shields.io/badge/go-1.25+-blue.svg)](https://golang.org)
 [![License](https://img.shields.io/badge/license-MulanPSL--2.0-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey.svg)]()
-[![Version](https://img.shields.io/badge/version-v0.3.0-orange.svg)]()
+[![Version](https://img.shields.io/badge/version-v0.13.0-orange.svg)](https://gitee.com/andershsueh/gitee-cli/releases/latest)
 
 ---
 
@@ -271,6 +271,29 @@ gitee auth login --hostname your-company.gitee.com
 export GITEE_HOSTNAME=your-company.gitee.com
 gitee repo list
 ```
+
+---
+
+## Changelog
+
+### v0.13.0 (2026-08-19) — Runtime Context Refactor + Architecture Convergence
+
+Core changes: Eliminated `cmd.Global*` global variables, injected `cmd.Runtime` explicit context; unified command organization pattern, eliminated layer inversion.
+
+**🧱 Architecture Refactor**
+- Introduced `cmd.Runtime` runtime context struct with `SetContext`/`RuntimeFrom`/`RuntimeFromCmd` injecting config into Cobra command context
+- Migrated 110 command files: `NewAPIClient()` → `NewAPIClientFrom(rt)`, `NewCmdkitOptions(client)` → `NewCmdkitOptionsFrom(rt, client)`, `NewDomainClient()` → `NewDomainClientFrom(rt)`
+- Eliminated `internal/handler` layer inversion, business logic moved to `internal/domain`
+- Abstracted list command execution skeleton, migrated all API list commands eliminating 5-stage boilerplate
+- Consolidated repo parsing entry point, deleted redundant `ResolveRepoFromFlag`
+
+**🐛 Fixes**
+- `issue comment` false 401 auth error for locked issues + JSON body rejected by Gitee
+
+**📖 Documentation**
+- 11-dimension schema completed for 129 agent-help docs + contract test guard
+- Agent-help matrix hygiene + philosophy numbers updated
+- completion/version n/a signal + contract test traversing command tree
 
 ---
 

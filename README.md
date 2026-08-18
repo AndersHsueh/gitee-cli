@@ -6,7 +6,7 @@
 [![Go Version](https://img.shields.io/badge/go-1.25+-blue.svg)](https://golang.org)
 [![License](https://img.shields.io/badge/license-MulanPSL--2.0-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey.svg)]()
-[![Version](https://img.shields.io/badge/version-v0.12.6-orange.svg)](https://gitee.com/andershsueh/gitee-cli/releases/latest)
+[![Version](https://img.shields.io/badge/version-v0.13.0-orange.svg)](https://gitee.com/andershsueh/gitee-cli/releases/latest)
 [![Agent Help](https://img.shields.io/badge/--agent--help-129%20verbs-8A2BE2.svg)](docs/philosophy.md)
 
 ```bash
@@ -220,6 +220,25 @@ golangci-lint run ./...           # Lint
 ---
 
 ## 更新日志
+
+### v0.13.0 (2026-08-19) — Runtime 上下文重构 + 架构收敛
+
+核心变化：消除 `cmd.Global*` 全局变量，注入 `cmd.Runtime` 显式上下文；统一命令组织模式，消除分层倒置。
+
+**🧱 架构重构**
+- 引入 `cmd.Runtime` 运行时上下文结构体，`SetContext`/`RuntimeFrom`/`RuntimeFromCmd` 将配置注入 Cobra 命令上下文
+- 全量迁移 110 个命令文件：`NewAPIClient()` → `NewAPIClientFrom(rt)`，`NewCmdkitOptions(client)` → `NewCmdkitOptionsFrom(rt, client)`，`NewDomainClient()` → `NewDomainClientFrom(rt)`
+- 消除 `internal/handler` 分层倒置，业务逻辑下沉到 `internal/domain` 包
+- 抽象 list 命令执行骨架，迁移全部 API list 命令消除五段式样板
+- 收敛 repo 解析入口，删除冗余 `ResolveRepoFromFlag`
+
+**🐛 修复**
+- `issue comment` 对锁定评论的 issue 误报 401 认证失败 + JSON body 被 Gitee 拒收
+
+**📖 文档**
+- 11 维度 schema 补齐 129 份 agent-help 文档 + 契约测试守门
+- agent-help 矩阵卫生 + philosophy 数字更新
+- completion/version n/a 信号 + contract test 遍历命令树
 
 ### v0.12.6 (2026-08-15) — `gitee issue close/reopen/edit` 根因修复（v0.12.5 workaround 升级）
 
