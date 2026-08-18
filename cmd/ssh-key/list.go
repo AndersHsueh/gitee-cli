@@ -3,12 +3,13 @@ package sshkey
 import (
 	"context"
 	"fmt"
-	"time"
+	"net/url"
+	"strconv"
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
+	"gitee-cli/internal/cmdkit"
 	"gitee-cli/internal/handler"
-	"gitee-cli/internal/output"
 	"gitee-cli/pkg/types"
 
 	"github.com/spf13/cobra"
@@ -41,48 +42,48 @@ func init() {
 }
 
 func runList(cobraCmd *cobra.Command, args []string) error {
-	client, err := cmd.NewAPIClient()
-	if err != nil {
-		return err
-	}
-
-	// Clamp perPage to Gitee v5's 1-100 range before sending it.
-	perPage := listFlags.limit
-	if perPage < 1 {
-		perPage = 30
-	}
-	if perPage > 100 {
-		perPage = 100
-	}
-	path, err := api.WithPageParams(api.SSHKeysList(), listFlags.page, perPage)
-	if err != nil {
-		return fmt.Errorf("listing SSH keys: %w", err)
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
-	defer cancel()
-
-	var keys []types.SSHKey
-	if err := client.Get(ctx, path, &keys); err != nil {
-		return fmt.Errorf("listing SSH keys: %w", err)
-	}
-
-	if cmd.GlobalOutput == "json" {
-		return handler.PrintJSON(keys)
-	}
-
-	if len(keys) == 0 {
-		fmt.Println("No SSH keys registered. Use 'gitee ssh-key add' to add one.")
-		return nil
-	}
-
-	w := output.NewTableWriter()
-	fmt.Fprintln(w, "ID\tTITLE\tCREATED")
-	for _, k := range keys {
-		fmt.Fprintf(w, "%d\t%s\t%s\n", k.ID, k.Title, k.CreatedAt)
-	}
-	_ = w.Flush()
-	fmt.Printf("\nTotal: %d key(s)\n", len(keys))
-	return nil
+	return cmdkit.RunList[types.SSHKey](cmdkit.ListSpec[types.SSHKey]{
+		// ssh-key list lists the authenticated user's keys — no target repo.
+		ResolveOwnerRepo: func() (string, string, error) {
+			return "", "", nil
+		},
+		Path: func(_, _ string) string {
+			// Clamp per_page to Gitee v5's 1-100 range before sending it.
+			perPage := listFlags.limit
+			if perPage < 1 {
+				perPage = 30
+			}
+			if perPage > 100 {
+				perPage = 100
+			}
+			qv := url.Values{}
+			qv.Set("page", strconv.Itoa(listFlags.page))
+			qv.Set("per_page", strconv.Itoa(perPage))
+			return api.SSHKeysList() + "?" + qv.Encode()
+		},
+		// ssh-key list caps per_page with --limit, pages via --page, and does
+		// a single GET — no --paginate support.
+		Fetch: func(ctx context.Context, client *api.Client, path string) ([]types.SSHKey, error) {
+			var keys []types.SSHKey
+			if err := client.Get(ctx, path, &keys); err != nil {
+				return nil, fmt.Errorf("listing SSH keys: %w", err)
+			}
+			return keys, nil
+		},
+		Columns: []string{"ID", "TITLE", "CREATED"},
+		Row: func(k types.SSHKey) []string {
+			return []string{strconv.FormatInt(k.ID, 10), k.Title, k.CreatedAt}
+		},
+		EmptyText: func(_, _ string) string {
+			return "No SSH keys registered. Use 'gitee ssh-key add' to add one."
+		},
+		Footer: func(count int) string {
+			return fmt.Sprintf("\nTotal: %d key(s)\n", count)
+		},
+		JSON: func(items []types.SSHKey) error {
+			return handler.PrintJSON(items)
+		},
+	})
 }
 
 const sshKeyListAgentHelp = `# gitee ssh-key list — Agent Help

@@ -4,12 +4,11 @@ import (
 	"context"
 	"fmt"
 	"net/url"
-	"time"
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
+	"gitee-cli/internal/cmdkit"
 	"gitee-cli/internal/handler"
-	"gitee-cli/internal/output"
 	"gitee-cli/internal/utils"
 	"gitee-cli/pkg/types"
 
@@ -44,55 +43,48 @@ func init() {
 }
 
 func runList(cobraCmd *cobra.Command, args []string) error {
-	owner, repoName, err := resolveReleaseRepo(listFlags.repo)
-	if err != nil {
-		return err
-	}
-
-	client, err := cmd.NewAPIClient()
-	if err != nil {
-		return err
-	}
-
-	path := api.ReleasesList(owner, repoName)
-	q := url.Values{}
-	q.Set("per_page", fmt.Sprintf("%d", listFlags.limit))
-	q.Set("page", fmt.Sprintf("%d", listFlags.page))
-	fullPath := path + "?" + q.Encode()
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
-	defer cancel()
-
-	var releases []types.Release
-	if err := client.Get(ctx, fullPath, &releases); err != nil {
-		return fmt.Errorf("listing releases: %w", err)
-	}
-
-	if cmd.GlobalOutput == "json" {
-		return handler.PrintJSON(releases)
-	}
-
-	if len(releases) == 0 {
-		fmt.Println("No releases found")
-		return nil
-	}
-
-	w := output.NewTableWriter()
-	fmt.Fprintln(w, "TAG\tNAME\tPRERELEASE\tPUBLISHED")
-	for _, r := range releases {
-		pre := ""
-		if r.Prerelease {
-			pre = "yes"
-		}
-		pub := "-"
-		if r.PublishedAt != nil {
-			pub = r.PublishedAt.Format("2006-01-02")
-		}
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", r.TagName, r.Name, pre, pub)
-	}
-	_ = w.Flush()
-	fmt.Printf("\nTotal: %d release(s)\n", len(releases))
-	return nil
+	return cmdkit.RunList[types.Release](cmdkit.ListSpec[types.Release]{
+		ResolveOwnerRepo: func() (string, string, error) {
+			return resolveReleaseRepo(listFlags.repo)
+		},
+		Path: func(owner, repoName string) string {
+			path := api.ReleasesList(owner, repoName)
+			q := url.Values{}
+			q.Set("per_page", fmt.Sprintf("%d", listFlags.limit))
+			q.Set("page", fmt.Sprintf("%d", listFlags.page))
+			return path + "?" + q.Encode()
+		},
+		// release list caps per_page with --limit and does a single GET
+		// (page via --page) — no --paginate support.
+		Fetch: func(ctx context.Context, client *api.Client, path string) ([]types.Release, error) {
+			var releases []types.Release
+			if err := client.Get(ctx, path, &releases); err != nil {
+				return nil, fmt.Errorf("listing releases: %w", err)
+			}
+			return releases, nil
+		},
+		Columns: []string{"TAG", "NAME", "PRERELEASE", "PUBLISHED"},
+		Row: func(r types.Release) []string {
+			pre := ""
+			if r.Prerelease {
+				pre = "yes"
+			}
+			pub := "-"
+			if r.PublishedAt != nil {
+				pub = r.PublishedAt.Format("2006-01-02")
+			}
+			return []string{r.TagName, r.Name, pre, pub}
+		},
+		EmptyText: func(_, _ string) string {
+			return "No releases found"
+		},
+		Footer: func(count int) string {
+			return fmt.Sprintf("\nTotal: %d release(s)\n", count)
+		},
+		JSON: func(items []types.Release) error {
+			return handler.PrintJSON(items)
+		},
+	})
 }
 
 // resolveReleaseRepo resolves owner/name from --repo flag or global --repo.

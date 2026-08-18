@@ -2,13 +2,12 @@ package gist
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"time"
+	"strconv"
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
-	"gitee-cli/internal/output"
+	"gitee-cli/internal/cmdkit"
 	"gitee-cli/internal/utils"
 	"gitee-cli/pkg/types"
 
@@ -39,51 +38,48 @@ func init() {
 }
 
 func runList(cobraCmd *cobra.Command, args []string) error {
-	client, err := cmd.NewAPIClient()
-	if err != nil {
-		return err
-	}
-
-	path := fmt.Sprintf("%s?per_page=%d", api.GistsList(), listFlags.limit)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
-	defer cancel()
-
-	var gists []types.Gist
-	if err := client.Get(ctx, path, &gists); err != nil {
-		// Gitee API returns 404 when there are no gists, treat as empty result
-		if api.IsNotFound(err) {
-			gists = []types.Gist{}
-		} else {
-			return fmt.Errorf("listing gists: %w", err)
-		}
-	}
-
-	if cmd.GlobalOutput == "json" {
-		b, _ := json.MarshalIndent(gists, "", "  ")
-		fmt.Println(string(b))
-		return nil
-	}
-
-	if len(gists) == 0 {
-		fmt.Println("No gists found")
-		return nil
-	}
-
-	w := output.NewTableWriter()
-	fmt.Fprintln(w, "ID\tDESCRIPTION\tPUBLIC\tFILES\tUPDATED")
-	for _, g := range gists {
-		vis := "public"
-		if !g.Public {
-			vis = "private"
-		}
-		desc := utils.Truncate(g.Description, 50)
-		if desc == "" {
-			desc = "-"
-		}
-		fmt.Fprintf(w, "%s\t%s\t%s\t%d\t%s\n",
-			g.ID, desc, vis, len(g.Files), utils.TruncateDate(g.UpdatedAt))
-	}
-	return w.Flush()
+	return cmdkit.RunList[types.Gist](cmdkit.ListSpec[types.Gist]{
+		// gist list lists the authenticated user's gists — no target repo.
+		ResolveOwnerRepo: func() (string, string, error) {
+			return "", "", nil
+		},
+		Path: func(_, _ string) string {
+			// gist list caps per_page with --limit (default 30) and does a
+			// single GET — no --paginate support (unlike issue/pr/repo).
+			return fmt.Sprintf("%s?per_page=%d", api.GistsList(), listFlags.limit)
+		},
+		// Custom fetch: single GET, 404 → empty (Gitee returns 404 when
+		// there are no gists).
+		Fetch: func(ctx context.Context, client *api.Client, path string) ([]types.Gist, error) {
+			var gists []types.Gist
+			if err := client.Get(ctx, path, &gists); err != nil {
+				if api.IsNotFound(err) {
+					return []types.Gist{}, nil
+				}
+				return nil, fmt.Errorf("listing gists: %w", err)
+			}
+			return gists, nil
+		},
+		Columns: []string{"ID", "DESCRIPTION", "PUBLIC", "FILES", "UPDATED"},
+		Row: func(g types.Gist) []string {
+			vis := "public"
+			if !g.Public {
+				vis = "private"
+			}
+			desc := utils.Truncate(g.Description, 50)
+			if desc == "" {
+				desc = "-"
+			}
+			return []string{
+				g.ID, desc, vis,
+				strconv.Itoa(len(g.Files)),
+				utils.TruncateDate(g.UpdatedAt),
+			}
+		},
+		EmptyText: func(_, _ string) string {
+			return "No gists found"
+		},
+	})
 }
 
 // gistListAgentHelp is the agent-targeted help for `gitee gist list`.

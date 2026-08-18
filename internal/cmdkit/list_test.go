@@ -274,3 +274,55 @@ func TestRunList_404IsEmpty(t *testing.T) {
 		t.Errorf("404 should yield empty text, got: %q", out.stdout)
 	}
 }
+
+// TestRunList_Footer verifies a table footer is printed after the rows
+// (used by label/milestone/webhook/ssh-key/release/notification list).
+func TestRunList_Footer(t *testing.T) {
+	withServer(t, func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`[{"number":1,"title":"a"}]`))
+	})
+	withGlobals(t)
+	cmd.GlobalOutput = "table"
+
+	s := spec()
+	s.Footer = func(count int) string {
+		return fmt.Sprintf("\nTotal: %d item(s)\n", count)
+	}
+	out := captureStdout(t, func() error {
+		return RunList[testItem](s)
+	})
+	if out.err != nil {
+		t.Fatalf("RunList footer: %v", out.err)
+	}
+	if !strings.Contains(out.stdout, "\nTotal: 1 item(s)\n") {
+		t.Errorf("footer missing, got: %q", out.stdout)
+	}
+}
+
+// TestRunList_CustomJSON verifies a custom JSON printer (e.g.
+// handler.PrintJSON) is invoked instead of the default indented marshal.
+func TestRunList_CustomJSON(t *testing.T) {
+	withServer(t, func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`[{"number":1,"title":"a"}]`))
+	})
+	withGlobals(t)
+	cmd.GlobalOutput = "json"
+
+	called := false
+	s := spec()
+	s.JSON = func(items []testItem) error {
+		called = true
+		if len(items) != 1 || items[0].Number != 1 {
+			t.Errorf("unexpected items passed to JSON printer: %+v", items)
+		}
+		return nil
+	}
+	if err := RunList[testItem](s); err != nil {
+		t.Fatalf("RunList custom json: %v", err)
+	}
+	if !called {
+		t.Error("custom JSON printer was not invoked")
+	}
+}

@@ -29,21 +29,46 @@ else
   fail "internal/cmdkit/list.go 缺失"
 fi
 
-echo "==> 2. issue list / pr list 已迁移到骨架（引用 cmdkit.RunList）"
-if grep -q "cmdkit.RunList" cmd/issue/list.go && grep -q "cmdkit.RunList" cmd/pr/list.go; then
-  pass "issue list 与 pr list 均使用 cmdkit.RunList"
-else
-  fail "issue list 或 pr list 未使用 cmdkit.RunList"
+echo "==> 2. 所有 API list 命令已迁移到骨架（引用 cmdkit.RunList）"
+MIGRATED_CMDS=(
+  "cmd/issue/list.go"
+  "cmd/pr/list.go"
+  "cmd/repo/list.go"
+  "cmd/gist/list.go"
+  "cmd/release/list.go"
+  "cmd/org/list.go"
+  "cmd/ssh-key/list.go"
+  "internal/handler/label.go"
+  "internal/handler/milestone.go"
+  "internal/handler/webhook.go"
+  "internal/handler/notification.go"
+)
+ALL_MIGRATED=1
+for f in "${MIGRATED_CMDS[@]}"; do
+  if ! grep -q "cmdkit.RunList" "$f"; then
+    fail "$f 未使用 cmdkit.RunList"
+    ALL_MIGRATED=0
+  fi
+done
+if [ "$ALL_MIGRATED" -eq 1 ]; then
+  pass "${#MIGRATED_CMDS[@]} 个 API list 命令均使用 cmdkit.RunList"
 fi
 
-echo "==> 3. 编译通过（go build ./...）"
+echo "==> 3. alias/extension list 保留原样（本地数据源，不适用 API 骨架）"
+if grep -q "cmdkit.RunList" cmd/alias/list.go || grep -q "cmdkit.RunList" cmd/extension/list.go; then
+  fail "alias/extension 不应迁移到 cmdkit（本地数据源）"
+else
+  pass "alias/extension list 保留本地实现（合理）"
+fi
+
+echo "==> 4. 编译通过（go build ./...）"
 if go build ./... >/dev/null 2>&1; then
   pass "go build ./... 通过"
 else
   fail "go build ./... 失败"
 fi
 
-echo "==> 4. 骨架边界单测通过（go test ./internal/cmdkit/）"
+echo "==> 5. 骨架边界单测通过（go test ./internal/cmdkit/）"
 if go test ./internal/cmdkit/ -count=1 >/dev/null 2>&1; then
   pass "go test ./internal/cmdkit/ 通过"
 else
@@ -51,33 +76,45 @@ else
 fi
 
 echo
-echo "==> 5. CLI 级输出验证（需登录，未登录则跳过）"
+echo "==> 6. CLI 级输出验证（需登录，未登录则跳过）"
 if ! "$BIN" auth status >/dev/null 2>&1; then
   echo "SKIP: 未登录，跳过 CLI 级验证（Go 单测已覆盖骨架边界）"
 else
-  # 5a. issue list table 模式
+  # 6a. issue list table 模式
   if "$BIN" issue list --repo andershsueh/gitee-cli --state open >/dev/null 2>&1; then
     pass "gitee issue list table 模式正常"
   else
     fail "gitee issue list table 模式失败"
   fi
-  # 5b. issue list json 模式（验证 JSON 可解析）
+  # 6b. issue list json 模式（验证 JSON 可解析）
   if "$BIN" issue list --repo andershsueh/gitee-cli --state open -o json | python3 -m json.tool >/dev/null 2>&1; then
     pass "gitee issue list json 模式输出合法 JSON"
   else
     fail "gitee issue list json 模式输出非法"
   fi
-  # 5c. pr list table 模式
+  # 6c. pr list table 模式
   if "$BIN" pr list --repo andershsueh/gitee-cli --state open >/dev/null 2>&1; then
     pass "gitee pr list table 模式正常"
   else
     fail "gitee pr list table 模式失败"
   fi
-  # 5d. pr list json 模式
+  # 6d. pr list json 模式
   if "$BIN" pr list --repo andershsueh/gitee-cli --state open -o json | python3 -m json.tool >/dev/null 2>&1; then
     pass "gitee pr list json 模式输出合法 JSON"
   else
     fail "gitee pr list json 模式输出非法"
+  fi
+  # 6e. label list table 模式（handler 层迁移）
+  if "$BIN" label list --repo andershsueh/gitee-cli >/dev/null 2>&1; then
+    pass "gitee label list table 模式正常"
+  else
+    fail "gitee label list table 模式失败"
+  fi
+  # 6f. org list table 模式
+  if "$BIN" org list >/dev/null 2>&1; then
+    pass "gitee org list table 模式正常"
+  else
+    fail "gitee org list table 模式失败"
   fi
 fi
 

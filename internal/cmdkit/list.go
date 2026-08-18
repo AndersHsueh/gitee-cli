@@ -42,6 +42,13 @@ type ListSpec[T any] struct {
 	// RunList uses cmd.GlobalLimit.
 	Limit func() int
 
+	// Fetch performs the data retrieval. When nil, RunList uses
+	// api.FetchListOrAll with the global pagination flags
+	// (--paginate/--page/--per-page/--limit). Override it for commands with
+	// a non-standard pagination model — e.g. gist list caps per_page with
+	// --limit and does a single GET (no --paginate support).
+	Fetch func(ctx context.Context, client *api.Client, path string) ([]T, error)
+
 	// Columns is the table header row. Required for table output.
 	Columns []string
 	// Row renders one item into table cells. Required for table output.
@@ -49,6 +56,13 @@ type ListSpec[T any] struct {
 	// EmptyText renders the empty-list message. When nil, nothing is
 	// printed for an empty result.
 	EmptyText func(owner, repo string) string
+	// Footer renders a table footer after the rows (e.g. "\nTotal: N
+	// label(s)"). When nil, no footer is printed.
+	Footer func(count int) string
+	// JSON overrides the default indented-JSON output. When nil, RunList
+	// uses json.MarshalIndent + fmt.Println. Set this to reuse a shared
+	// JSON printer (e.g. handler.PrintJSON) without importing handler here.
+	JSON func(items []T) error
 	// ErrCtx prefixes non-404 fetch errors (e.g. "listing issues").
 	ErrCtx string
 }
@@ -82,19 +96,29 @@ func RunList[T any](spec ListSpec[T]) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
 	defer cancel()
 
-	// 4. Fetch (single page or all pages per --paginate; 404 → empty).
-	limit := cmd.GlobalLimit
-	if spec.Limit != nil {
-		limit = spec.Limit()
+	// 4. Fetch. Default is FetchListOrAll (single page or all pages per
+	// --paginate; 404 → empty). A command with a non-standard pagination
+	// model (e.g. gist list) supplies its own Fetch.
+	var items []T
+	if spec.Fetch != nil {
+		items, err = spec.Fetch(ctx, client, spec.Path(owner, repo))
+	} else {
+		limit := cmd.GlobalLimit
+		if spec.Limit != nil {
+			limit = spec.Limit()
+		}
+		items, err = api.FetchListOrAll[T](ctx, client, spec.Path(owner, repo),
+			cmd.GlobalPaginate, cmd.GlobalPerPage, limit, cmd.GlobalPage, spec.ErrCtx)
 	}
-	items, err := api.FetchListOrAll[T](ctx, client, spec.Path(owner, repo),
-		cmd.GlobalPaginate, cmd.GlobalPerPage, limit, cmd.GlobalPage, spec.ErrCtx)
 	if err != nil {
 		return err
 	}
 
 	// 5. Dispatch output.
 	if cmd.GlobalOutput == "json" {
+		if spec.JSON != nil {
+			return spec.JSON(items)
+		}
 		b, _ := json.MarshalIndent(items, "", "  ")
 		fmt.Println(string(b))
 		return nil
@@ -112,5 +136,11 @@ func RunList[T any](spec ListSpec[T]) error {
 	for _, it := range items {
 		fmt.Fprintln(w, strings.Join(spec.Row(it), "\t"))
 	}
-	return w.Flush()
+	if err := w.Flush(); err != nil {
+		return err
+	}
+	if spec.Footer != nil {
+		fmt.Print(spec.Footer(len(items)))
+	}
+	return nil
 }

@@ -10,12 +10,13 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
-	"gitee-cli/internal/output"
+	"gitee-cli/internal/cmdkit"
 	"gitee-cli/internal/utils"
 	"gitee-cli/pkg/types"
 
@@ -35,55 +36,53 @@ func MilestoneResolveRepo(repo string) (string, string, error) {
 
 // MilestoneList runs the milestone-list operation.
 func MilestoneList(repo, stateFilter string, limit int) error {
-	owner, repoName, err := MilestoneResolveRepo(repo)
-	if err != nil {
-		return err
-	}
-
-	client, err := cmd.NewAPIClient()
-	if err != nil {
-		return err
-	}
-
-	path := api.MilestonesList(owner, repoName)
-	q := url.Values{}
-	q.Set("per_page", fmt.Sprintf("%d", limit))
-	if stateFilter != "" {
-		q.Set("state", stateFilter)
-	}
-	fullPath := path + "?" + q.Encode()
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
-	defer cancel()
-
-	var milestones []types.Milestone
-	if err := client.Get(ctx, fullPath, &milestones); err != nil {
-		return fmt.Errorf("listing milestones: %w", err)
-	}
-
-	if cmd.GlobalOutput == "json" {
-		return PrintJSON(milestones)
-	}
-
-	if len(milestones) == 0 {
-		fmt.Printf("No milestones found in %s/%s\n", owner, repoName)
-		return nil
-	}
-
-	w := output.NewTableWriter()
-	fmt.Fprintln(w, "NUMBER\tTITLE\tSTATE\tOPEN\tCLOSED\tDUE")
-	for _, m := range milestones {
-		due := ""
-		if m.DueOn != nil {
-			due = m.DueOn.Format("2006-01-02")
-		}
-		title := utils.Truncate(m.Title, 40)
-		fmt.Fprintf(w, "%d\t%s\t%s\t%d\t%d\t%s\n",
-			m.Number, title, m.State, m.OpenIssues, m.ClosedIssues, due)
-	}
-	_ = w.Flush()
-	fmt.Printf("\nTotal: %d milestone(s)\n", len(milestones))
-	return nil
+	return cmdkit.RunList[types.Milestone](cmdkit.ListSpec[types.Milestone]{
+		ResolveOwnerRepo: func() (string, string, error) {
+			return MilestoneResolveRepo(repo)
+		},
+		Path: func(owner, repoName string) string {
+			path := api.MilestonesList(owner, repoName)
+			q := url.Values{}
+			q.Set("per_page", fmt.Sprintf("%d", limit))
+			if stateFilter != "" {
+				q.Set("state", stateFilter)
+			}
+			return path + "?" + q.Encode()
+		},
+		// milestone list caps per_page with --limit and does a single GET —
+		// no --paginate support.
+		Fetch: func(ctx context.Context, client *api.Client, path string) ([]types.Milestone, error) {
+			var milestones []types.Milestone
+			if err := client.Get(ctx, path, &milestones); err != nil {
+				return nil, fmt.Errorf("listing milestones: %w", err)
+			}
+			return milestones, nil
+		},
+		Columns: []string{"NUMBER", "TITLE", "STATE", "OPEN", "CLOSED", "DUE"},
+		Row: func(m types.Milestone) []string {
+			due := ""
+			if m.DueOn != nil {
+				due = m.DueOn.Format("2006-01-02")
+			}
+			return []string{
+				strconv.Itoa(m.Number),
+				utils.Truncate(m.Title, 40),
+				m.State,
+				strconv.Itoa(m.OpenIssues),
+				strconv.Itoa(m.ClosedIssues),
+				due,
+			}
+		},
+		EmptyText: func(o, r string) string {
+			return fmt.Sprintf("No milestones found in %s/%s", o, r)
+		},
+		Footer: func(count int) string {
+			return fmt.Sprintf("\nTotal: %d milestone(s)\n", count)
+		},
+		JSON: func(items []types.Milestone) error {
+			return PrintJSON(items)
+		},
+	})
 }
 
 // MilestoneView runs the milestone-view operation.

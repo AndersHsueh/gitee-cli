@@ -10,12 +10,13 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
 	"gitee-cli/cmd"
 	"gitee-cli/internal/api"
-	"gitee-cli/internal/output"
+	"gitee-cli/internal/cmdkit"
 	"gitee-cli/internal/utils"
 	"gitee-cli/pkg/types"
 
@@ -35,47 +36,44 @@ func WebhookResolveRepo(repo string) (string, string, error) {
 
 // WebhookList runs the webhook-list operation.
 func WebhookList(repo string, limit int) error {
-	owner, repoName, err := WebhookResolveRepo(repo)
-	if err != nil {
-		return err
-	}
-
-	client, err := cmd.NewAPIClient()
-	if err != nil {
-		return err
-	}
-
-	path := api.WebhooksList(owner, repoName)
-	q := url.Values{}
-	q.Set("per_page", fmt.Sprintf("%d", limit))
-	fullPath := path + "?" + q.Encode()
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
-	defer cancel()
-
-	var hooks []types.Webhook
-	if err := client.Get(ctx, fullPath, &hooks); err != nil {
-		return fmt.Errorf("listing webhooks: %w", err)
-	}
-
-	if cmd.GlobalOutput == "json" {
-		return PrintJSON(hooks)
-	}
-
-	if len(hooks) == 0 {
-		fmt.Printf("No webhooks configured in %s/%s\n", owner, repoName)
-		return nil
-	}
-
-	w := output.NewTableWriter()
-	fmt.Fprintln(w, "ID\tURL\tEVENTS\tCREATED")
-	for _, h := range hooks {
-		events := summarizeEvents(h)
-		fmt.Fprintf(w, "%d\t%s\t%s\t%s\n", h.ID, h.URL, events, h.CreatedAt.Format("2006-01-02"))
-	}
-	_ = w.Flush()
-	fmt.Printf("\nTotal: %d webhook(s)\n", len(hooks))
-	return nil
+	return cmdkit.RunList[types.Webhook](cmdkit.ListSpec[types.Webhook]{
+		ResolveOwnerRepo: func() (string, string, error) {
+			return WebhookResolveRepo(repo)
+		},
+		Path: func(owner, repoName string) string {
+			path := api.WebhooksList(owner, repoName)
+			q := url.Values{}
+			q.Set("per_page", fmt.Sprintf("%d", limit))
+			return path + "?" + q.Encode()
+		},
+		// webhook list caps per_page with --limit and does a single GET — no
+		// --paginate support.
+		Fetch: func(ctx context.Context, client *api.Client, path string) ([]types.Webhook, error) {
+			var hooks []types.Webhook
+			if err := client.Get(ctx, path, &hooks); err != nil {
+				return nil, fmt.Errorf("listing webhooks: %w", err)
+			}
+			return hooks, nil
+		},
+		Columns: []string{"ID", "URL", "EVENTS", "CREATED"},
+		Row: func(h types.Webhook) []string {
+			return []string{
+				strconv.FormatInt(h.ID, 10),
+				h.URL,
+				summarizeEvents(h),
+				h.CreatedAt.Format("2006-01-02"),
+			}
+		},
+		EmptyText: func(o, r string) string {
+			return fmt.Sprintf("No webhooks configured in %s/%s", o, r)
+		},
+		Footer: func(count int) string {
+			return fmt.Sprintf("\nTotal: %d webhook(s)\n", count)
+		},
+		JSON: func(items []types.Webhook) error {
+			return PrintJSON(items)
+		},
+	})
 }
 
 // summarizeEvents turns the 5 boolean event flags into a short comma-joined
