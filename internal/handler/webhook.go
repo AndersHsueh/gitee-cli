@@ -23,12 +23,14 @@ import (
 )
 
 // WebhookResolveRepo resolves --repo flag / global --repo into (owner, repo).
-// Delegates to utils.ResolveRepoFromFlag so the global --repo fallback
-// and parsing logic are shared across all command groups (label, release).
-// If a webhook-only override is ever needed, add a wrapper here that calls
-// utils.ResolveRepoFromFlag and then applies the override.
+// Delegates to utils.ResolveRepo so parsing and the git-config fallback are
+// shared across all command groups (label, release). The local flag wins;
+// the global --repo is used only when the local flag is empty.
 func WebhookResolveRepo(repo string) (string, string, error) {
-	return utils.ResolveRepoFromFlag(repo, cmd.GlobalRepo)
+	if repo == "" {
+		repo = cmd.GlobalRepo
+	}
+	return utils.ResolveRepo("", repo, nil)
 }
 
 // WebhookList runs the webhook-list operation.

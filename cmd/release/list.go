@@ -96,10 +96,14 @@ func runList(cobraCmd *cobra.Command, args []string) error {
 }
 
 // resolveReleaseRepo resolves owner/name from --repo flag or global --repo.
-// Delegates to utils.ResolveRepoFromFlag so the global --repo fallback
-// and parsing logic are shared across all command groups (label, webhook).
+// Delegates to utils.ResolveRepo so parsing and the git-config fallback are
+// shared across all command groups (label, webhook). The local flag wins;
+// the global --repo is used only when the local flag is empty.
 func resolveReleaseRepo(repo string) (string, string, error) {
-	return utils.ResolveRepoFromFlag(repo, cmd.GlobalRepo)
+	if repo == "" {
+		repo = cmd.GlobalRepo
+	}
+	return utils.ResolveRepo("", repo, nil)
 }
 
 const releaseListAgentHelp = `# gitee release list — Agent Help

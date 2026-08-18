@@ -23,10 +23,14 @@ import (
 )
 
 // MilestoneResolveRepo resolves --repo flag / global --repo into (owner, repo).
-// Delegates to utils.ResolveRepoFromFlag so the global --repo fallback
-// and parsing logic are shared across all command groups.
+// Delegates to utils.ResolveRepo so parsing and the git-config fallback are
+// shared across all command groups. The local flag wins; the global --repo is
+// used only when the local flag is empty.
 func MilestoneResolveRepo(repo string) (string, string, error) {
-	return utils.ResolveRepoFromFlag(repo, cmd.GlobalRepo)
+	if repo == "" {
+		repo = cmd.GlobalRepo
+	}
+	return utils.ResolveRepo("", repo, nil)
 }
 
 // MilestoneList runs the milestone-list operation.
