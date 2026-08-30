@@ -40,19 +40,19 @@ commits / compare / protect（分支保护）等 20+ 个动词——**部分能�
 
 ---
 
-## 🤖 Dual-surface CLI Design：同一份 CLI，长两张脸
+## 🤖 双界面 CLI 设计：同一份 CLI，两种打开方式
 
 > 📖 完整设计宣言：[docs/philosophy.md](docs/philosophy.md)
 
 2026 年调用 CLI 的不再只是人类的手指，还有 Claude Code、Cursor、Cline 们的代码。
 这两类用户对"帮助文档"的需求**结构上正交**：人要短、能扫；Agent 要全、可解析、有唯一正解。
-传统 `--help` 想一份文档讨好两个物种，结果两边都不爽。
+传统 `--help` 想用一份文档同时讨好这两类使用者，结果两边都不满意。
 
-gitee-cli 的答案：**承认两类用户，长两张脸。**
+gitee-cli 的答案：**承认两类使用者，给出两套界面。**
 
-| Surface | Flag | 给谁 | 设计目标 |
-|---------|------|------|---------|
-| Human | `--help` | 人 | 信息密度低，3 秒扫到要点 |
+| 界面 | Flag | 给谁 | 设计目标 |
+|------|------|------|---------|
+| 人类界面 | `--help` | 人 | 信息密度低，3 秒扫到要点 |
 | Agent | `--agent-help` | AI Agent | 信息密度高，结构稳定，机器可解析（`-o json`） |
 
 ```bash
@@ -209,7 +209,7 @@ golangci-lint run ./...           # Lint
 
 | 文档 | 说明 |
 |------|------|
-| [docs/philosophy.md](docs/philosophy.md) | Dual-surface CLI Design 设计宣言 |
+| [docs/philosophy.md](docs/philosophy.md) | 双界面 CLI 设计宣言 |
 | [docs/zh/FSD.md](docs/zh/FSD.md) | 功能规格文档 |
 | [docs/zh/SDD.md](docs/zh/SDD.md) | 系统设计文档 |
 | [docs/zh/developer-guide.md](docs/zh/developer-guide.md) | 开发指导文档 |

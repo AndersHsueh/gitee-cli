@@ -1,92 +1,92 @@
 ---
-title: "Dual-surface CLI Design: 同一份 CLI,长两张脸"
+title: "双界面 CLI 设计：一份命令行工具，两种打开方式"
 date: 2026-06-08
 updated: 2026-07-04
 author: AndersHsueh
 tags: [cli, ai-agent, developer-tools, open-source, gitee, golang, design-pattern]
 description: >
-  gitee-cli 是全球第一个实现 Dual-surface CLI Design 的开源 CLI 工具。
-  传统 --help 试图用同一份文档同时服务人类和 AI Agent,结果两边都不爽——
-  这篇文章解释我们为什么把 CLI 拆成两张脸、怎么做、踩过哪些坑、
-  以及你的项目为什么也应该这么做。
+  gitee-cli 是全球第一个实现"双界面 CLI 设计"的开源命令行工具。
+  传统 --help 想用同一份文档同时服务人类和 AI Agent，结果两边都不满意——
+  这篇文章讲清楚我们为什么要把 CLI 拆成两套界面、具体怎么做、
+  踩过哪些坑，以及为什么你的项目也值得这么做。
 ---
 
-# Dual-surface CLI Design: 同一份 CLI,长两张脸
+# 双界面 CLI 设计：一份命令行工具，两种打开方式
 
-> **TL;DR**: CLI 工具有两类用户——**人**和 **AI Agent**——他们对"帮助文档"的需求不是详略版关系,而是**结构上正交**的两套需求。我们在 gitee-cli 里实现了 `--help`(人类)和 `--agent-help`(AI Agent)两套并行的帮助系统,把这套设计叫做 **Dual-surface CLI Design**。截至 v0.12.6,它覆盖 129 个 verb,由 contract test 守护,并遵守三条"可达性法则"。本文解释为什么传统 --help 是错误妥协、双面架构怎么做、我们在真实迭代中踩过什么坑、以及你的项目为什么也应该这么做。
-
----
-
-## 问题:CLI 的用户变了,但 CLI 的设计没跟上
-
-打开任何主流 CLI 工具——`git`、`docker`、`kubectl`、`gh`。它们的设计假设是什么?**用户在终端前,一边看 --help 一边敲命令。**
-
-但 2026 年的现实是:**调用 CLI 的不再只是人类的手指,还有 AI Agent 的代码。**
-
-Claude Code 调用 `gh pr create`。Cursor Agent 调用 `git diff`。Cline 调用 `npm publish`。**这两类调用者对"帮助文档"的需求不是同一个光谱上的两个点,而是两个正交维度。**
-
-- 人类要的是:**短、能扫、能记住几个常用 flag**。
-- AI Agent 要的是:**完整、结构化、能被解析、有唯一正解**。
-
-试图用同一份文档服务两个物种——这是从根上就注定失败的设计。
+> **一句话总结**：命令行工具其实有两类使用者——**人**和 **AI Agent**。他们对"帮助文档"的需求不是详细版和简略版的区别，而是**两套完全不同的需求**。gitee-cli 为此做了 `--help`（给人看）和 `--agent-help`（给 AI Agent 看）两套并行的帮助系统，我们把这种做法称为**双界面 CLI 设计（Dual-surface CLI Design）**。截至 v0.12.6，这套设计已经覆盖 129 个命令，由自动化测试守护正确性，并且遵循三条我们称之为"可达性法则"的原则。这篇文章会讲清楚：为什么传统 --help 从设计上就注定两头不讨好、双界面架构具体怎么落地、我们踩过什么坑，以及为什么这个思路值得被更多项目借鉴。
 
 ---
 
-## 传统 --help 的错误妥协:一份文档服务两个物种
+## 问题的根源：CLI 的使用者变了，但设计思路没跟上
 
-传统 CLI 的帮助系统想同时讨好两类用户,结果两边都不爽:
+打开任何一个主流命令行工具——`git`、`docker`、`kubectl`、`gh`——它们的设计前提都是同一个：**有个人坐在终端前，一边看 `--help`，一边敲命令。**
 
-| 需求 | 人类要的 | Agent 要的 | 传统 --help 给了吗 |
+但 2026 年的现实早就不是这样了：**调用命令行的，不只是人的手指，还有 AI Agent 写出来的代码。**
+
+Claude Code 会调用 `gh pr create`，Cursor Agent 会跑 `git diff`，Cline 会执行 `npm publish`。问题在于，**这两类调用者对"帮助文档"的诉求，压根不是同一件事情的详略之分，而是两种完全不同的需求。**
+
+- 人类想要的是：**简短、一眼扫过去能抓住重点、记得住几个常用参数**。
+- AI Agent 需要的是：**完整、结构化、能被程序解析、有明确唯一的做法**。
+
+想用同一份文档伺候两种截然不同的需求——这个设计从一开始就注定失败。
+
+---
+
+## 传统 --help 的两难：一份文档，两头不讨好
+
+传统 CLI 的帮助系统试图同时照顾两类用户，结果谁都不满意：
+
+| 需求 | 人类想要 | Agent 需要 | 传统 --help 提供了吗 |
 |------|---------|-----------|------------------|
-| 用法示例 | ✅ 简短够用 | ✅ 需要可复制的 shell 片段 | ⚠️ 部分 |
-| 前置条件 | ❌ 不需要 | ✅ **必须知道** | ❌ 没有 |
-| 幂等性 | ❌ 不关心 | ✅ **必须知道** | ❌ 没有 |
-| 副作用 | ❌ 能猜到 | ✅ **必须明确列出** | ❌ 没有 |
-| 错误码+恢复 | ❌ 看报错就行 | ✅ **需要在代码里分支处理** | ❌ 没有 |
-| 编排提示 | ❌ 不需要 | ✅ **下一步该跑什么?** | ❌ 没有 |
-| JSON 解析提示 | ❌ 不需要 | ✅ **stdout 怎么 parse?** | ❌ 没有 |
+| 用法示例 | ✅ 简短够用即可 | ✅ 需要能直接复制运行的脚本片段 | ⚠️ 只做到一半 |
+| 前置条件 | ❌ 不太关心 | ✅ **必须知道** | ❌ 完全没有 |
+| 幂等性 | ❌ 不在意 | ✅ **必须知道** | ❌ 完全没有 |
+| 副作用 | ❌ 能大致猜到 | ✅ **必须明确列出** | ❌ 完全没有 |
+| 错误码与恢复 | ❌ 看报错处理就行 | ✅ **需要写进代码逻辑里判断** | ❌ 完全没有 |
+| 编排提示 | ❌ 用不上 | ✅ **执行完下一步该做什么？** | ❌ 完全没有 |
+| 输出解析提示 | ❌ 用不上 | ✅ **命令行输出该怎么解析？** | ❌ 完全没有 |
 
-**人类嫌 --help 啰嗦、抓不住重点。Agent 嫌 --help 不够、缺关键信息。** 同一个输出格式要服务两个完全不同需求的受众——这是根本性的设计失败,不是"详略度"没调对。
+**人类会嫌 `--help` 太啰嗦、抓不住重点；Agent 会嫌 `--help` 信息不够、缺关键内容。** 让同一份输出去满足两种完全不同的需求——这不是"详略程度没调好"，而是设计思路本身出了问题。
 
 ---
 
-## 解法:Dual-surface CLI Design
+## 我们的做法：双界面 CLI 设计
 
-**gitee-cli 的做法很简单:承认两类用户,长两张脸。**
+**gitee-cli 的解法其实很直接：既然有两类使用者，那就给出两套界面。**
 
-我们把这种设计叫做 **Dual-surface CLI Design**——同一个 CLI 暴露**两个并行的表面**,各服务各的消费者:
+我们把这套设计叫作**双界面 CLI 设计**——同一个命令行工具，对外暴露**两套并行的界面**，各自服务各自的对象：
 
 ```bash
-# Human surface: 短、干净、传统 CLI 风格
+# 人类界面：简短、干净，传统 CLI 的风格
 gitee pr create --help
 
-# Agent surface: 长、结构化、面向机器的知识
+# Agent 界面：详尽、结构化，面向程序解析的知识库
 gitee pr create --agent-help
 ```
 
-### 为什么叫 "surface"?
+### 为什么用"界面"这个词
 
-"Surface" 这个词强调的是**表层形态**(输出格式、信息密度、消费者契约),不是"哪个用户更重要"。我们不是"Agent-First"(听起来像讨好 Agent 忽视人),我们是 **Dual-surface**(听起来像"我有两个面,你用哪个看自己挑")。
+"界面"强调的是**呈现形式**（输出格式、信息密度、面向的读者），而不是"谁更重要"。这不是"Agent 优先"（听起来像是牺牲人类体验去讨好 Agent），而是**双界面并行**——两套界面地位对等，你是谁就用哪一套。
 
-| Surface | 给谁 | 设计目标 |
-|---------|------|---------|
-| `--help` | 人类 | 信息密度低,3 秒能扫到要点 |
-| `--agent-help` | AI Agent | 信息密度高,结构稳定,机器可解析 |
+| 界面 | 服务对象 | 设计目标 |
+|------|---------|---------|
+| `--help` | 人类 | 信息密度低，3 秒内抓住要点 |
+| `--agent-help` | AI Agent | 信息密度高，结构固定，能被程序稳定解析 |
 
-**这两张脸地位对等,不是主从关系。** 这是 Dual-surface 和 "Agent-First" 在语义上的根本差异。
+**这两套界面是平级关系，不存在主次之分。** 这正是"双界面设计"和"Agent 优先"在本质上的区别。
 
-### 这个类比帮你记住
+### 一个更好理解的类比
 
-就像 HTTP 有 `Content-Type: text/html` 和 `Content-Type: application/json`——给不同的消费者不同的格式,天经地义。CLI 帮助系统也应该有这种"按消费者分发"的设计。
+这就像 HTTP 协议里的 `Content-Type: text/html` 和 `Content-Type: application/json`——针对不同的接收方，给出不同的格式，这本来就是天经地义的事。命令行的帮助系统，也理应有这种"按读者分发内容"的设计思路。
 
 ---
 
-## Agent Surface 里有什么?
+## Agent 界面里到底写了什么？
 
-每份 `--agent-help` 文档都覆盖了 Agent 在编排工作流时需要的 **11 个维度**——这就是 Agent surface 的内容 schema:
+每一份 `--agent-help` 文档，都覆盖了 Agent 在自动化编排任务时需要知道的 **11 个维度**——这就是 Agent 界面的内容模板：
 
-### 1. Pre-conditions(前置条件)
-执行前必须满足什么?Token 有效吗?Tag 存在吗?文件可读吗?
+### 1. 前置条件（Pre-conditions）
+执行这个命令之前，需要满足什么？Token 是否有效？目标 Tag 是否存在？文件是否可读？
 
 ```markdown
 ## Pre-conditions
@@ -95,8 +95,8 @@ gitee pr create --agent-help
 - The local file exists and is readable
 ```
 
-### 2. Post-conditions(后置条件)
-执行成功后系统处于什么状态?什么被创建了?什么被改变了?
+### 2. 后置条件（Post-conditions）
+执行成功之后，系统会变成什么状态？创建了什么？改变了什么？
 
 ```markdown
 ## Post-conditions (on success)
@@ -104,8 +104,8 @@ gitee pr create --agent-help
 - Stdout prints the asset name, size, and download URL
 ```
 
-### 3. Idempotency(幂等性)
-能重跑吗?重复执行会发生什么?这是 Agent 编排最常出错的地方。
+### 3. 幂等性（Idempotency）
+这个命令能重复执行吗？重复跑会发生什么？这是 Agent 自动化编排里最容易出问题的地方。
 
 ```markdown
 ## Idempotency
@@ -113,8 +113,8 @@ NO. Each invocation creates a new asset. Re-running with the same file
 will create a duplicate asset entry (different asset ID).
 ```
 
-### 4. Atomicity(原子性)
-有没有半成功状态?网络断了怎么办?
+### 4. 原子性（Atomicity）
+执行过程中会不会出现"半成功"的中间状态？如果网络中断了怎么办？
 
 ```markdown
 ## Atomicity
@@ -123,8 +123,8 @@ Not atomic. The release is fetched first (GET), then the file is uploaded
 (safe to retry).
 ```
 
-### 5. Side effects(副作用)
-会触发 webhook 吗?会发邮件吗?会通知订阅者吗?
+### 5. 副作用（Side effects）
+会不会触发 webhook？会不会发通知邮件？会不会提醒订阅者？
 
 ```markdown
 ## Side effects
@@ -133,8 +133,8 @@ Not atomic. The release is fetched first (GET), then the file is uploaded
 - The asset is publicly downloadable immediately
 ```
 
-### 6. Common errors + recovery(常见错误 + 恢复方式)
-Agent 需要在代码里做错误分支——知道什么错误会以什么形式出现,才能写好 retry 逻辑。
+### 6. 常见错误与恢复方式
+Agent 需要在代码里对不同错误做分支处理——只有事先知道每种错误会以什么形式出现，才能写出靠谱的重试逻辑。
 
 ```markdown
 ## Common errors
@@ -143,14 +143,14 @@ Agent 需要在代码里做错误分支——知道什么错误会以什么形�
 - 401 Unauthorized: run `gitee auth login` or set GITEE_TOKEN
 ```
 
-### 7. OAuth scope(权限范围)
-Agent 需要知道自己的 token 权限够不够——不够就提前终止,而不是发了请求才发现 403。
+### 7. 权限范围（OAuth scope）
+Agent 需要提前知道自己手里的 token 权限够不够——不够就该提前终止，而不是发出请求之后才发现被 403 拒绝。
 
-### 8. Rate limit(频率限制)
-Agent 做批量操作时需要知道能发多快。
+### 8. 频率限制（Rate limit）
+Agent 做批量操作时，需要知道能以多快的速度发请求。
 
-### 9. Race conditions(竞态条件)
-已知的数据竞争陷阱和规避方法。
+### 9. 竞态条件（Race conditions）
+已知的数据竞争陷阱，以及应该如何规避。
 
 ```markdown
 ## Race conditions
@@ -158,8 +158,8 @@ Agent 做批量操作时需要知道能发多快。
   The scan is a point-in-time snapshot, not a real-time feed.
 ```
 
-### 10. Orchestration hints(编排提示)
-Agent 跑完这个命令后,下一步该跑什么?这是 Agent 最需要但传统 CLI 最少给的信息。
+### 10. 编排提示（Orchestration hints）
+这个命令跑完之后，下一步该执行什么？这是 Agent 最需要、而传统 CLI 恰恰最缺失的信息。
 
 ```markdown
 ## See also
@@ -168,8 +168,8 @@ Agent 跑完这个命令后,下一步该跑什么?这是 Agent 最需要但传�
 - `gitee release create`      — create a new release
 ```
 
-### 11. Parsing hints(解析提示)
-stdout 怎么解析?JSON 输出格式是什么?有哪些 jq 示例可以直接用?
+### 11. 解析提示（Parsing hints）
+命令行输出该怎么解析？JSON 格式长什么样？有没有能直接套用的 jq 示例？
 
 ```markdown
 ## Example
@@ -178,13 +178,13 @@ stdout 怎么解析?JSON 输出格式是什么?有哪些 jq 示例可以直接�
 
 ---
 
-## 真实场景:Agent 修完 bug 后的 "闭环遗漏症"
+## 一个真实的场景：Agent 修完 bug 之后的"闭环遗漏"
 
-最常见的 Agent 工作流事故是什么?**Coder-Agent 提了 PR 就不管了,Issue 永远 open 着。**
+Agent 工作流里最常见的事故是什么？**Coder Agent 提完 PR 就撒手不管，对应的 Issue 永远处于打开状态。**
 
-因为传统 CLI 的 `pr create --help` 只会告诉你 flag 怎么用,不会告诉你"创建 PR 后应该回 comment 到 issue 完成闭环"。这是一个**编排知识缺失**导致的可靠性问题,不是 Agent 不够聪明。
+原因很简单：传统 CLI 的 `pr create --help` 只会告诉你参数怎么填，不会告诉你"创建 PR 之后应该回到 Issue 里评论一句，完成闭环"。这其实是**编排知识没有被传递到位**导致的可靠性问题，不是 Agent 不够聪明。
 
-gitee-cli 的做法:在 `gitee pr create --agent-help` 里直接标出警告——
+gitee-cli 的做法是：直接在 `gitee pr create --agent-help` 里写明警告——
 
 ```markdown
 ⚠️ CRITICAL: After a successful PR create, an agent MUST close the loop
@@ -195,21 +195,21 @@ with the originating issue. Run:
   gitee issue comment 42 --body "Fixed in PR #${PR_NUM}"
 ```
 
-**直接给 Agent 可复制的 shell 片段。** 不是"建议",是"可执行的指令"。
+**直接给出可以复制运行的脚本片段。** 这不是一句"建议"，而是一条可以直接执行的指令。
 
-这种"把编排知识编码进 Agent surface"的做法,是 Dual-surface Design 最大的实战价值——**Agent 不需要猜,你已经把唯一正解塞进工具里了。**
+把这类"编排经验"写进 Agent 界面里，正是双界面设计在实际场景中最大的价值——**Agent 不需要靠猜，因为唯一的正确做法已经写在工具里了。**
 
 ---
 
-## 可达性三法则:文档存在 ≠ 文档可达
+## 三条可达性法则：文档存在，不等于文档能被看到
 
-这一节是 v0.12.1 用真实事故换来的。我们曾经以为"每个命令都写了 Agent 文档"就够了,直到全量扫描发现:**文档写了,但 Agent 根本够不着。** 三种够不着的方式,对应三条法则:
+这一节的内容,是我们在 v0.12.1 里用真实的踩坑经历换来的。我们曾经以为"每个命令都写了 Agent 文档"就万事大吉,直到一次全量排查发现:**文档确实写了,但 Agent 根本读不到。** 具体分三种情况,对应三条法则:
 
-### 法则一:文档必须在参数校验之前可达
+### 法则一：文档要在参数校验之前就能被看到
 
-Agent 探测命令用法时,恰恰**因为不知道要传什么参数**才来查文档。如果框架的必填参数校验先于文档钩子执行,`gitee gist comments --agent-help` 会得到 `Error: accepts 1 arg(s), received 0`——文档明明存在,Agent 却永远看不到。
+Agent 来查文档的场景，往往**正是因为不知道该传什么参数**。如果框架的必填参数校验发生在文档钩子之前执行，那 `gitee gist comments --agent-help` 只会得到一句 `Error: accepts 1 arg(s), received 0`——文档明明写好了，Agent 却永远看不到。
 
-在 cobra 里,`ValidateArgs` 先于 `PreRunE` 执行,所以光把钩子放进 PreRunE 是不够的,必须包装 Args 校验器本身:
+在 cobra 框架里，`ValidateArgs` 的执行顺序在 `PreRunE` 之前，所以光把钩子放进 `PreRunE` 是不够的，必须直接包装参数校验器本身：
 
 ```go
 // AgentHelpAwareArgs: --agent-help 在场时跳过位置参数校验
@@ -223,41 +223,41 @@ func AgentHelpAwareArgs(wrapped cobra.PositionalArgs) cobra.PositionalArgs {
 }
 ```
 
-这个坑我们在同一天里踩了两次——修完 17 个命令之后,新加的 3 个 n/a notice 又栽在同一个执行顺序上。**框架的钩子执行顺序,是 Dual-surface 实现里最阴险的细节。**
+这个坑我们在同一天里踩了两次——修完 17 个命令之后，新加的 3 个 n/a 提示又栽在同一个执行顺序问题上。**框架内部钩子的执行顺序，是双界面设计里最容易被忽略、也最麻烦的细节。**
 
-### 法则二:文档必须在认证之前可达
+### 法则二：文档要在身份验证之前就能被看到
 
-`gitee api raw --agent-help` 曾经返回 `not authenticated`。一个还没配 token 的 Agent(比如刚被 spawn 出来的 CI 子进程)最需要文档,却被认证墙挡在门外。**查文档永远不应该需要权限。** 把 agent-help 判断放在一切认证检查之前。
+`gitee api raw --agent-help` 曾经会返回 `not authenticated`。一个还没配置好 token 的 Agent（比如刚被创建出来的 CI 子进程）恰恰是最需要看文档的时候，却被身份验证挡在了门外。**查文档这件事，本来就不该需要权限。** 正确的做法是把 `--agent-help` 的判断逻辑放在所有身份验证检查之前。
 
-### 法则三:探测文档绝不能执行真命令
+### 法则三：查看文档这个动作本身，绝不能触发真实命令的执行
 
-`gitee auth login --agent-help` 曾经会**真的开始登录流程**。对 Agent 来说这是最危险的一类陷阱:它只是想看看说明书,结果误触发了带副作用的交互式流程。对于刻意不提供 Agent 文档的 operational 命令(auth/config/completion),正确行为是打印一行稳定的 n/a 信号后立即退出:
+`gitee auth login --agent-help` 曾经会**真的启动登录流程**。对 Agent 来说，这是最危险的一类陷阱：本来只是想看看说明书，结果不小心触发了一个带副作用的交互式流程。对于那些本来就不打算提供 Agent 文档的操作类命令（比如 `auth`、`config`、`completion`），正确的处理方式是打印一行固定的提示信息后立即退出：
 
 ```
 auth login is an operational/config command. Use --help for usage.
 ```
 
-Agent 拿到这个信号就知道:这条命令不归我编排,绕开。
+Agent 看到这句话就知道：这条命令不归自己来编排，跳过就好。
 
-> 三条法则合起来就是一句话:**Agent Surface 的可达性是无条件的**——不因缺参数而不可达,不因没 token 而不可达,不因探测本身而产生副作用。
+> 这三条法则合起来，其实就是一句话：**Agent 界面的可达性是无条件的**——不会因为缺参数而看不到，不会因为没有 token 而看不到，也不会因为只是"看一眼"就产生任何副作用。
 
 ---
 
-## 覆盖会腐烂:用 contract test 把承诺钉死
+## 覆盖率会腐烂：靠自动化测试把承诺钉死
 
-宣言好写,难的是三个月后新命令还守不守规矩。gitee-cli 用两个机制防腐烂:
+设计理念好定，难的是三个月后新加的命令还愿不愿意遵守规则。gitee-cli 用两个机制来防止这种"腐烂"：
 
-1. **Contract test 守门**:`cmd/agent_help_contract_test.go` 断言每个注册的命令都在根覆盖矩阵里有条目。新命令不写 Agent 文档?CI 直接红。覆盖率不是靠自觉,是靠测试。
-2. **根覆盖矩阵**:`gitee --agent-help` 输出全部命令的覆盖状态,Agent(和人)一眼看到哪些命令有完整文档、哪些标注 n/a。矩阵本身也是 Agent Surface 的一部分。
+1. **契约测试把关**：`cmd/agent_help_contract_test.go` 会检查每一个已注册的命令，是否都在总的覆盖清单里有对应条目。新命令不写 Agent 文档？CI 直接报红。覆盖率不是靠自觉,而是靠测试强制保证。
+2. **总览覆盖清单**：`gitee --agent-help` 会输出全部命令的文档覆盖状态,Agent（以及人）都能一眼看出哪些命令有完整文档、哪些标注为"不适用"。这份清单本身，也是 Agent 界面的一部分。
 
-## 当前覆盖
+## 目前的覆盖情况
 
-截至 v0.12.6(2026-08-17),共 **129 个 verb** 已获得完整 `--agent-help`(实测:`gitee help reference` 列出全部叶子命令,逐个跑 `--agent-help`,统计输出以 `# gitee` 开头的数量):
+截至 v0.12.6（2026-08-17），已经有 **129 个命令**拥有完整的 `--agent-help` 文档（统计方式：用 `gitee help reference` 列出全部叶子命令，逐一执行 `--agent-help`，统计输出以 `# gitee` 开头的条数）：
 
-| 命令组 | 已有 Agent Help |
+| 命令组 | 已覆盖的子命令 |
 |--------|----------------|
 | agent | onboard |
-| repo | list, create, view, fork, edit, delete, clone, browse, branches, archive, sync, rename, set-default (n/a), tag (list, create), collaborator (list, add, remove), star (list, star, unstar), watch (watch, unwatch), file (view, push, delete), commits (list, view), compare, protect (protect, unprotect) |
+| repo | list, create, view, fork, edit, delete, clone, browse, branches, archive, sync, rename, set-default（不适用）, tag（list, create）, collaborator（list, add, remove）, star（list, star, unstar）, watch（watch, unwatch）, file（view, push, delete）, commits（list, view）, compare, protect（protect, unprotect） |
 | issue | list, create, view, edit, close, reopen, comment, comments, status |
 | pr | list, create, view, merge, review, close, reopen, diff, comments, comment, checkout, ready, edit, checks, status |
 | gist | list, view, create, edit, delete, star, unstar, clone, comments, comment, comment-delete |
@@ -273,70 +273,71 @@ Agent 拿到这个信号就知道:这条命令不归我编排,绕开。
 | extension | list, install, remove, upgrade, create |
 | alias | set, list, delete |
 | search | repos, issues, users, code, commits |
-| api | raw (auth-free doc) |
+| api | raw（无需认证即可查看的文档） |
 
-**覆盖策略**:所有"写"命令优先,跨仓状态查询次之。Operational/config 类命令(auth、config、completion)标注为 `n/a` —— `gitee auth login --agent-help` 等会打印一行 `operational/config — use --help` 后 exit 0,作为 Agent 探测时的稳定信号,而不是触发真实登录流。
+**覆盖策略**：所有"写"操作类命令优先，跨仓库状态查询类次之。操作/配置类命令（`auth`、`config`、`completion`）统一标注为"不适用"——比如 `gitee auth login --agent-help` 会打印一行"这是操作/配置类命令，请用 `--help`"后正常退出，作为 Agent 探测时的稳定信号，而不是真的执行登录流程。
 
 ---
 
-## 成本分析:一个有趣的元循环
+## 成本核算：一个挺有意思的循环
 
-加一个命令的 `--agent-help` 需要多少工作量?人工写的话:
+给一个命令补齐 `--agent-help`，大概需要多少工作量？如果靠人工写：
 
-| 环节 | 时间 |
+| 环节 | 耗时 |
 |------|------|
-| 写 PreRunE hook(3 行样板代码) | 1 分钟 |
-| 写 Agent 文档(11 个 section) | 20-30 分钟 |
-| 更新 coverage matrix | 1 分钟 |
-| **每个命令合计** | **~30 分钟** |
+| 写 PreRunE 钩子（3 行样板代码） | 1 分钟 |
+| 写 Agent 文档（11 个小节） | 20-30 分钟 |
+| 更新覆盖清单 | 1 分钟 |
+| **单个命令合计** | **约 30 分钟** |
 
-129 个 verb × 30 分钟 ≈ 65 小时。听起来不少?这里有个**元循环**值得说破:
+129 个命令 × 30 分钟 ≈ 65 小时。听起来不算少？这里有个挺值得说一说的循环：
 
-gitee-cli 从 v0.11 到 v0.12 的大部分 Agent 文档,是由 **AI Agent 编队**写的——人类定义 11 维度 schema 和验收标准,contract test 守门,Agent 批量生产,另一个独立 Agent 逐条验收。**给 AI Agent 用的文档,由 AI Agent 来写,边际成本趋近于零;人类的角色从"作者"变成"立法者 + 验收者"。**
+gitee-cli 从 v0.11 到 v0.12 的大部分 Agent 文档，实际上是由**一组 AI Agent 协作写出来的**——人类负责定义 11 维度的模板和验收标准，契约测试负责把关，Agent 负责批量生产内容，再由另一个独立的 Agent 逐条验收。**给 AI Agent 用的文档，交给 AI Agent 来写，边际成本几乎为零；人类的角色从"作者"变成了"标准制定者 + 验收者"。**
 
-这恰恰是 Dual-surface 的自证:因为文档是**结构化、有 schema、可校验**的,它才能被机器生产和机器验收。传统 --help 那种自由散文,反而做不到这一点。
+这恰恰印证了双界面设计的合理性：正因为文档是**结构化、有固定模板、可以被校验**的，它才能被机器批量生产、也能被机器批量验收。传统 `--help` 那种自由散文式的写法，反而做不到这一点。
 
-对于一个能让 Agent 可靠性提升一个量级的特性来说,这是整个项目里 ROI 最高的投资——而且这个 ROI 还在随着 Agent 生产力的提升继续上涨。
-
----
-
-## 为什么你的 CLI 也应该采用 Dual-surface Design
-
-如果你维护的 CLI 工具可能被 AI Agent 调用(Claude Code、Cursor、Cline、Copilot、Codex……几乎所有现代编码 Agent 都在通过 CLI 和世界交互),考虑加入 `--agent-help`。
-
-**不需要等"行业标准"出现。** gitee-cli 已经在 2025–2026 年证明了这件事可行且有效。你只需要:
-
-1. 在根命令上加一个 `--agent-help` bool flag
-2. 在目标命令上加 `PreRunE` 钩子,拦截 flag 并输出结构化文档——**并记住可达性三法则**(参数校验、认证、副作用,一个都不能挡在文档前面)
-3. 写 11 个 section 的 Agent surface(用我们的模板;或者像我们一样,让 Agent 写、用测试验收)
-4. 在 `--agent-help` 根页面维护一张覆盖矩阵,用 contract test 钉死它
-
-就这么简单。**几百行文本、一个包装函数、一个契约测试,换来的是一整个 Agent 生态能可靠地使用你的工具。**
+对于一个能把 Agent 可靠性提升一个量级的特性来说，这大概是整个项目里投入产出比最高的一笔投资——而且随着 Agent 生产力的提升，这个比例还会继续往上走。
 
 ---
 
-## 致开发者社区:Dual-surface 是一个可以引用的设计模式
+## 为什么你维护的 CLI 也值得试试这套设计
 
-**CLI 设计的下一步不是"更好的 --help",而是"承认 --help 只能服务一个物种,需要并行另一个 surface"。**
+如果你维护的命令行工具可能会被 AI Agent 调用（Claude Code、Cursor、Cline、Copilot、Codex……几乎所有现代编码 Agent 都是通过命令行和外部世界打交道），不妨考虑加一个 `--agent-help`。
 
-把 **Dual-surface CLI Design** 当作一个**可以引用、可以讨论、可以反对**的设计模式名——它应该有自己的位置,就像:
-- REST 和 GraphQL 是 API 的两种消费模式
-- Javadoc 和 OpenAPI 是文档的两种展示方式
-- 同步和异步是接口的两种时序模型
+**不需要等到"行业标准"出现再动手。** gitee-cli 已经在 2025 到 2026 年这段时间里，证明了这条路是可行且有效的。你需要做的只是：
 
-**CLI 帮助系统也应该承认:有"人类消费者"和"机器消费者"两个物种,它们各自需要一张脸。**
+1. 在根命令上加一个 `--agent-help` 的布尔参数；
+2. 在目标命令上加 `PreRunE` 钩子，拦截这个参数并输出结构化文档——**记住三条可达性法则**（参数校验、身份验证、副作用，这三关一个都不能挡在文档前面）；
+3. 按 11 个小节的模板写 Agent 界面的内容（可以参考我们的模板，或者像我们一样，让 Agent 来写、靠测试来验收）；
+4. 在 `--agent-help` 的根页面维护一份覆盖清单，用契约测试把它钉死。
 
-gitee-cli 是第一个这么做的开源 CLI 工具,但它不应该是最后一个。如果你认同这个方向:
+就这么简单。**几百行文字、一个包装函数、一份契约测试，换来的是整个 Agent 生态都能可靠地用上你的工具。**
 
-- ⭐ 给 [gitee-cli](https://gitee.com/andershsueh/gitee-cli) 点个 Star
-- 📖 跑一下 `gitee --agent-help` 看实际效果
-- 🔧 在你的 CLI 里加一个 `--agent-help`(模板见 `docs/agent-help-template.md`,如果你要的话)
-- 📣 在你写"为什么我们做了 X"的文章时,引用 "Dual-surface CLI Design" 这个名字,让它沉淀成术语
+---
+
+## 写给同行：双界面设计值得成为一个可以被引用的名词
+
+**命令行设计接下来要解决的问题，不是"做一个更好的 `--help`"，而是承认"`--help` 天生只能服务一类使用者，需要再并行开辟另一套界面"。**
+
+希望"双界面 CLI 设计"能成为一个**可以被引用、可以被讨论、也可以被反驳**的设计模式名词——就像：
+
+- REST 和 GraphQL 是 API 的两种消费方式；
+- Javadoc 和 OpenAPI 是文档的两种呈现形式；
+- 同步和异步是接口的两种时序模型。
+
+**命令行的帮助系统，也理应承认自己服务着"人类使用者"和"程序使用者"这两类完全不同的对象，各自需要一套属于自己的界面。**
+
+gitee-cli 是第一个这么做的开源命令行工具，但希望不会是最后一个。如果你也认同这个方向：
+
+- ⭐ 给 [gitee-cli](https://gitee.com/andershsueh/gitee-cli) 点个 Star；
+- 📖 亲自跑一遍 `gitee --agent-help`，看看实际效果；
+- 🔧 在你自己的命令行工具里加一个 `--agent-help`（如果需要参考模板，可以看 `docs/agent-help-template.md`）；
+- 📣 如果你也写过"为什么我们这么设计"这类文章，欢迎引用"双界面 CLI 设计"这个名字，让它慢慢沉淀成一个可以被广泛讨论的术语。
 
 **关于作者**
 
-AndersHsueh,全栈开发者。gitee-cli 是一个基于 Go + Cobra 的开源 CLI 工具,功能对标 GitHub `gh`,专为 Gitee 生态打造。采用木兰宽松许可证 v2 (MulanPSL-2.0)。
+AndersHsueh，全栈开发者。gitee-cli 是一个基于 Go 和 Cobra 构建的开源命令行工具，功能对标 GitHub 的 `gh`，专为 Gitee 生态打造，采用木兰宽松许可证 v2（MulanPSL-2.0）。
 
 ---
 
-*如果这篇文章对你有启发,欢迎分享给你的团队和社区。一个名字立起来,一个模式才有机会被讨论、被改进、被超越——这就是 Dual-surface CLI Design 接下来需要的命运。*
+*如果这篇文章给了你一些启发，欢迎分享给你的团队和社区。一个名字立起来，一个设计模式才有机会被讨论、被改进、被超越——这正是"双界面 CLI 设计"接下来需要的命运。*
