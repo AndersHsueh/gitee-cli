@@ -97,17 +97,25 @@ func TestVersionCmdWiring(t *testing.T) {
 // is a silent drift that shipped before (source said 0.12.6 while the tag
 // was v0.13.0), so the two values are now locked together by this test.
 func TestReadmeVersionMatchesVersionVar(t *testing.T) {
-	data, err := os.ReadFile("../README.md")
-	if err != nil {
-		t.Fatalf("read README.md: %v", err)
+	readmes, err := filepath.Glob("../README*.md")
+	if err != nil || len(readmes) == 0 {
+		t.Fatalf("no README*.md found next to the cmd package: %v", err)
 	}
 	re := regexp.MustCompile(`badge/version-v(\d+\.\d+\.\d+)-`)
-	m := re.FindSubmatch(data)
-	if m == nil {
-		t.Fatal("README.md has no version badge matching badge/version-vX.Y.Z-...")
-	}
-	if got := string(m[1]); got != Version {
-		t.Errorf("README version badge is v%s but cmd.Version is %s — bump both together", got, Version)
+	for _, path := range readmes {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Errorf("read %s: %v", path, err)
+			continue
+		}
+		m := re.FindSubmatch(data)
+		if m == nil {
+			t.Errorf("%s has no version badge matching badge/version-vX.Y.Z-...", path)
+			continue
+		}
+		if got := string(m[1]); got != Version {
+			t.Errorf("%s version badge is v%s but cmd.Version is %s — bump every README together", path, got, Version)
+		}
 	}
 }
 

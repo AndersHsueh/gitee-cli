@@ -1,7 +1,7 @@
 name: CI
 
-# Authoritative quality gate for gitee-cli (the GitHub mirror is the CI
-# target; Gitee Go runs the same scripts/ci.sh via .workflow/ci.yml).
+# The gate itself lives in scripts/ci.sh — this workflow only provisions the
+# toolchain and calls it, so GitHub Actions and Gitee Go run identical checks.
 on:
   push:
     branches: [master]
@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   ci:
-    name: gofmt + vet + test + vuln
+    name: quality gate
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -26,17 +26,11 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v8
-        with:
-          version: v2.15.0
-          args: --timeout=5m
-
-      - name: Quality gate (gofmt, vet, build, test -race, govulncheck)
-        run: bash scripts/ci.sh
-
-      - name: Cross-compile (linux/windows/darwin)
+      - name: Install golangci-lint
         run: |
-          GOOS=linux   GOARCH=amd64 go build -o /tmp/gitee-linux-amd64 ./cmd/gitee
-          GOOS=windows GOARCH=amd64 go build -o /tmp/gitee-windows-amd64.exe ./cmd/gitee
-          GOOS=darwin  GOARCH=arm64 go build -o /tmp/gitee-darwin-arm64 ./cmd/gitee
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh \
+            | sh -s -- -b "$(go env GOPATH)/bin" v2.15.0
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Quality gate
+        run: bash scripts/ci.sh

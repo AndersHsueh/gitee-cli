@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -11,12 +12,24 @@ import (
 
 // withHome points $HOME (and %USERPROFILE% for Windows) at a temp dir so the
 // test never reads or writes the developer's real ~/.gitee-cli/settings.json.
+// t.Setenv forbids parallel subtests, which is fine here: every test that
+// touches settings must run against this isolated HOME.
 func withHome(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
 	t.Setenv("HOME", dir)
 	t.Setenv("USERPROFILE", dir)
 	return dir
+}
+
+// skipWithoutPOSIXPerms skips assertions on 0600/0700 semantics: Windows
+// synthesizes 0666 for files and has no group/world bits, and config.Load
+// intentionally skips permission tightening there.
+func skipWithoutPOSIXPerms(t *testing.T) {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("POSIX permission bits are not meaningful on Windows")
+	}
 }
 
 func TestSettingsPath(t *testing.T) {
@@ -48,6 +61,7 @@ func TestLoad_InvalidJSON(t *testing.T) {
 // then Load() against an isolated HOME and asserts both the payload and the
 // 0600/0700 permission invariants.
 func TestSaveAndLoadRoundTrip(t *testing.T) {
+	skipWithoutPOSIXPerms(t)
 	withHome(t)
 
 	s := &Settings{}
@@ -90,6 +104,7 @@ func TestSaveAndLoadRoundTrip(t *testing.T) {
 // fix: an existing settings.json was 0644 while holding a live token, and
 // nothing ever repaired it because Load() did not check.
 func TestLoad_TightensLoosePermissions(t *testing.T) {
+	skipWithoutPOSIXPerms(t)
 	withHome(t)
 
 	dir := filepath.Dir(SettingsPath())

@@ -1,7 +1,8 @@
-# Gitee Go pipeline — mirrors .github/workflows/ci.yml by calling the same
-# scripts/ci.sh, so there is exactly one definition of "the quality gate".
+# Gitee Go pipeline — calls the same scripts/ci.sh as GitHub Actions, so
+# there is exactly one definition of "the quality gate".
 #
-# golangVersion must stay >= the `go` directive in go.mod (1.27.3).
+# golangVersion must be >= the `go` directive in go.mod (1.27.3); Gitee Go
+# resolves a minor version to its latest available patch release.
 version: "1.0"
 name: ci
 displayName: CI
@@ -13,8 +14,8 @@ stages:
   steps:
   - step: build@golang
     name: ci
-    displayName: gofmt + vet + build + test -race + govulncheck
-    golangVersion: "1.27"
+    displayName: gofmt + vet + build + test -race + cross-compile + govulncheck
+    golangVersion: "1.27.3"
     commands:
     - "go version"
     - "bash scripts/ci.sh"

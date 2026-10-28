@@ -3,7 +3,7 @@
 > 在终端里完整操作 Gitee 的现代命令行工具，功能对标 GitHub `gh` ——
 > 并且是**全球第一个**同时为人类和 AI Agent 设计帮助系统的开源 CLI。
 
-[![Go Version](https://img.shields.io/badge/go-1.25+-blue.svg)](https://golang.org)
+[![Go Version](https://img.shields.io/badge/go-1.27+-blue.svg)](https://golang.org)
 [![License](https://img.shields.io/badge/license-MulanPSL--2.0-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey.svg)]()
 [![Version](https://img.shields.io/badge/version-v0.13.1-orange.svg)](https://gitee.com/andershsueh/gitee-cli/releases/latest)

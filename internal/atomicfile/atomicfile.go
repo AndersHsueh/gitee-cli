@@ -51,3 +51,24 @@ func Write(path string, data []byte, perm os.FileMode) error {
 	}
 	return nil
 }
+
+// EnsurePerm tightens the permissions of an existing file to perm when it is
+// currently looser (perm&0o077 != 0). It is a no-op when the file is already
+// tight, so callers can safely run it on every read.
+//
+// This is for POSIX permission bits only; callers on platforms without
+// meaningful group/world bits (Windows) should skip it.
+func EnsurePerm(path string, perm os.FileMode) error {
+	info, err := os.Stat(path)
+	if err != nil {
+		return fmt.Errorf("stat %s: %w", path, err)
+	}
+	current := info.Mode().Perm()
+	if current&0o077 == 0 {
+		return nil
+	}
+	if err := os.Chmod(path, perm); err != nil {
+		return fmt.Errorf("tightening %s from %04o to %04o: %w", path, current, perm, err)
+	}
+	return nil
+}

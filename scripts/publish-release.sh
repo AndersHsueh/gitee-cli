@@ -1,102 +1,131 @@
 #!/usr/bin/env bash
 #
-# scripts/publish-release.sh — create a Gitee release for the current tag and
+# scripts/publish-release.sh — create the Gitee release for a git tag and
 # upload every artifact produced by scripts/release.sh.
 #
+# The network calls go through the gitee CLI itself (release create / view /
+# upload) rather than hand-rolled HTTP, so publishing uses the same auth
+# resolution, retries and endpoint builders as the shipped binary.
+#
 # Usage:
-#   GITEE_TOKEN=xxx VERSION=0.13.1 bash scripts/publish-release.sh
+#   GITEE_TOKEN=xxx TAG=v0.13.1 bash scripts/publish-release.sh
 #   GITEE_TOKEN=xxx VERSION=0.13.1 OUT_DIR=dist bash scripts/publish-release.sh
 #
-# Idempotent enough for a re-run: if a release for the tag already exists we
-# reuse it and re-upload assets (Gitee replaces same-named attachments).
-#
-# Requires: curl, python3 (JSON parsing only). Token needs repo write access.
+# Idempotent: an existing release is reused, and assets already attached
+# (matched by name) are skipped, so a failed run can be re-run cheaply.
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 : "${GITEE_TOKEN:?GITEE_TOKEN is required (Gitee personal access token with repo write)}"
-OUT_DIR="${OUT_DIR:-dist}"
-TAG="v${VERSION:?VERSION is required (e.g. VERSION=0.13.1)}"
+OUT_DIR="${OUT_DIR:-$ROOT_DIR/dist}"
+
+if [ -z "${TAG:-}" ]; then
+  : "${VERSION:?set TAG=vX.Y.Z or VERSION=X.Y.Z}"
+  TAG="v${VERSION#v}"
+fi
 
 if [ ! -d "$OUT_DIR" ]; then
   echo "ERROR: ${OUT_DIR}/ not found — run scripts/release.sh first." >&2
   exit 1
 fi
+if [ ! -f "$OUT_DIR/SHA256SUMS.txt" ]; then
+  echo "ERROR: ${OUT_DIR}/SHA256SUMS.txt missing — run scripts/release.sh first." >&2
+  exit 1
+fi
+if ! git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
+  echo "ERROR: git tag ${TAG} does not exist locally — tag the release commit first." >&2
+  exit 1
+fi
+TARGET="$(git rev-list -n1 "$TAG")"
 
-# Derive owner/repo from the origin remote (ssh or https form).
-REMOTE="$(git remote get-url origin)"
+# The release commands take --repo; derive owner/repo from the origin remote
+# (ssh and https forms).
+REMOTE="$(git remote get-url origin 2>/dev/null || true)"
+if [ -z "$REMOTE" ]; then
+  echo "ERROR: no 'origin' remote — cannot determine the target repository." >&2
+  exit 1
+fi
 case "$REMOTE" in
-  git@gitee.com:*/*.git)  SLUG="${REMOTE#git@gitee.com:}"; SLUG="${SLUG%.git}" ;;
-  https://gitee.com/*/*.git) SLUG="${REMOTE#https://gitee.com/}"; SLUG="${SLUG%.git}" ;;
-  https://gitee.com/*/*)  SLUG="${REMOTE#https://gitee.com/}" ;;
-  *) echo "ERROR: cannot derive owner/repo from origin remote: ${REMOTE}" >&2; exit 1 ;;
+  git@gitee.com:*)         SLUG="${REMOTE#git@gitee.com:}" ;;
+  ssh://git@gitee.com/*)   SLUG="${REMOTE#ssh://git@gitee.com/}" ;;
+  https://gitee.com/*)     SLUG="${REMOTE#https://gitee.com/}" ;;
+  *)
+    echo "ERROR: origin is not a gitee.com remote: ${REMOTE}" >&2
+    exit 1
+    ;;
 esac
-OWNER="${SLUG%%/*}"
-REPO="${SLUG#*/}"
-API="https://gitee.com/api/v5/repos/${OWNER}/${REPO}"
+SLUG="${SLUG%.git}"
+case "$SLUG" in
+  */*) ;;
+  *)
+    echo "ERROR: cannot derive owner/repo from origin remote: ${REMOTE}" >&2
+    exit 1
+    ;;
+esac
 
-echo "==> Publishing ${TAG} to ${OWNER}/${REPO}"
-
-# Release notes: use release-notes/<tag>.md when present, else a short default.
 NOTES_FILE="release-notes/${TAG}.md"
 if [ -f "$NOTES_FILE" ]; then
   BODY="$(cat "$NOTES_FILE")"
 else
-  BODY="$(printf 'Release %s\n\nSee git log for the full changelog.' "$TAG")"
-  echo "    (no ${NOTES_FILE} — using a minimal release body)"
+  BODY="Release ${TAG}"
+  echo "==> No ${NOTES_FILE}, using a minimal release body"
 fi
 
-TARGET="$(git rev-parse HEAD)"
+WORK="$(mktemp -d)"
+trap 'rm -rf "$WORK"' EXIT
 
-# Create the release. If it already exists (422/400), look it up instead.
-echo "==> Creating release ${TAG}"
-CREATE_JSON="$(python3 - "$TAG" "$TARGET" "$BODY" <<'PY'
-import json, sys
-tag, target, body = sys.argv[1], sys.argv[2], sys.argv[3]
-print(json.dumps({
-    "tag_name": tag,
-    "target_commitish": target,
-    "name": tag,
-    "body": body,
-    "prerelease": False,
-}))
-PY
-)"
+# Throwaway host binary so publishing exercises the real CLI code path.
+echo "==> Building publishing binary"
+go build -o "$WORK/gitee" ./cmd/gitee
+BIN="$WORK/gitee"
 
-RESP="$(curl -sS -X POST "${API}/releases" \
-  -H "Content-Type: application/json" \
-  -H "Authorization: token ${GITEE_TOKEN}" \
-  -d "$CREATE_JSON")"
-
-RELEASE_ID="$(printf '%s' "$RESP" | python3 -c 'import json,sys
-try:
-    d=json.load(sys.stdin)
-except Exception:
-    d={}
-print(d.get("id","") if isinstance(d,dict) else "")')"
-
-if [ -z "$RELEASE_ID" ]; then
-  echo "    create did not return an id; looking up existing release for ${TAG}"
-  RESP="$(curl -sS -H "Authorization: token ${GITEE_TOKEN}" "${API}/releases/tags/${TAG}")"
-  RELEASE_ID="$(printf '%s' "$RESP" | python3 -c 'import json,sys
-try:
-    d=json.load(sys.stdin)
-except Exception:
-    d={}
-print(d.get("id","") if isinstance(d,dict) else "")')"
+echo "==> Ensuring release ${TAG} on ${SLUG} (target ${TARGET})"
+if "$BIN" release create --repo "$SLUG" --tag "$TAG" --name "$TAG" --target "$TARGET" --body "$BODY" >/dev/null 2>"$WORK/create.err"; then
+  echo "    created"
+else
+  echo "    create did not succeed — assuming the release already exists"
+  sed 's/^/    /' "$WORK/create.err" | tail -2
 fi
 
-if [ -z "$RELEASE_ID" ]; then
-  echo "ERROR: could not create or find a release for ${TAG}." >&2
-  echo "response: ${RESP}" >&2
+# Gitee indexing can lag right after a create, so retry the read.
+echo "==> Resolving release"
+ready=0
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+  if "$BIN" release view --repo "$SLUG" --tag "$TAG" -o json > "$WORK/release.json" 2>"$WORK/view.err"; then
+    ready=1
+    break
+  fi
+  sleep 2
+done
+if [ "$ready" -ne 1 ]; then
+  echo "ERROR: release ${TAG} is not readable after 20s." >&2
+  if [ -s "$WORK/create.err" ]; then
+    echo "create error:" >&2
+    sed 's/^/    /' "$WORK/create.err" >&2
+  fi
+  if [ -s "$WORK/view.err" ]; then
+    echo "view error:" >&2
+    sed 's/^/    /' "$WORK/view.err" >&2
+  fi
   exit 1
 fi
-echo "    release id: ${RELEASE_ID}"
 
-# Upload every archive + checksums file.
-echo "==> Uploading assets"
+# One parse gives us both the already-attached asset names and the URL.
+python3 - "$WORK/release.json" "$WORK/assets.txt" "$WORK/url.txt" <<'PY'
+import json, sys
+src, assets_path, url_path = sys.argv[1], sys.argv[2], sys.argv[3]
+with open(src, encoding="utf-8") as fh:
+    release = json.load(fh)
+with open(assets_path, "w", encoding="utf-8") as fh:
+    for asset in release.get("assets") or []:
+        fh.write(asset.get("name", "") + "\n")
+with open(url_path, "w", encoding="utf-8") as fh:
+    fh.write(release.get("html_url", ""))
+PY
+existing="$(cat "$WORK/assets.txt")"
+
 shopt -s nullglob
 assets=( "$OUT_DIR"/*.tar.gz "$OUT_DIR"/*.zip "$OUT_DIR"/SHA256SUMS.txt )
 shopt -u nullglob
@@ -105,25 +134,31 @@ if [ "${#assets[@]}" -eq 0 ]; then
   exit 1
 fi
 
+echo "==> Uploading assets"
 for asset in "${assets[@]}"; do
-  printf '    %-40s ' "$(basename "$asset")"
-  UP="$(curl -sS -X POST "${API}/releases/${RELEASE_ID}/attach_files" \
-    -H "Authorization: token ${GITEE_TOKEN}" \
-    -F "file=@${asset}")"
-  UP_NAME="$(printf '%s' "$UP" | python3 -c 'import json,sys
-try:
-    d=json.load(sys.stdin)
-except Exception:
-    d={}
-print(d.get("name","") if isinstance(d,dict) else "")')"
-  if [ -n "$UP_NAME" ]; then
-    echo "✓ ${UP_NAME}"
+  name="$(basename "$asset")"
+  if printf '%s\n' "$existing" | grep -qxF "$name"; then
+    echo "    ${name} — already attached, skipping"
+    continue
+  fi
+  printf '    %-42s ' "$name"
+  uploaded=0
+  for _ in 1 2 3 4 5; do
+    if "$BIN" release upload --repo "$SLUG" "$TAG" --file "$asset" >/dev/null 2>"$WORK/upload.err"; then
+      uploaded=1
+      break
+    fi
+    sleep 2
+  done
+  if [ "$uploaded" -eq 1 ]; then
+    echo "✓"
   else
     echo "FAILED"
-    echo "response: ${UP}" >&2
+    sed 's/^/    /' "$WORK/upload.err" >&2
     exit 1
   fi
 done
 
 echo
-echo "==> Release ${TAG} published: https://gitee.com/${OWNER}/${REPO}/releases/tag/${TAG}"
+echo "==> Release ${TAG} published"
+echo "    $(cat "$WORK/url.txt")"

@@ -342,15 +342,23 @@ func MilestoneDelete(owner, repo string, number int) string {
 }
 
 // Release asset endpoints (v0.10.0)
-// Gitee v5 asset operations use the numeric release ID (not tag name).
-// The caller should first call ReleasesGet to resolve tag → ID, then
-// use these builders with the release's numeric ID.
+// Gitee v5 asset operations use the numeric release ID (not tag name) and the
+// `attach_files` path (not GitHub's `/assets`). The caller should first call
+// ReleasesGet to resolve tag → ID, then use these builders with the numeric ID.
 func ReleaseAssetUpload(owner, repo string, releaseID int64) string {
-	return fmt.Sprintf("/repos/%s/%s/releases/%d/assets", owner, repo, releaseID)
+	return fmt.Sprintf("/repos/%s/%s/releases/%d/attach_files", owner, repo, releaseID)
+}
+
+// ReleaseAssetsList lists the attachments of a release. Unlike the `assets`
+// array embedded in the release object (which only carries name +
+// browser_download_url), this endpoint returns the numeric asset IDs that the
+// delete endpoint needs.
+func ReleaseAssetsList(owner, repo string, releaseID int64) string {
+	return fmt.Sprintf("/repos/%s/%s/releases/%d/attach_files", owner, repo, releaseID)
 }
 
 func ReleaseDeleteAsset(owner, repo string, releaseID int64, assetID int64) string {
-	return fmt.Sprintf("/repos/%s/%s/releases/%d/assets/%d", owner, repo, releaseID, assetID)
+	return fmt.Sprintf("/repos/%s/%s/releases/%d/attach_files/%d", owner, repo, releaseID, assetID)
 }
 
 // Notification endpoints (P0-4)

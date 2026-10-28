@@ -84,19 +84,27 @@ func runDeleteAsset(cobraCmd *cobra.Command, args []string) error {
 		return fmt.Errorf("getting release %s: %w", tag, err)
 	}
 
+	// The `assets` array embedded in the release object only carries name +
+	// download URL (no numeric ID), so resolve IDs from the attach_files
+	// endpoint before matching.
+	var assets []types.Asset
+	if err := client.Get(ctx, api.ReleaseAssetsList(owner, repoName, release.ID), &assets); err != nil {
+		return fmt.Errorf("listing assets of release %s: %w", tag, err)
+	}
+
 	// Find target asset.
 	var target *types.Asset
 	if deleteAssetFlags.assetID != 0 {
-		for i := range release.Assets {
-			if release.Assets[i].ID == deleteAssetFlags.assetID {
-				target = &release.Assets[i]
+		for i := range assets {
+			if assets[i].ID == deleteAssetFlags.assetID {
+				target = &assets[i]
 				break
 			}
 		}
 	} else {
-		for i := range release.Assets {
-			if release.Assets[i].Name == deleteAssetFlags.assetName {
-				target = &release.Assets[i]
+		for i := range assets {
+			if assets[i].Name == deleteAssetFlags.assetName {
+				target = &assets[i]
 				break
 			}
 		}

@@ -171,10 +171,11 @@ func TestReleaseAssetEndpoints(t *testing.T) {
 		got  string
 		want string
 	}{
-		{"upload", ReleaseAssetUpload("owner", "repo", 42), "/repos/owner/repo/releases/42/assets"},
-		{"delete", ReleaseDeleteAsset("owner", "repo", 42, 7), "/repos/owner/repo/releases/42/assets/7"},
-		{"org upload", ReleaseAssetUpload("gitee-cli", "gitee", 9999), "/repos/gitee-cli/gitee/releases/9999/assets"},
-		{"org delete", ReleaseDeleteAsset("gitee-cli", "gitee", 100, 200), "/repos/gitee-cli/gitee/releases/100/assets/200"},
+		{"upload", ReleaseAssetUpload("owner", "repo", 42), "/repos/owner/repo/releases/42/attach_files"},
+		{"delete", ReleaseDeleteAsset("owner", "repo", 42, 7), "/repos/owner/repo/releases/42/attach_files/7"},
+		{"list", ReleaseAssetsList("owner", "repo", 42), "/repos/owner/repo/releases/42/attach_files"},
+		{"org upload", ReleaseAssetUpload("gitee-cli", "gitee", 9999), "/repos/gitee-cli/gitee/releases/9999/attach_files"},
+		{"org delete", ReleaseDeleteAsset("gitee-cli", "gitee", 100, 200), "/repos/gitee-cli/gitee/releases/100/attach_files/200"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

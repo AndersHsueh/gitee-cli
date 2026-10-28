@@ -68,3 +68,52 @@ func TestWritePermissionZero(t *testing.T) {
 		t.Errorf("file should exist: %v", err)
 	}
 }
+
+func TestEnsurePermTightensLooseFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "secret")
+	if err := os.WriteFile(path, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(path, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := EnsurePerm(path, 0o600); err != nil {
+		t.Fatalf("EnsurePerm: %v", err)
+	}
+	fi, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if perm := fi.Mode().Perm(); perm != 0o600 {
+		t.Errorf("perm = %o, want 0600", perm)
+	}
+}
+
+func TestEnsurePermKeepsTightFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "secret")
+	if err := os.WriteFile(path, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(path, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := EnsurePerm(path, 0o600); err != nil {
+		t.Fatalf("EnsurePerm: %v", err)
+	}
+	fi, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if perm := fi.Mode().Perm(); perm != 0o600 {
+		t.Errorf("perm = %o, want 0600", perm)
+	}
+}
+
+func TestEnsurePermMissingFile(t *testing.T) {
+	err := EnsurePerm(filepath.Join(t.TempDir(), "missing"), 0o600)
+	if err == nil {
+		t.Fatal("EnsurePerm on missing file should error")
+	}
+}

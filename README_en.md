@@ -2,10 +2,10 @@
 
 > Gitee Official CLI Tool — Complete Gitee operations in the terminal, equivalent to GitHub's `gh`
 
-[![Go Version](https://img.shields.io/badge/go-1.25+-blue.svg)](https://golang.org)
+[![Go Version](https://img.shields.io/badge/go-1.27+-blue.svg)](https://golang.org)
 [![License](https://img.shields.io/badge/license-MulanPSL--2.0-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey.svg)]()
-[![Version](https://img.shields.io/badge/version-v0.13.0-orange.svg)](https://gitee.com/andershsueh/gitee-cli/releases/latest)
+[![Version](https://img.shields.io/badge/version-v0.13.1-orange.svg)](https://gitee.com/andershsueh/gitee-cli/releases/latest)
 
 ---
 

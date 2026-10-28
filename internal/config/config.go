@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
+
+	"gitee-cli/internal/atomicfile"
 )
 
 // Settings mirrors the structure of ~/.gitee-cli/settings.json
@@ -55,9 +58,11 @@ func Load() (*Settings, error) {
 	}
 	// A settings file written by an older build (or copied/restored by hand)
 	// may be group/world-readable even though it holds an access token.
-	// Tighten it on read rather than waiting for the next Save.
+	// Tighten it on read rather than waiting for the next Save. Best effort:
+	// a read-only HOME or a filesystem that ignores chmod must not turn every
+	// command into an authentication failure.
 	if err := tightenPermissions(path); err != nil {
-		return nil, err
+		fmt.Fprintf(os.Stderr, "warning: %v\n", err)
 	}
 
 	var s Settings
@@ -75,62 +80,25 @@ func Load() (*Settings, error) {
 // behaviour, were restored from a backup, or were created by another tool —
 // and the file contains an access token, so this is not cosmetic.
 func tightenPermissions(path string) error {
-	info, err := os.Stat(path)
-	if err != nil {
-		return fmt.Errorf("stat settings: %w", err)
-	}
-	perm := info.Mode().Perm()
-	if perm&0o077 == 0 {
+	if runtime.GOOS == "windows" {
+		// Windows has no POSIX group/world bits: Mode().Perm() is synthesized
+		// as 0666 and os.Chmod only toggles the read-only flag, so the check
+		// would fire on every load without ever converging.
 		return nil
 	}
-	if err := os.Chmod(path, 0o600); err != nil {
-		return fmt.Errorf("settings file %s has permissions %04o (accessible by other users) and could not be tightened to 0600: %w", path, perm, err)
-	}
-	return nil
+	return atomicfile.EnsurePerm(path, 0o600)
 }
 
 func Save(s *Settings) error {
 	path := SettingsPath()
-	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0700); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return err
 	}
 	data, err := json.MarshalIndent(s, "", "  ")
 	if err != nil {
 		return err
 	}
-
-	// 写到同目录的临时文件，再 rename 原子替换。
-	// 同目录 rename 在 POSIX 和 Windows 上都是原子的，保证读者要么看到旧文件、
-	// 要么看到完整的新文件，不会出现半截 JSON。
-	tmp, err := os.CreateTemp(dir, ".settings-*.tmp")
-	if err != nil {
-		return err
-	}
-	tmpPath := tmp.Name()
-
-	// 任何出错都要清理掉临时文件，避免遗留垃圾。
-	cleanup := func() { _ = os.Remove(tmpPath) }
-
-	if _, err := tmp.Write(data); err != nil {
-		_ = tmp.Close()
-		cleanup()
-		return err
-	}
-	if err := tmp.Chmod(0600); err != nil {
-		_ = tmp.Close()
-		cleanup()
-		return err
-	}
-	if err := tmp.Close(); err != nil {
-		cleanup()
-		return err
-	}
-	if err := os.Rename(tmpPath, path); err != nil {
-		cleanup()
-		return err
-	}
-	return nil
+	return atomicfile.Write(path, data, 0o600)
 }
 
 // GetToken returns the token for the given hostname.
