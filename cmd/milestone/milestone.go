@@ -1,6 +1,8 @@
 package milestone
 
 import (
+	"gitee-cli/cmd"
+
 	"github.com/spf13/cobra"
 )
 
@@ -19,6 +21,8 @@ var MilestoneCmd = &cobra.Command{
 Milestones group issues and pull requests under a release target or a
 delivery deadline. You can create, list, view, edit, and delete
 milestones scoped to a single repository.`,
+	// GroupRunE: unknown verbs exit non-zero with a suggestion; no args shows help.
+	RunE: cmd.GroupRunE,
 }
 
 func init() {

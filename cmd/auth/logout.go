@@ -11,6 +11,7 @@ import (
 
 var logoutCmd = &cobra.Command{
 	Use:     "logout",
+	Args:    cobra.NoArgs,
 	Short:   "Log out and remove stored token",
 	PreRunE: cmd.AgentHelpNA("auth logout"),
 	RunE: func(cobraCmd *cobra.Command, args []string) error {

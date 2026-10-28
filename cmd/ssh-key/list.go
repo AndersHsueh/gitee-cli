@@ -22,6 +22,7 @@ var listFlags struct {
 
 var listCmd = &cobra.Command{
 	Use:   "list",
+	Args:  cobra.NoArgs,
 	Short: "List your SSH public keys",
 	Example: `  gitee ssh-key list
   gitee ssh-key list --limit 50

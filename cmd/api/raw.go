@@ -49,7 +49,10 @@ Useful for testing or accessing endpoints not yet covered by dedicated commands.
 	PreRunE: func(c *cobra.Command, args []string) error {
 		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
-			cmd.PrintAgentHelp(apiRawAgentHelp)
+			// Shares apiRawAgentHelp's body with `gitee api raw`, so
+			// retitle it to this command path (agents parse the heading
+			// to know which command they're reading about).
+			cmd.PrintAgentHelpForCommand(c, apiRawAgentHelp)
 		}
 		return nil
 	},

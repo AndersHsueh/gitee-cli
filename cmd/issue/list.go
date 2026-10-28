@@ -24,6 +24,7 @@ var listFlags struct {
 
 var listCmd = &cobra.Command{
 	Use:   "list",
+	Args:  cobra.NoArgs,
 	Short: "List issues in a repository",
 	Example: `  gitee issue list --repo owner/repo
   gitee issue list --repo owner/repo --state closed --labels bug

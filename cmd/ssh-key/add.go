@@ -22,6 +22,7 @@ var addFlags struct {
 
 var addCmd = &cobra.Command{
 	Use:   "add",
+	Args:  cobra.NoArgs,
 	Short: "Add an SSH public key to your account",
 	Example: `  gitee ssh-key add --title "laptop" --key ~/.ssh/id_rsa.pub
   gitee ssh-key add --title "ci-runner" --key "ssh-ed25519 AAAA..."`,

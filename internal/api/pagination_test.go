@@ -194,3 +194,33 @@ func TestFetchAllPages_ValidationErrors(t *testing.T) {
 		assert.Error(t, err)
 	})
 }
+
+// TestFetchListOrAll_LimitCapsSinglePage locks the single shared place
+// where --limit caps a NON-paginated read. Before this, the cap lived only
+// in cmdkit.RunList, so hand-rolled list paths (repo commits, status) and
+// GITEE_LIMIT silently returned a full page (30 rows) when the user asked
+// for 1.
+func TestFetchListOrAll_LimitCapsSinglePage(t *testing.T) {
+	var gotPerPage string
+	client, ts := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		gotPerPage = r.URL.Query().Get("per_page")
+		w.Header().Set("Content-Type", "application/json")
+		// Server deliberately returns more rows than requested to prove the
+		// defensive truncation also works.
+		_ = json.NewEncoder(w).Encode([]map[string]any{
+			mkItem(1), mkItem(2), mkItem(3), mkItem(4), mkItem(5),
+		})
+	})
+	defer ts.Close()
+
+	got, err := FetchListOrAll[map[string]any](context.Background(), client, "/items", false, 30, 2, 1, "listing")
+	require.NoError(t, err)
+	assert.Equal(t, "2", gotPerPage, "per_page must not exceed --limit on a single page")
+	assert.Len(t, got, 2, "--limit must truncate a single-page result")
+
+	// limit=0 means "no cap": neither per_page nor the result may shrink.
+	got, err = FetchListOrAll[map[string]any](context.Background(), client, "/items", false, 30, 0, 1, "listing")
+	require.NoError(t, err)
+	assert.Equal(t, "30", gotPerPage)
+	assert.Len(t, got, 5)
+}

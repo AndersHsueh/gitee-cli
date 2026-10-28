@@ -27,7 +27,7 @@ import (
 // has no repo argument (it's "what have I starred?").
 
 // starFlags is shared across star/unstar/list so the user can invoke
-// `gitee repo star --repo owner/repo` (Cobra binds by pointer).
+// `gitee repo star star --repo owner/repo` (Cobra binds by pointer).
 var starFlags struct {
 	repo  string
 	limit int
@@ -43,15 +43,15 @@ Starring a repository bookmarks it to your personal profile and signals
 support for the author. Use these verbs to add a star, remove an
 existing star, or enumerate the repositories you have already starred.
 
-  gitee repo star <owner>/<repo>   — star a repository to support its author
-  gitee repo unstar <owner>/<repo> — remove a star
+  gitee repo star star <owner>/<repo>   — star a repository to support its author
+  gitee repo star unstar <owner>/<repo> — remove a star
   gitee repo star list             — list repositories you have starred
 
 Note: starring is independent of watching. Star a repo to bookmark it;
-use gitee repo watch to receive notifications about its activity.`,
-	Example: `  gitee repo star myorg/myrepo
-  gitee repo star myorg/myrepo --repo myorg/myrepo
-  gitee repo unstar myorg/myrepo
+use ` + "`" + `gitee repo watch watch` + "`" + ` to receive notifications about its activity.`,
+	Example: `  gitee repo star star myorg/myrepo
+  gitee repo star star myorg/myrepo --repo myorg/myrepo
+  gitee repo star unstar myorg/myrepo
   gitee repo star list
   gitee repo star list --limit 50`,
 	PreRunE: func(c *cobra.Command, args []string) error {
@@ -61,17 +61,16 @@ use gitee repo watch to receive notifications about its activity.`,
 		}
 		return nil
 	},
-	RunE: func(c *cobra.Command, args []string) error {
-		// No subcommand given — show help so users discover star/unstar/list.
-		return c.Help()
-	},
+	// GroupRunE prints help with no args and returns an error (with the
+	// correct fully-qualified form) when given a positional arg — see cmd.GroupRunE.
+	RunE: cmd.GroupRunE,
 }
 
 var starStarCmd = &cobra.Command{
 	Use:   "star [owner/repo]",
 	Short: "Star a repository to support its author",
-	Example: `  gitee repo star myorg/myrepo
-  gitee repo star --repo myorg/myrepo`,
+	Example: `  gitee repo star star myorg/myrepo
+  gitee repo star star --repo myorg/myrepo`,
 	PreRunE: func(c *cobra.Command, args []string) error {
 		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
@@ -85,8 +84,8 @@ var starStarCmd = &cobra.Command{
 var starUnstarCmd = &cobra.Command{
 	Use:   "unstar [owner/repo]",
 	Short: "Remove a star from a repository",
-	Example: `  gitee repo unstar myorg/myrepo
-  gitee repo unstar --repo myorg/myrepo`,
+	Example: `  gitee repo star unstar myorg/myrepo
+  gitee repo star unstar --repo myorg/myrepo`,
 	PreRunE: func(c *cobra.Command, args []string) error {
 		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
@@ -99,6 +98,7 @@ var starUnstarCmd = &cobra.Command{
 
 var starListCmd = &cobra.Command{
 	Use:   "list",
+	Args:  cobra.NoArgs,
 	Short: "List repositories you have starred",
 	Example: `  gitee repo star list
   gitee repo star list --limit 50`,
@@ -132,7 +132,7 @@ func init() {
 }
 
 // resolveStarRepoArg returns the (owner, repo) pair for star/unstar,
-// preferring the positional argument (e.g. `gitee repo star owner/repo`),
+// preferring the positional argument (e.g. `gitee repo star star owner/repo`),
 // then the local --repo flag, then the global --repo flag.
 func resolveStarRepoArg(args []string) ([2]string, error) {
 	// Positional arg wins when present.
@@ -259,11 +259,11 @@ existing star, or enumerate the repositories you have already starred.
 
 Starring is a personal signal — it does not subscribe you to
 notifications. To subscribe to notifications about a repository, use
-` + "`" + `gitee repo watch` + "`" + ` (separate verb, separate API path).
+` + "`" + `gitee repo watch watch` + "`" + ` (separate verb, separate API path).
 
 ## Subcommands
-  star [owner/repo]   Star a repository. See ` + "`" + `gitee repo star --agent-help` + "`" + `.
-  unstar [owner/repo] Remove a star. See ` + "`" + `gitee repo unstar --agent-help` + "`" + `.
+  star [owner/repo]   Star a repository. See ` + "`" + `gitee repo star star --agent-help` + "`" + `.
+  unstar [owner/repo] Remove a star. See ` + "`" + `gitee repo star unstar --agent-help` + "`" + `.
   list                List your starred repos. See
                      ` + "`" + `gitee repo star list --agent-help` + "`" + `.
 
@@ -305,13 +305,13 @@ projects (write) for star/unstar; projects (read) for list
 Gitee API v5: 1000 req/hour authenticated.
 
 ## See also
-- ` + "`" + `gitee repo watch` + "`" + `     — subscribe to notifications (independent of star)
+- ` + "`" + `gitee repo watch watch` + "`" + ` — subscribe to notifications (independent of star)
 - ` + "`" + `gitee repo view` + "`" + `     — inspect a repo's metadata
 - ` + "`" + `gitee auth status` + "`" + `  — verify token scope before calling
 - ` + "`" + `gitee --agent-help` + "`" + `  — overview of all commands with agent help
 `
 
-const repoStarStarAgentHelp = `# gitee repo star — Agent Help
+const repoStarStarAgentHelp = `# gitee repo star star — Agent Help
 
 ## Purpose
 Star a Gitee repository. Star a repository to support its author and
@@ -320,19 +320,19 @@ increments by 1 and the repo appears in your starred list (visible to
 you at https://gitee.com/{your-username}).
 
 Starring is independent of watching: starring does NOT subscribe you to
-notifications. To subscribe to notifications, use ` + "`" + `gitee repo watch` + "`" + `.
+notifications. To subscribe to notifications, use ` + "`" + `gitee repo watch watch` + "`" + `.
 
 ## Pre-conditions
 - Authenticated (gitee auth status)
 - The target repo exists and is visible to the token
 - --repo / -R is set (owner/repo) OR the repo is passed as a positional
-  argument: ` + "`" + `gitee repo star owner/repo` + "`" + `
+  argument: ` + "`" + `gitee repo star star owner/repo` + "`" + `
 - The repo is not already starred by you (idempotent — re-starring is
   a no-op on the server)
 
 ## Required flags / arguments
   owner/repo            Repository full name as a positional argument,
-                        e.g. ` + "`" + `gitee repo star myorg/myrepo` + "`" + `.
+                        e.g. ` + "`" + `gitee repo star star myorg/myrepo` + "`" + `.
                         Equivalent to ` + "`" + `--repo owner/repo` + "`" + `.
 
 ## Optional flags
@@ -390,7 +390,7 @@ Retrying after a transient error is safe.
 After starring a repository, an agent typically wants to:
 1. Verify: gitee repo star list | grep owner/repo
 2. Subscribe to notifications (separate verb, separate intent):
-   gitee repo watch owner/repo --type watching
+   gitee repo watch watch owner/repo --type watching
 3. Clone it locally to start contributing:
    gitee repo clone owner/repo
 
@@ -403,25 +403,25 @@ Each call to this command counts as 1 request.
 
 ## Example
   # Star via positional argument (most concise)
-  gitee repo star myorg/myrepo
+  gitee repo star star myorg/myrepo
 
   # Star via --repo flag (works in scripts where positional parsing
   # is awkward)
-  gitee repo star --repo myorg/myrepo
+  gitee repo star star --repo myorg/myrepo
 
   # Pipeline: star a list of repos from a file
   cat favourites.txt | while read r; do
-    gitee repo star "$r"
+    gitee repo star star "$r"
   done
 
 ## See also
-- ` + "`" + `gitee repo unstar` + "`" + `  — remove a star
+- ` + "`" + `gitee repo star unstar` + "`" + `  — remove a star
 - ` + "`" + `gitee repo star list` + "`" + ` — verify the star was recorded
-- ` + "`" + `gitee repo watch` + "`" + `  — subscribe to notifications (independent of star)
+- ` + "`" + `gitee repo watch watch` + "`" + ` — subscribe to notifications (independent of star)
 - ` + "`" + `gitee --agent-help` + "`" + `  — overview of all commands with agent help
 `
 
-const repoStarUnstarAgentHelp = `# gitee repo unstar — Agent Help
+const repoStarUnstarAgentHelp = `# gitee repo star unstar — Agent Help
 
 ## Purpose
 Remove a star from a Gitee repository. After this, the repo is no
@@ -432,13 +432,13 @@ decrements by 1.
 - Authenticated (gitee auth status)
 - The target repo exists and is visible to the token
 - --repo / -R is set (owner/repo) OR the repo is passed as a positional
-  argument: ` + "`" + `gitee repo unstar owner/repo` + "`" + `
+  argument: ` + "`" + `gitee repo star unstar owner/repo` + "`" + `
 - The repo is currently starred by you (idempotent — unstarring an
   unstarred repo returns 404, but the post-condition holds)
 
 ## Required flags / arguments
   owner/repo            Repository full name as a positional argument,
-                        e.g. ` + "`" + `gitee repo unstar myorg/myrepo` + "`" + `.
+                        e.g. ` + "`" + `gitee repo star unstar myorg/myrepo` + "`" + `.
                         Equivalent to ` + "`" + `--repo owner/repo` + "`" + `.
 
 ## Optional flags
@@ -492,7 +492,7 @@ After unstarring a repository, an agent typically wants to:
 1. Verify: gitee repo star list | grep owner/repo
    (should produce no output)
 2. If you also want to stop receiving notifications, follow up with:
-   gitee repo unwatch owner/repo
+   gitee repo watch unwatch owner/repo
 3. To leave the project entirely (lose access), see also:
    gitee repo collaborator remove --repo owner/repo <your-username>
 
@@ -505,20 +505,20 @@ Each call to this command counts as 1 request.
 
 ## Example
   # Unstar via positional argument (most concise)
-  gitee repo unstar myorg/myrepo
+  gitee repo star unstar myorg/myrepo
 
   # Unstar via --repo flag
-  gitee repo unstar --repo myorg/myrepo
+  gitee repo star unstar --repo myorg/myrepo
 
   # Pipeline: bulk-unstar from a file
   cat to-cleanup.txt | while read r; do
-    gitee repo unstar "$r"
+    gitee repo star unstar "$r"
   done
 
 ## See also
-- ` + "`" + `gitee repo star` + "`" + `       — add a star
+- ` + "`" + `gitee repo star star` + "`" + ` — add a star
 - ` + "`" + `gitee repo star list` + "`" + ` — verify removal
-- ` + "`" + `gitee repo unwatch` + "`" + `   — stop receiving notifications too
+- ` + "`" + `gitee repo watch unwatch` + "`" + ` — stop receiving notifications too
 - ` + "`" + `gitee --agent-help` + "`" + `  — overview of all commands with agent help
 `
 
@@ -590,7 +590,7 @@ missed, removed stars causing harmless 404s downstream). The STARS
 column is doubly volatile: it counts EVERYONE's stars and moves even
 when your own starred set is unchanged — never use counter deltas to
 detect your own star/unstar effects. Mitigation: when verifying that
-a ` + "`" + `gitee repo star` + "`" + ` call landed, re-run THIS command and grep for
+a ` + "`" + `gitee repo star star` + "`" + ` call landed, re-run THIS command and grep for
 the full_name; for batch jobs, re-list immediately before acting and
 tolerate membership drift. Retrying THIS command is always safe
 (read-only).
@@ -602,9 +602,9 @@ After listing your stars, an agent typically wants to:
 2. Clone a starred repo:
    gitee repo star list -o json | jq -r '.[0].full_name' | xargs gitee repo clone
 3. Unstar in bulk:
-   gitee repo star list -o json | jq -r '.[].full_name' | xargs -I {} gitee repo unstar {}
+   gitee repo star list -o json | jq -r '.[].full_name' | xargs -I {} gitee repo star unstar {}
 4. Subscribe to notifications on a starred repo:
-   gitee repo watch owner/repo --type watching
+   gitee repo watch watch owner/repo --type watching
 
 ## OAuth scope required
 projects (read)
@@ -625,8 +625,8 @@ Each call to this command counts as 1 request.
   gitee repo clone "$TARGET"
 
 ## See also
-- ` + "`" + `gitee repo star` + "`" + `     — add a star to a repo
-- ` + "`" + `gitee repo unstar` + "`" + `   — remove a star
-- ` + "`" + `gitee repo watch` + "`" + `    — subscribe to notifications (independent of star)
+- ` + "`" + `gitee repo star star` + "`" + ` — add a star to a repo
+- ` + "`" + `gitee repo star unstar` + "`" + `   — remove a star
+- ` + "`" + `gitee repo watch watch` + "`" + ` — subscribe to notifications (independent of star)
 - ` + "`" + `gitee --agent-help` + "`" + `  — overview of all commands with agent help
 `

@@ -13,7 +13,10 @@
 //   - `gitee extension create <name>` scaffolds a new extension.
 package extension
 
-import "github.com/spf13/cobra"
+import (
+	"gitee-cli/cmd"
+	"github.com/spf13/cobra"
+)
 
 // ExtensionCmd is the top-level command for the gitee extension
 // subcommand group.
@@ -29,6 +32,8 @@ invoke it directly as 'gitee <name> ...' just like a built-in command.
 Use 'gitee extension list' to see what's installed, 'gitee extension
 install <owner/repo>' to grab one from Gitee, and 'gitee extension
 create <name>' to scaffold a new one.`,
+	// GroupRunE: unknown verbs exit non-zero with a suggestion; no args shows help.
+	RunE: cmd.GroupRunE,
 }
 
 func init() {

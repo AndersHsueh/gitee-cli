@@ -36,7 +36,7 @@ func TestWatchAgentHelpContent(t *testing.T) {
 
 func TestWatchWatchAgentHelpContent(t *testing.T) {
 	required := []string{
-		"# gitee repo watch",
+		"# gitee repo watch watch",
 		"## Purpose",
 		"## Pre-conditions",
 		"## Required flags / arguments",
@@ -63,7 +63,7 @@ func TestWatchWatchAgentHelpContent(t *testing.T) {
 
 func TestWatchUnwatchAgentHelpContent(t *testing.T) {
 	required := []string{
-		"# gitee repo unwatch",
+		"# gitee repo watch unwatch",
 		"## Purpose",
 		"## Pre-conditions",
 		"## Required flags / arguments",

@@ -36,7 +36,7 @@ func TestProtectAgentHelpContent(t *testing.T) {
 
 func TestProtectProtectAgentHelpContent(t *testing.T) {
 	required := []string{
-		"# gitee repo protect",
+		"# gitee repo protect protect",
 		"## Purpose",
 		"## Pre-conditions",
 		"## Required flags / arguments",
@@ -63,7 +63,7 @@ func TestProtectProtectAgentHelpContent(t *testing.T) {
 
 func TestProtectUnprotectAgentHelpContent(t *testing.T) {
 	required := []string{
-		"# gitee repo unprotect",
+		"# gitee repo protect unprotect",
 		"## Purpose",
 		"## Pre-conditions",
 		"## Required flags / arguments",

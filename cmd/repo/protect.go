@@ -21,11 +21,11 @@ import (
 //
 // Both verbs share the --repo / -R flag pattern and take the branch
 // name as a positional argument. The umbrella command also accepts
-// `gitee repo unprotect <branch>` as an alias so users can run it from
+// `gitee repo protect unprotect <branch>` as an alias so users can run it from
 // the repo root in the same way gh does.
 
 // protectFlags is shared across protect/unprotect so the user can
-// invoke `gitee repo protect --repo owner/repo main` (Cobra binds by
+// invoke `gitee repo protect protect --repo owner/repo main` (Cobra binds by
 // pointer).
 var protectFlags struct {
 	repo string
@@ -41,10 +41,10 @@ without admin rights. Use these verbs to lock a release-bearing
 branch (e.g. main, master, release/*) so accidental pushes can't
 break it, and to unlock it again when you intentionally need to.
 
-  gitee repo protect <branch>     — enable branch protection
-  gitee repo unprotect <branch>   — remove branch protection`,
-	Example: `  gitee repo protect main --repo owner/repo
-  gitee repo unprotect main --repo owner/repo`,
+  gitee repo protect protect <branch>     — enable branch protection
+  gitee repo protect unprotect <branch>   — remove branch protection`,
+	Example: `  gitee repo protect protect main --repo owner/repo
+  gitee repo protect unprotect main --repo owner/repo`,
 	PreRunE: func(c *cobra.Command, args []string) error {
 		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
@@ -52,17 +52,16 @@ break it, and to unlock it again when you intentionally need to.
 		}
 		return nil
 	},
-	RunE: func(c *cobra.Command, args []string) error {
-		// No subcommand given — show help so users discover protect/unprotect.
-		return c.Help()
-	},
+	// GroupRunE prints help with no args and returns an error (with the
+	// correct fully-qualified form) when given a positional arg — see cmd.GroupRunE.
+	RunE: cmd.GroupRunE,
 }
 
 var protectProtectCmd = &cobra.Command{
 	Use:   "protect <branch>",
 	Short: "Enable branch protection on a repository branch",
-	Example: `  gitee repo protect main --repo owner/repo
-  gitee repo protect release/v1 --repo owner/repo`,
+	Example: `  gitee repo protect protect main --repo owner/repo
+  gitee repo protect protect release/v1 --repo owner/repo`,
 	PreRunE: func(c *cobra.Command, args []string) error {
 		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
@@ -76,8 +75,8 @@ var protectProtectCmd = &cobra.Command{
 var protectUnprotectCmd = &cobra.Command{
 	Use:   "unprotect <branch>",
 	Short: "Remove branch protection from a repository branch",
-	Example: `  gitee repo unprotect main --repo owner/repo
-  gitee repo unprotect release/v1 --repo owner/repo`,
+	Example: `  gitee repo protect unprotect main --repo owner/repo
+  gitee repo protect unprotect release/v1 --repo owner/repo`,
 	PreRunE: func(c *cobra.Command, args []string) error {
 		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
@@ -90,17 +89,19 @@ var protectUnprotectCmd = &cobra.Command{
 
 // repoUnprotectCmd is a top-level alias for `gitee repo protect
 // unprotect <branch>` so the verb reads naturally at the repo root:
-// `gitee repo unprotect main --repo owner/repo`. Mirrors how star /
+// `gitee repo protect unprotect main --repo owner/repo`. Mirrors how star /
 // unstar live as siblings under RepoCmd rather than nesting.
 var repoUnprotectCmd = &cobra.Command{
 	Use:   "unprotect <branch>",
 	Short: "Remove branch protection from a repository branch (alias of `gitee repo protect unprotect`)",
-	Example: `  gitee repo unprotect main --repo owner/repo
-  gitee repo unprotect release/v1 --repo owner/repo`,
+	Example: `  gitee repo protect unprotect main --repo owner/repo
+  gitee repo protect unprotect release/v1 --repo owner/repo`,
 	PreRunE: func(c *cobra.Command, args []string) error {
 		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
-			cmd.PrintAgentHelp(repoProtectUnprotectAgentHelp)
+			// Shares its doc with `gitee repo protect unprotect`, so retitle
+			// it to this alias's own path.
+			cmd.PrintAgentHelpForCommand(c, repoProtectUnprotectAgentHelp)
 		}
 		return nil
 	},
@@ -132,7 +133,7 @@ func init() {
 // Gitee.
 func resolveProtectBranchArg(args []string) (string, error) {
 	if len(args) == 0 || args[0] == "" {
-		return "", fmt.Errorf("branch is required (e.g. `gitee repo protect main --repo owner/repo`)")
+		return "", fmt.Errorf("branch is required (e.g. `gitee repo protect protect main --repo owner/repo`)")
 	}
 	return args[0], nil
 }
@@ -219,9 +220,9 @@ this Gitee v5 API level — there are no granular options exposed (e.g.
 
 ## Subcommands
   protect <branch>     Enable branch protection. See
-                       ` + "`" + `gitee repo protect --agent-help` + "`" + `.
+                       ` + "`" + `gitee repo protect protect --agent-help` + "`" + `.
   unprotect <branch>   Remove branch protection. See
-                       ` + "`" + `gitee repo unprotect --agent-help` + "`" + `.
+                       ` + "`" + `gitee repo protect unprotect --agent-help` + "`" + `.
 
 ## Pre-conditions
 - Authenticated (gitee auth status)
@@ -267,7 +268,7 @@ Gitee API v5: 1000 req/hour authenticated.
 - ` + "`" + `gitee --agent-help` + "`" + `    — overview of all commands with agent help
 `
 
-const repoProtectProtectAgentHelp = `# gitee repo protect — Agent Help
+const repoProtectProtectAgentHelp = `# gitee repo protect protect — Agent Help
 
 ## Purpose
 Enable branch protection on a specific branch of a Gitee repository.
@@ -354,7 +355,7 @@ After enabling protection, an agent typically wants to:
    is binary at this API level
 3. Communicate the change to collaborators: pushes via PR only from
    now on
-4. To undo: ` + "`" + `gitee repo unprotect <branch> --repo owner/repo` + "`" + `
+4. To undo: ` + "`" + `gitee repo protect unprotect <branch> --repo owner/repo` + "`" + `
 
 ## OAuth scope required
 projects (write)
@@ -365,24 +366,24 @@ Each call to this command counts as 1 request.
 
 ## Example
   # Protect main
-  gitee repo protect main --repo myorg/billing-svc
+  gitee repo protect protect main --repo myorg/billing-svc
 
   # Protect a release branch
-  gitee repo protect release/v1 --repo myorg/billing-svc
+  gitee repo protect protect release/v1 --repo myorg/billing-svc
 
   # Pipeline: protect main after CI passes on initial push
   if gitee repo branches --repo myorg/billing-svc -o json | jq -e '.[] | select(.name=="main") | select(.protected == false)' > /dev/null; then
-    gitee repo protect main --repo myorg/billing-svc
+    gitee repo protect protect main --repo myorg/billing-svc
   fi
 
 ## See also
-- ` + "`" + `gitee repo unprotect` + "`" + `  — undo this
+- ` + "`" + `gitee repo protect unprotect` + "`" + `  — undo this
 - ` + "`" + `gitee repo branches` + "`" + `   — verify the ` + "`" + `protected` + "`" + ` flag
 - ` + "`" + `gitee pr create` + "`" + `      — the supported workflow after protection
 - ` + "`" + `gitee --agent-help` + "`" + `   — overview of all commands with agent help
 `
 
-const repoProtectUnprotectAgentHelp = `# gitee repo unprotect — Agent Help
+const repoProtectUnprotectAgentHelp = `# gitee repo protect unprotect — Agent Help
 
 ## Purpose
 Remove branch protection from a specific branch of a Gitee
@@ -466,7 +467,7 @@ will rewrite history visible to every collaborator. Either:
 After unprotecting, an agent typically wants to:
 1. Perform the exceptional operation (force-push, etc.)
 2. Re-protect immediately:
-   ` + "`" + `gitee repo protect <branch> --repo owner/repo` + "`" + `
+   ` + "`" + `gitee repo protect protect <branch> --repo owner/repo` + "`" + `
 3. Verify the round-trip:
    ` + "`" + `gitee repo branches --repo owner/repo -o json | jq '.[] | select(.name=="<branch>")'` + "`" + `
 4. Notify collaborators that the branch is unprotected again
@@ -480,15 +481,15 @@ Each call to this command counts as 1 request.
 
 ## Example
   # Plain removal (use sparingly; see safety warning above)
-  gitee repo unprotect main --repo myorg/billing-svc
+  gitee repo protect unprotect main --repo myorg/billing-svc
 
   # Round-trip: unprotect, force-push a fix, re-protect
-  gitee repo unprotect main --repo myorg/billing-svc
+  gitee repo protect unprotect main --repo myorg/billing-svc
   git push --force-with-lease origin main
-  gitee repo protect main --repo myorg/billing-svc
+  gitee repo protect protect main --repo myorg/billing-svc
 
 ## See also
-- ` + "`" + `gitee repo protect` + "`" + `    — the inverse verb
+- ` + "`" + `gitee repo protect protect` + "`" + ` — the inverse verb
 - ` + "`" + `gitee repo branches` + "`" + `  — verify the ` + "`" + `protected` + "`" + ` flag
 - ` + "`" + `gitee --agent-help` + "`" + `   — overview of all commands with agent help
 `

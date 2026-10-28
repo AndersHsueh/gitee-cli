@@ -13,6 +13,7 @@ var viewFlags struct {
 
 var viewCmd = &cobra.Command{
 	Use:   "view",
+	Args:  cobra.NoArgs,
 	Short: "View a single label",
 	Example: `  gitee label view --repo owner/repo --name bug
   gitee label view -R owner/repo -n enhancement`,

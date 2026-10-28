@@ -23,7 +23,7 @@ import (
 // --type flag (watching | releases_only | ignoring; default: watching).
 
 // watchFlags is shared across watch/unwatch so the user can invoke
-// `gitee repo watch --repo owner/repo --type watching` (Cobra binds
+// `gitee repo watch watch --repo owner/repo --type watching` (Cobra binds
 // by pointer).
 var watchFlags struct {
 	repo string
@@ -39,16 +39,16 @@ Watching a repository subscribes you to activity notifications —
 issues, PRs, comments, releases, depending on the watch level. Watching
 is independent of starring: star to bookmark, watch to subscribe.
 
-  gitee repo watch [owner/repo]   — subscribe to activity
-  gitee repo unwatch [owner/repo] — unsubscribe (no notifications)
+  gitee repo watch watch [owner/repo]   — subscribe to activity
+  gitee repo watch unwatch [owner/repo] — unsubscribe (no notifications)
 
 The watch verb accepts a --type flag with three values:
   watching        — receive all activity notifications (default)
   releases_only   — receive notifications only for new releases
   ignoring        — unsubscribe entirely`,
-	Example: `  gitee repo watch myorg/myrepo
-  gitee repo watch myorg/myrepo --type releases_only
-  gitee repo unwatch myorg/myrepo`,
+	Example: `  gitee repo watch watch myorg/myrepo
+  gitee repo watch watch myorg/myrepo --type releases_only
+  gitee repo watch unwatch myorg/myrepo`,
 	PreRunE: func(c *cobra.Command, args []string) error {
 		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
@@ -56,17 +56,16 @@ The watch verb accepts a --type flag with three values:
 		}
 		return nil
 	},
-	RunE: func(c *cobra.Command, args []string) error {
-		// No subcommand given — show help so users discover watch/unwatch.
-		return c.Help()
-	},
+	// GroupRunE prints help with no args and returns an error (with the
+	// correct fully-qualified form) when given a positional arg — see cmd.GroupRunE.
+	RunE: cmd.GroupRunE,
 }
 
 var watchWatchCmd = &cobra.Command{
 	Use:   "watch [owner/repo]",
 	Short: "Subscribe to a repository's activity",
-	Example: `  gitee repo watch myorg/myrepo
-  gitee repo watch myorg/myrepo --type releases_only`,
+	Example: `  gitee repo watch watch myorg/myrepo
+  gitee repo watch watch myorg/myrepo --type releases_only`,
 	PreRunE: func(c *cobra.Command, args []string) error {
 		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
@@ -80,7 +79,7 @@ var watchWatchCmd = &cobra.Command{
 var watchUnwatchCmd = &cobra.Command{
 	Use:     "unwatch [owner/repo]",
 	Short:   "Unsubscribe from a repository (no notifications)",
-	Example: `  gitee repo unwatch myorg/myrepo`,
+	Example: `  gitee repo watch unwatch myorg/myrepo`,
 	PreRunE: func(c *cobra.Command, args []string) error {
 		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
@@ -210,8 +209,8 @@ remember.
 
 ## Subcommands
   watch [owner/repo]   Subscribe to a repo's activity. See
-                      ` + "`" + `gitee repo watch --agent-help` + "`" + `.
-  unwatch [owner/repo] Unsubscribe. See ` + "`" + `gitee repo unwatch --agent-help` + "`" + `.
+                      ` + "`" + `gitee repo watch watch --agent-help` + "`" + `.
+  unwatch [owner/repo] Unsubscribe. See ` + "`" + `gitee repo watch unwatch --agent-help` + "`" + `.
 
 ## Watch levels (Gitee v5 watch_type field)
   watching        — full activity (issues, PRs, comments, releases).
@@ -232,7 +231,7 @@ remember.
             server. Re-watching with a different --type updates the
             watch level in place.
 - unwatch:  YES. Re-unwatching an already-unsubscribed repo returns
-            204 No Content (Gitee semantics — see gitee repo unwatch
+            204 No Content (Gitee semantics — see gitee repo watch unwatch
             --agent-help for details).
 
 ## Atomicity
@@ -253,13 +252,13 @@ projects (write)
 Gitee API v5: 1000 req/hour authenticated.
 
 ## See also
-- ` + "`" + `gitee repo star` + "`" + `       — bookmark (independent of watch)
-- ` + "`" + `gitee repo unstar` + "`" + `     — remove a bookmark
+- ` + "`" + `gitee repo star star` + "`" + ` — bookmark (independent of watch)
+- ` + "`" + `gitee repo star unstar` + "`" + ` — remove a bookmark
 - ` + "`" + `gitee notification list` + "`" + ` — see the notifications Gitee has queued for you
 - ` + "`" + `gitee --agent-help` + "`" + `    — overview of all commands with agent help
 `
 
-const repoWatchWatchAgentHelp = `# gitee repo watch — Agent Help
+const repoWatchWatchAgentHelp = `# gitee repo watch watch — Agent Help
 
 ## Purpose
 Subscribe to activity notifications on a Gitee repository. Choose the
@@ -270,11 +269,11 @@ star to bookmark, watch to subscribe.
 - Authenticated (gitee auth status)
 - The target repo exists and is visible to the token
 - --repo / -R is set (owner/repo) OR the repo is passed as a positional
-  argument: ` + "`" + `gitee repo watch owner/repo` + "`" + `
+  argument: ` + "`" + `gitee repo watch watch owner/repo` + "`" + `
 
 ## Required flags / arguments
   owner/repo            Repository full name as a positional argument,
-                        e.g. ` + "`" + `gitee repo watch myorg/myrepo` + "`" + `.
+                        e.g. ` + "`" + `gitee repo watch watch myorg/myrepo` + "`" + `.
                         Equivalent to ` + "`" + `--repo owner/repo` + "`" + `.
 
 ## Optional flags
@@ -332,9 +331,9 @@ Gitee exposes no separate "get my watch level" read here.
 After watching a repository, an agent typically wants to:
 1. Verify: gitee notification list --unread | grep owner/repo
 2. Adjust the watch level if needed:
-   gitee repo watch owner/repo --type releases_only
+   gitee repo watch watch owner/repo --type releases_only
 3. Stop watching later:
-   gitee repo unwatch owner/repo
+   gitee repo watch unwatch owner/repo
 
 ## OAuth scope required
 projects (write)
@@ -345,22 +344,22 @@ Each call to this command counts as 1 request.
 
 ## Example
   # Watch with default level (all activity)
-  gitee repo watch myorg/myrepo
+  gitee repo watch watch myorg/myrepo
 
   # Watch releases only (common for downstream consumers)
-  gitee repo watch myorg/myrepo --type releases_only
+  gitee repo watch watch myorg/myrepo --type releases_only
 
   # Explicitly ignore (distinct from "not watched")
-  gitee repo watch myorg/myrepo --type ignoring
+  gitee repo watch watch myorg/myrepo --type ignoring
 
 ## See also
-- ` + "`" + `gitee repo unwatch` + "`" + `       — stop watching
-- ` + "`" + `gitee repo star` + "`" + `           — bookmark (independent of watch)
+- ` + "`" + `gitee repo watch unwatch` + "`" + `       — stop watching
+- ` + "`" + `gitee repo star star` + "`" + ` — bookmark (independent of watch)
 - ` + "`" + `gitee notification list` + "`" + `  — see queued notifications
 - ` + "`" + `gitee --agent-help` + "`" + `       — overview of all commands with agent help
 `
 
-const repoWatchUnwatchAgentHelp = `# gitee repo unwatch — Agent Help
+const repoWatchUnwatchAgentHelp = `# gitee repo watch unwatch — Agent Help
 
 ## Purpose
 Unsubscribe from a Gitee repository. After this, Gitee stops sending
@@ -375,11 +374,11 @@ holds in both cases.
 ## Pre-conditions
 - Authenticated (gitee auth status)
 - --repo / -R is set (owner/repo) OR the repo is passed as a positional
-  argument: ` + "`" + `gitee repo unwatch owner/repo` + "`" + `
+  argument: ` + "`" + `gitee repo watch unwatch owner/repo` + "`" + `
 
 ## Required flags / arguments
   owner/repo            Repository full name as a positional argument,
-                        e.g. ` + "`" + `gitee repo unwatch myorg/myrepo` + "`" + `.
+                        e.g. ` + "`" + `gitee repo watch unwatch myorg/myrepo` + "`" + `.
                         Equivalent to ` + "`" + `--repo owner/repo` + "`" + `.
 
 ## Optional flags
@@ -398,7 +397,7 @@ changed.
 - Webhooks subscribed to "Watch" events fire
 - The repo is removed from your subscriptions list
 - The repo's star state is UNCHANGED (star is a separate API path;
-  use ` + "`" + `gitee repo unstar` + "`" + ` to remove a bookmark too)
+  use ` + "`" + `gitee repo star unstar` + "`" + ` to remove a bookmark too)
 
 ## Post-conditions (on success)
 - Stdout prints "✓ Unwatched owner/repo — no further notifications"
@@ -436,9 +435,9 @@ After unwatching a repository, an agent typically wants to:
 1. Verify: gitee notification list --unread | grep owner/repo
    (should produce no output for this repo)
 2. To also remove the bookmark, follow up with:
-   gitee repo unstar owner/repo
+   gitee repo star unstar owner/repo
 3. To re-subscribe later at a different level:
-   gitee repo watch owner/repo --type releases_only
+   gitee repo watch watch owner/repo --type releases_only
 
 ## OAuth scope required
 projects (write)
@@ -449,18 +448,18 @@ Each call to this command counts as 1 request.
 
 ## Example
   # Unwatch via positional argument (most concise)
-  gitee repo unwatch myorg/myrepo
+  gitee repo watch unwatch myorg/myrepo
 
   # Unwatch via --repo flag
-  gitee repo unwatch --repo myorg/myrepo
+  gitee repo watch unwatch --repo myorg/myrepo
 
   # Pipeline: bulk-unwatch from a file
   cat to-silence.txt | while read r; do
-    gitee repo unwatch "$r"
+    gitee repo watch unwatch "$r"
   done
 
 ## See also
-- ` + "`" + `gitee repo watch` + "`" + `     — (re)subscribe
-- ` + "`" + `gitee repo unstar` + "`" + `   — remove the bookmark (separate verb)
+- ` + "`" + `gitee repo watch watch` + "`" + ` — (re)subscribe
+- ` + "`" + `gitee repo star unstar` + "`" + ` — remove the bookmark (separate verb)
 - ` + "`" + `gitee --agent-help` + "`" + `  — overview of all commands with agent help
 `

@@ -12,6 +12,7 @@ import (
 
 var listCmd = &cobra.Command{
 	Use:   "list",
+	Args:  cobra.NoArgs,
 	Short: "List installed extensions",
 	Example: `  gitee extension list
   gitee extension list --output json`,

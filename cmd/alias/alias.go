@@ -22,6 +22,8 @@ of the same name.
 
 Use 'gitee alias list' to see what's defined and 'gitee alias
 delete <name>' to remove one.`,
+	// GroupRunE: unknown verbs exit non-zero with a suggestion; no args shows help.
+	RunE: cmd.GroupRunE,
 }
 
 func init() {

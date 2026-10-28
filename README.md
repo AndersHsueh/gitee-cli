@@ -1,13 +1,15 @@
 # gitee-cli
 
+**中文** | [English](README_en.md) | [日本語](README_ja.md)
+
 > 在终端里完整操作 Gitee 的现代命令行工具，功能对标 GitHub `gh` ——
 > 并且是**全球第一个**同时为人类和 AI Agent 设计帮助系统的开源 CLI。
 
 [![Go Version](https://img.shields.io/badge/go-1.27+-blue.svg)](https://golang.org)
 [![License](https://img.shields.io/badge/license-MulanPSL--2.0-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey.svg)]()
-[![Version](https://img.shields.io/badge/version-v0.13.1-orange.svg)](https://gitee.com/andershsueh/gitee-cli/releases/latest)
-[![Agent Help](https://img.shields.io/badge/--agent--help-129%20verbs-8A2BE2.svg)](docs/philosophy.md)
+[![Version](https://img.shields.io/badge/version-v0.13.2-orange.svg)](https://gitee.com/andershsueh/gitee-cli/releases/latest)
+[![Agent Help](https://img.shields.io/badge/--agent--help-137%20verbs-8A2BE2.svg)](docs/philosophy.md)
 [![CI](https://github.com/AndersHsueh/gitee-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/AndersHsueh/gitee-cli/actions/workflows/ci.yml)
 
 ```bash
@@ -23,15 +25,21 @@ gitee pr merge 18 --squash
 
 ## 为什么选 gitee-cli
 
-**1. 覆盖面完整。** 22 个命令组、150+ 子命令，从仓库、Issue、PR、Release 到
+**1. 覆盖面完整。** 21 个顶层命令组、149 个叶子命令（含 `repo star` 这类嵌套分组共 28 组，
+`gitee help reference` 实测 177 条命令路径），从仓库、Issue、PR、Release 到
 里程碑、通知、协作者、分支保护，Gitee 日常工作流全部终端化：
 
 | 领域 | 命令组 |
 |------|--------|
 | 代码协作 | `repo` `pr` `issue` `milestone` `label` `release` `gist` |
 | 仓库运维 | `webhook` `org` `user` `ssh-key` `notification` |
-| 检索 | `search`（repos / issues / users / code / commits）`status`（跨仓看板） |
+| 检索 | `search`（issues / users 可用；repos / code / commits 见下注）`status`（跨仓看板） |
 | 工具链 | `api`（裸 API）`alias` `extension` `config` `completion` `agent` |
+
+> ⚠️ `search` 的真实状态（v0.13.2 实测）：`search issues` / `search users` 正常；
+> `search repos` 目前对任何查询都返回空（上游 Gitee 搜索接口行为变化），CLI 会打印
+> "(no results)"；`search code` / `search commits` 在该 Gitee 实例返回 404，CLI 会给出
+> 明确提示并以非 0 退出码结束，不会假装成功。
 
 其中 `repo` 一组就有 tag / collaborator / star / watch / file（直接读写仓库文件）/
 commits / compare / protect（分支保护）等 20+ 个动词——**部分能力连 `gh` 都没有内建**，
@@ -67,7 +75,7 @@ gitee agent onboard                     # 一键为你的仓库生成 Agent 编�
 Side effects、错误码与恢复、OAuth scope、Rate limit、竞态条件、
 **Orchestration hints**（跑完这条命令下一步跑什么）、**Parsing hints**（stdout 怎么 parse）。
 
-**当前覆盖：129 个 verb（v0.12.6 实测）**，并由 contract test 在 CI 层守护——
+**当前覆盖：137 个命令拥有完整 `--agent-help` 文档（v0.13.2 实测）**，并由 contract test 在 CI 层守护——
 新命令不写 Agent 文档，测试直接红。此外我们保证三条"可达性法则"：
 缺少必填参数时 `--agent-help` 照样能出文档、查文档不需要 token、
 探测文档永远不会误执行真命令（`auth login --agent-help` 只会告诉你它是 operational 命令，
@@ -141,12 +149,12 @@ gitee auth status
 gitee repo list --owner torvalds --visibility public
 gitee repo create --name my-project --private
 gitee repo fork owner/repo && gitee repo clone owner/repo
-gitee repo star owner/repo                  # 点星支持
-gitee repo watch owner/repo --releases-only # 只订阅发版
+gitee repo star star owner/repo             # 点星支持（子命令是 star star）
+gitee repo watch watch owner/repo --type releases_only  # 只订阅发版
 gitee repo file push ./notes.md docs/notes.md -m "docs: add notes"  # 不 clone 直接改文件
-gitee repo commits --author someone --since 2026-06-01
+gitee repo commits list --author someone --since 2026-06-01
 gitee repo compare master...feature/x
-gitee repo protect master                   # 分支保护
+gitee repo protect protect master           # 分支保护
 ```
 
 ### Issue / 里程碑 / 通知
@@ -154,7 +162,7 @@ gitee repo protect master                   # 分支保护
 ```bash
 gitee issue list --state all --labels bug,enhancement
 gitee issue create --title "发现一个 Bug" --body "复现步骤：..." --labels bug
-gitee issue edit 42 --title "更准确的标题" --add-assignee someone
+gitee issue edit 42 --title "更准确的标题" --assignees someone
 gitee issue close 42 && gitee issue comment 42 --body "已修复"
 
 gitee milestone create --title "v1.0" --due-on 2026-09-30
@@ -176,8 +184,10 @@ gitee pr status                             # 我名下所有仓库的 PR 看板
 ### 搜索 / 裸 API
 
 ```bash
-gitee search repos "web framework" --language go --sort stars
-gitee search code "func main" --repo owner/repo
+gitee search issues "memory leak" --state open --limit 10   # 搜索 Issue（可用）
+gitee search users andershsueh                              # 搜索用户（可用）
+gitee search repos "web framework" --language go            # ⚠️ 上游接口当前返回空
+gitee search code "func main" --repo owner/repo             # ⚠️ 该实例不支持，CLI 提示后退出
 gitee api GET /user/repos?type=owner --paginate
 gitee api POST /user/repos --field name=test --field private=true
 ```
@@ -188,18 +198,40 @@ gitee api POST /user/repos --field name=test --field private=true
 
 | 选项 | 说明 | 默认值 |
 |------|------|--------|
-| `--repo string` | 目标仓库（owner/repo），缺省从 git remote 推断 | 自动 |
-| `-o, --output string` | 输出格式：`table` \| `json` \| `csv` | `table` |
+| `-R, --repo string` | 目标仓库（owner/repo），缺省从 git remote 推断 | 自动 |
+| `-o, --output string` | 输出格式：`table` \| `json`（**不支持 csv**，非法值会报错） | `table` |
 | `-P, --paginate` | 自动分页取全部结果 | `false` |
 | `--limit int` | 结果总数上限 | `30`（`--paginate` 时为跨页总数上限；`0` 表示不限） |
+| `--page int` | 页码（未 `--paginate` 时生效） | `1` |
+| `--per-page int` | 每页条数（最大 100） | `30` |
 | `--token string` | Access Token（覆盖配置文件）；建议改用 `GITEE_TOKEN` | 读配置 |
 | `--hostname string` | Gitee 实例地址（企业私有部署） | `gitee.com` |
+| `--api-url string` | API 基础 URL，非标准私有部署用 | `https://{hostname}/api/v5` |
+| `--agent-help` | 输出 Agent 向长文档（部分命令支持） | `false` |
+| `--no-extensions` | 跳过外部扩展加载 | `false` |
 | `--verbose` | 打印 HTTP 请求/响应详情 | `false` |
 | `--no-color` | 关闭颜色输出 | `false` |
 
-环境变量：`GITEE_TOKEN` / `GITEE_ALIASES_FILE` / `GITEE_EXT_DIR` / `BROWSER`；
-其余配置请用 flag 或 `~/.gitee-cli/settings.json`。
-更多请看 `gitee help environment`、`gitee help formatting`、`gitee help exit-codes`。
+环境变量（13 个，完整说明见 `gitee help environment`）：
+
+| 变量 | 说明 |
+|------|------|
+| `GITEE_TOKEN` | Access Token（等价 `--token`） |
+| `GITEE_HOSTNAME` | Gitee 实例地址（等价 `--hostname`） |
+| `GITEE_API_URL` | API 基础 URL（等价 `--api-url`） |
+| `GITEE_OUTPUT` | 默认输出格式 `table` \| `json`（等价 `-o`） |
+| `GITEE_VERBOSE` | 设为 `1`/`true`/`yes`/`on` 打印 HTTP 详情到 stderr（等价 `--verbose`） |
+| `GITEE_TIMEOUT` | HTTP 超时秒数（等价 `--timeout`） |
+| `GITEE_LIMIT` | 默认 `--limit` 值 |
+| `GITEE_PAGINATE` | 设为 `1`/`true`/`yes`/`on` 默认开启 `--paginate` |
+| `GITEE_NO_EXTENSIONS` | 设为 `1`/`true`/`yes`/`on` 跳过外部扩展加载 |
+| `NO_COLOR` | 非空则关闭颜色（标准变量，等价 `--no-color`） |
+| `GITEE_ALIASES_FILE` | 覆盖别名文件路径（默认 `~/.gitee-cli/aliases.json`） |
+| `GITEE_EXT_DIR` | 覆盖扩展安装目录（默认 `~/.gitee-cli/extensions`） |
+| `BROWSER` | `repo browse` 等打开浏览器时使用的程序 |
+
+> 代理请用 Go `net/http` 的标准变量（`HTTPS_PROXY` / `NO_PROXY`）——CLI 不单独解析它们。
+> 更多请看 `gitee help environment`、`gitee help formatting`、`gitee help exit-codes`。
 
 ## Shell 补全 / 企业部署
 
@@ -215,14 +247,14 @@ gitee auth login --hostname your-company.gitee.com       # 企业私有实例
 ```bash
 go install ./cmd/gitee            # 构建并安装
 bash scripts/ci.sh                # 与 CI 完全一致的门禁：gofmt/vet/lint/build/test -race/交叉编译/govulncheck
-go test ./... -race -count=1      # 测试：34 个包 · 112 个测试文件 · 451 个测试函数
+go test ./... -race -count=1      # 测试：35 个包 · 118 个测试文件 · 485 个测试函数（v0.13.2 实测）
 golangci-lint run ./...           # Lint（CI 使用 v2.15.0）
 ```
 
 发版（需先打 tag，`GITEE_TOKEN` 需有写权限）：
 
 ```bash
-git tag -a v0.13.1 -m v0.13.1 && git push origin v0.13.1
+git tag -a v0.13.2 -m v0.13.2 && git push origin v0.13.2
 GITEE_TOKEN=... bash scripts/release.sh --publish   # 构建 5 平台 + 打包 + SHA256SUMS + 建 release + 上传
 ```
 
@@ -242,6 +274,32 @@ CI 由 `.github/workflows/ci.yml`（GitHub Actions）与 `.workflow/ci.yml`（Gi
 ---
 
 ## 更新日志
+
+### v0.13.2 (2026-10-28) — P1 维护批次：命令面/文档真实性、参数契约、验收套件
+
+> 在 v0.13.1 打通发版之后，把 13 条 P1 问题一次清掉：命令面、文档、参数契约与验收脚本。
+
+**🧭 命令面与契约**
+- agent-help 覆盖矩阵与 live 命令树精确对齐（157 行，0 幽灵、0 遗漏），新增契约测试守护
+- 13 处 `--agent-help` 标题改为真实命令路径（`gitee api`、`repo star star/unstar`、`repo watch watch/unwatch`、`repo protect protect/unprotect`、`issue label` 6 个）
+- `gitee help reference` 去掉重复的 `issue label` 子树，并纳入 `version`
+- 所有支持 `--repo` 的命令统一补齐 `-R` 短参；不接受位置参数的命令改为严格报错（不再静默忽略）
+- 分组命令（`repo star/watch/protect/tag/file/commits/collaborator`）带位置参数时返回非 0 并提示正确全路径，不再"打印帮助 + exit 0"
+- `-o` 只接受 `table|json`；非法值（含此前的 csv）直接报错，不再静默退回 table
+- 13 个环境变量真实生效（`GITEE_OUTPUT`/`LIMIT`/`TIMEOUT`/`HOSTNAME`/`API_URL`/`PAGINATE`/`VERBOSE`/`NO_EXTENSIONS`/`NO_COLOR` 等），`help environment` 与实现双向锁定
+- `search repos` 空结果时在 stderr 说明上游接口现状并给出替代命令；`search code/commits` 的 404 提示保留
+- 顺带修复：`--limit` 在非 `--paginate` 时被忽略；`--verbose` 的 HTTP trace 改到 stderr（不再污染 `-o json`）
+
+**📖 文档**
+- README 三语 + docs 三语修正 470 条可执行示例（`test/verify_docs_examples.py` 守护，fenced 238 + inline 232），删除失效 flag 与假 env var
+- `auth login` 等 12 处文档从"OAuth2 设备流"改为真实的 PAT 校验流程；`auth refresh` 按代码真相标注为占位
+- 删除重复的 `README_jp.md`（`README_ja.md` 为唯一日语版），三语 README 顶部互链
+- `docs/{zh,en,ja}` 的 FSD/SDD/developer-guide 顶部加状态横幅并修正最误导的段落（Viper/oauth2/internal-auth/printer/i18n、Webhook "未覆盖"、模块路径等）
+- 覆盖数字校准：137 个命令有完整 `--agent-help`（149 叶子 / 177 路径）、35 包 / 118 测试文件 / 485 测试函数
+
+**🧪 验收**
+- 新增独立验收套件 `test/p1-acceptance.sh`（A–N 14 项，14/14 PASS）、`test/verify_docs_examples.py`、`test/report_numbers.sh`
+- `bash scripts/ci.sh` 全绿（gofmt / vet / golangci-lint / build / test -race / 三平台交叉编译 / govulncheck）
 
 ### v0.13.1 (2026-10-28) — 维护修复：发布链路、CI、Go 1.27 工具链、token 权限
 

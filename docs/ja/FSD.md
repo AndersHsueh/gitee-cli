@@ -1,6 +1,12 @@
 # gitee-cli 機能仕様書（Functional Specification Document）
 
-バージョン：1.0.0 | 言語：Go 1.23+ | 参照：Gitee API v5 + GitHub `gh` CLI
+> ⚠️ **ステータス通知（v0.13.2、2026-10 メンテナンス）**：本文書は初期の設計ドラフトであり、
+> **未実装または古くなった**記述を含みます。現在の挙動はコード、`gitee --help`、
+> `gitee <cmd> --agent-help`、`gitee help reference`、`gitee help environment` が正となります。
+> 現状と大きく乖離する段落は本文中で直接修正・注記しています。
+
+
+バージョン：1.0.0（設計ドラフト。現状の修正は冒頭の通知を参照）| 言語：Go 1.27+ | 参照：Gitee API v5 + GitHub `gh` CLI
 
 ---
 
@@ -12,8 +18,8 @@
 |-----------|-----|
 | プロジェクト名 | `gitee-cli` |
 | タイプ | コマンドラインツール（CLI） |
-| 言語 | Go 1.23+ |
-| フレームワーク | Cobra + Viper |
+| 言語 | Go 1.27+ |
+| フレームワーク | Cobra（設定は手書き JSON、Viper 未使用） |
 | 目標 | Gitee の公式 CLI ツール成為、GitHub `gh` に対抗 |
 | API ベースURL | `https://gitee.com/api/v5` |
 | 参照プロジェクト | [`gh`](https://github.com/cli/cli)、[`glab`](https://github.com/cli/go-gitlab) |
@@ -21,17 +27,21 @@
 ### 1.2 コア機能サマリー
 
 ```
-gitee auth login|logout|status|refresh|token   # OAuth2 認証
-gitee repo list|create|clone|fork|view|edit|delete|browse  # リポジトリ管理
-gitee issue list|create|view|edit|close|reopen|comment     # Issue 管理
-gitee pr list|create|view|merge|close|reopen|review|diff|checks  # Pull Request
-gitee gist list|create|view|edit|delete|star|clone         # Gist
-gitee org list|view|member|repo|issue                      # 組織
-gitee search repos|issues|users                            # 検索
-gitee api <method> <path> [--field key=val]                # 生 API アクセス
-gitee config set|get|list|unset                            # 設定
-gitee completion bash|zsh|fish|powershell                  # シェル補完
+gitee auth login|logout|status|refresh|token        # PAT 認証（OAuth2 デバイスフローなし）
+gitee repo list|create|view|fork|edit|delete|clone|browse|branches  # リポジトリ管理
+gitee repo tag|collaborator|star|watch|file|commits|compare|protect|archive|rename|sync  # リポジトリ拡張
+gitee issue list|create|view|edit|close|reopen|comment  # Issue 管理
+gitee pr list|create|view|merge|review|diff|checks|comments|checkout|close|reopen|edit|ready|status  # Pull Request
+gitee gist list|create|view|edit|delete|star|clone|comments  # Gist
+gitee org list|view|members|repos|issues                   # 組織（サブコマンドは複数形）
+gitee search issues|users                            # 検索（repos は空、code/commits はこのインスタンスで非対応）
+gitee api <method> <path> [--field key=val]          # 生 API アクセス
+gitee config set|get|list|unset                      # 設定
+gitee completion bash|zsh|fish|powershell            # シェル補完
+gitee label|milestone|release|webhook|notification|ssh-key|user|alias|extension|agent|status  # その他のグループ
 ```
+
+コマンド面の正は `gitee help reference`（各グループの `--help` と `--agent-help`）です。
 
 ---
 
@@ -39,32 +49,44 @@ gitee completion bash|zsh|fish|powershell                  # シェル補完
 
 | フラグ | タイプ | 説明 | デフォルト値 |
 |--------|--------|------|-------------|
+| `--repo string` | string | 対象リポジトリ owner/repo（省略時は git remote から推定） | 自動 |
 | `--hostname string` | string | Gitee サーバーアドレス（エンタープライズ/プライベートデプロイ） | `gitee.com` |
-| `--token string` | string | OAuth Access Token（設定より優先） | 設定から読み込み |
-| `-o, --output string` | string | 出力形式 (`table`\|`json`\|`csv`) | `table` |
+| `--token string` | string | パーソナルアクセストークン（PAT、設定より優先） | 設定から読み込み |
+| `--api-url string` | string | API ルート URL | `https://{hostname}/api/v5` |
+| `-o, --output string` | string | 出力形式 `table`\|`json`（**csv 非対応、不正値はエラー終了**） | `table` |
 | `-P, --paginate` | bool | 自動ページネーション、全結果を取得 | `false` |
 | `--page int` | int | ページ番号 | `1` |
 | `--per-page int` | int | 1 ページあたりの件数（最大 100） | `30` |
-| `--limit int` | int | 結果の最大数（0 = 無制限） | `0` |
-| `-c, --config string` | string | 設定ファイルパス | `~/.gitee-cli/settings.json` |
-| `--api-url string` | string | API ルート URL | `https://gitee.com/api/v5` |
-| `--timeout int` | int | ネットワークタイムアウト秒数 | `30` |
-| `-v, --verbose` | bool | デバッグ情報出力（HTTP リクエスト/レスポンス詳細） | `false` |
+| `--limit int` | int | 結果の最大数（`--paginate` 時はページ横断の総上限、`0` は無制限） | `30` |
+| `--timeout int` | int | HTTP タイムアウト秒数 | `30` |
+| `-v, --verbose` | bool | HTTP リクエスト/レスポンス詳細を出力 | `false` |
 | `--no-color` | bool | ANSI カラー出力を無効化 | `false` |
-| `--no-interaction` | bool | サイレントモード、インタラクティブプロンプトを無効化（CI/CD） | `false` |
-| `--insecure` | bool | 安全でない HTTPS 接続を許可 | `false` |
-| `--lang string` | string | UI 言語 (`zh`\|`en`) | `zh` |
+| `--no-extensions` | bool | 外部拡張の読み込みをスキップ | `false` |
+| `--agent-help` | bool | Agent 向けの長い構造化ヘルプ（一部コマンド、`-o json` 可） | `false` |
 
-**環境変数マッピング（フラグより優先、設定より低い）：**
+> 旧設計の `--config` / `--no-interaction` / `--insecure` / `--lang` は**存在しません**。
+> 設定ファイルのパスは `~/.gitee-cli/settings.json` に固定です。
 
-| 環境変数 | 対応フラグ |
-|---------|-----------|
-| `GITEE_TOKEN` | `--token` |
-| `GITEE_HOSTNAME` | `--hostname` |
-| `GITEE_OUTPUT` | `--output` |
-| `GITEE_API_URL` | `--api-url` |
-| `HTTPS_PROXY` / `HTTP_PROXY` | プロキシ設定 |
-| `NO_COLOR` | `--no-color` |
+**環境変数（全 13 個、詳細は `gitee help environment`）：**
+
+| 環境変数 | 対応/意味 |
+|---------|----------|
+| `GITEE_TOKEN` | アクセストークン、`--token` と同等 |
+| `GITEE_HOSTNAME` | `--hostname` と同等 |
+| `GITEE_API_URL` | `--api-url` と同等 |
+| `GITEE_OUTPUT` | デフォルト出力形式、`--output` と同等。`table`/`json` 以外はエラー |
+| `GITEE_VERBOSE` | `1`/`true`/`yes`/`on` で HTTP 詳細（stderr）を有効化、`--verbose` と同等 |
+| `GITEE_TIMEOUT` | HTTP タイムアウト秒数、`--timeout` と同等。整数以外はエラー |
+| `GITEE_LIMIT` | `--limit` のデフォルト値 |
+| `GITEE_PAGINATE` | `1`/`true`/`yes`/`on` で `--paginate` を既定化 |
+| `GITEE_NO_EXTENSIONS` | `1`/`true`/`yes`/`on` で拡張読み込みをスキップ |
+| `NO_COLOR` | 非空でカラー無効、`--no-color` と同等 |
+| `GITEE_ALIASES_FILE` | 別名ファイルのパス上書き |
+| `GITEE_EXT_DIR` | 拡張ディレクトリの上書き |
+| `BROWSER` | `repo browse` が使うブラウザ |
+
+> プロキシは Go `net/http` 標準の変数（`HTTPS_PROXY` / `HTTP_PROXY` / `NO_PROXY`）に従い、
+> CLI 自身は解析しません。
 
 ---
 
@@ -72,44 +94,35 @@ gitee completion bash|zsh|fish|powershell                  # シェル補完
 
 ### 3.1 `gitee auth` — 認証管理
 
-**対応 Gitee API：** OAuth2 Device Flow（`/oauth/authorizations/device/*`）
+**方式：パーソナルアクセストークン（PAT）。** gitee-cli には OAuth2 デバイスフロー、
+ブラウザ認証、`refresh_token` 交換は**ありません**。`auth login` は既存トークンを読み、
+`GET /user` で検証します。
 
-| サブコマンド | Gitee API エンドポイント | 説明 |
-|-------------|------------------------|------|
-| `gitee auth login` | `POST /oauth/authorizations/device/code` + ポーリング | OAuth2 デバイスフロー開始、Access Token を取得 |
-| `gitee auth logout` | ローカル操作 | `~/.gitee-cli/settings.json` から Token を削除 |
-| `gitee auth status` | `GET /user` | 現在のログイン状態を表示（ユーザー名、Token 有効期限） |
-| `gitee auth refresh` | `POST /oauth/token?grant_type=refresh_token` | 期限切れ Token を更新 |
-| `gitee auth token` | ローカル操作 | 現在の Access Token を出力（パイプラピング用） |
+**トークン解決の優先順位：** `--token` フラグ > `GITEE_TOKEN` 環境変数 > `~/.gitee-cli/settings.json`。
 
-**`gitee auth login` フルフロー：**
+| サブコマンド | 動作 |
+|--------------|------|
+| `gitee auth login [--token <PAT>]` | 引数なし：既存トークンを読み `/user` で検証。`--token` 指定時：検証後に `~/.gitee-cli/settings.json` へ保存（ディレクトリ 0700 / ファイル 0600） |
+| `gitee auth logout` | 保存済みトークンを削除 |
+| `gitee auth status` | `GET /user` でログイン状態とユーザー名を表示 |
+| `gitee auth refresh` | スタブ実装：「Token refresh is not yet supported. Please re-authenticate with 'gitee auth login'.」と表示して終了コード 0。更新も再検証もせず、OAuth の `refresh_token` 交換でもない |
+| `gitee auth token` | 現在のアクセストークンを出力（パイプ用） |
+
+**`gitee auth login` の実際の流れ：**
 ```
-1. POST /oauth/authorizations/device/code
-   Body: { client_id, scope }
-   → device_code, user_code, verification_uri, expires_in, interval
-
-2. プロンプトを表示：
-   ! 一回限りのコード XXXX-XXXX をコピーしてください
-   - Enter を押して gitee.com/device をブラウザで開く
-
-3. ブラウザを開く / または --no-interaction モードで URL を印刷
-
-4. [5 秒ごとにポーリング]
-   POST /oauth/authorizations/device/token
-   Body: { client_id, device_code, grant_type="urn:ietf:params:oauth:grant-type:device_code" }
-   → access_token, token_type, scope, refresh_token
-
-5. access_token を ~/.gitee-cli/settings.json に書き込み（0600 権限）
-
-6. GET /user → 検証して "✓ Logged in as <username>" を表示
+1. 優先順位に従って候補トークンを解決（--token > GITEE_TOKEN > settings.json）
+2. `Authorization: token <PAT>` で GET /user → 検証しユーザー名を取得
+3. --token を明示した場合のみ ~/.gitee-cli/settings.json に保存（0600）
 ```
+> ⚠️ `--token` の値は `ps` やシェル履歴に残ります。使い捨て以外は `GITEE_TOKEN` を推奨します。
 
-**`gitee auth login` パラメータ：**
+**`gitee auth login` のフラグ：**
 
-| パラメータ | 説明 |
-|-----------|------|
-| `--scopes string` | リクエストする OAuth 権限スコープ（デフォルト：`user_info,projects,pull_requests,issues,notes,gists`） |
-| `--with-token` | 既存の Token を stdin から読み込んで保存（OAuth フローをスキップ） |
+| フラグ | 説明 |
+|--------|------|
+| `-t, --token string` | トークンを指定（検証成功後に保存） |
+
+> 旧設計の `--with-token`（stdin から読み込み）と `--scopes` は**存在しません**。
 
 ---
 
@@ -145,9 +158,11 @@ gitee completion bash|zsh|fish|powershell                  # シェル補完
 |-----------|------|-----------|
 | `--owner string` | ユーザー/組織名を指定 | 現在のログインユーザー |
 | `--visibility string` | `public`\|`private`\|`internal`\|`all` | `all` |
-| `--sort string` | `created`\|`updated`\|`pushed`\|`full_name` | `updated` |
-| `--direction string` | `asc`\|`desc` | `desc` |
-| `--type string` | `owner`\|`member`\|`all` | `owner` |
+| `--sort string` | `created`\|`updated`\|`pushed`\|`full_name`\|`stars` | `full_name` |
+| `--direction string` | `asc`\|`desc` | `asc` |
+| `-L, --limit int` | 返すリポジトリ数の上限 | `30` |
+
+> 旧稿の `--type` は存在しません。位置引数も受け付けません（`--repo` 指定か git remote から推定）。
 
 **`gitee repo create` パラメータ：**
 
@@ -195,9 +210,10 @@ gitee completion bash|zsh|fish|powershell                  # シェル補完
 | `#` | `number` | Issue 番号 |
 | `TITLE` | `title` | タイトル（60 文字で切り捨て） |
 | `STATE` | `state` | open/closed |
-| `LABELS` | `labels[].name` | ラベル（最大 3 個表示） |
-| `ASSIGNEE` | `assignee.login` | 担当者 |
-| `UPDATED` | `updated_at` | 更新日（相対時間） |
+| `LABELS` | `labels[].name` | ラベル（カンマ連結。無ければ `-`） |
+| `UPDATED` | `updated_at` | 更新日（`YYYY-MM-DD`） |
+
+> 表はこの 5 列のみで、`ASSIGNEE` 列はありません。
 
 **`gitee issue create` パラメータ：**
 
@@ -232,21 +248,21 @@ gitee completion bash|zsh|fish|powershell                  # シェル補完
 
 | パラメータ | API フィールド | デフォルト |
 |-----------|---------------|-----------|
-| `--state string` | `state` | `open` |
-| `--author string` | `author` | — |
+| `--state string` | `state` | `open`（`open`\|`closed`\|`merged`\|`all`） |
 | `--head string` | `head` | — |
 | `--base string` | `base` | — |
-| `--sort string` | `sort` | `created` |
-| `--direction string` | `direction` | `desc` |
+
+> 旧稿の `--author` / `--sort` / `--direction` は `pr list` に存在しません。
 
 **`gitee pr merge` パラメータ：**
 
-| パラメータ | API フィールド | 説明 |
-|-----------|---------------|------|
-| `--squash` | `merge_method=squash` | Squash マージ |
-| `--rebase` | `merge_method=rebase` | Rebase マージ |
-| `--merge-commit-message string` | `merge_commit_message` | マージコミットメッセージ |
-| `--delete-branch` | — | マージ後にソースブランチを削除 |
+| パラメータ | 説明 |
+|-----------|------|
+| `--squash` | Squash マージ（body `squash=true`） |
+| `--squash-message string` | Squash マージのコミットメッセージ（body `squash_message`） |
+
+> 旧設計の `--rebase` / `--merge-commit-message` / `--delete-branch` は**存在しません**。
+> CLI が実装しているのは squash と squash-message の 2 つだけです。
 
 ---
 
@@ -270,17 +286,20 @@ gitee completion bash|zsh|fish|powershell                  # シェル補完
 |-----------|---------------|------|
 | `--description string` | `description` | Gist の説明 |
 | `--public` | `public=true` | 公開に設定（デフォルト private） |
-| `--from-stdin` | — | stdin からコンテンツを読み取る（`--filename` と共に使用） |
-| `--filename string` | — | stdin モードでのファイル名 |
+| `--file stringArray` | `files` | `filename=content` または `filename=@path`、複数指定可 |
+| `--filename string` | — | stdin モードのファイル名（内容は stdin から） |
+| `-i, --interactive` | — | 対話編集モード |
+
+> `--from-stdin` はありません。stdin 入力は `--filename <name>`（任意で `--file` 併用）で行います。
 
 **`gitee gist list` 出力フィールド：**
 
 | フィールド | API フィールド | 説明 |
 |-----------|---------------|------|
 | `ID` | `id` | Gist ID |
-| `DESCRIPTION` | `description` | 説明（50 文字で切り捨て） |
-| `FILES` | `files` 数 | 含まれるファイル数 |
+| `DESCRIPTION` | `description` | 説明（50 文字で切り捨て、空なら `-`） |
 | `PUBLIC` | `public` | 公開かどうか |
+| `FILES` | `files` 数 | 含まれるファイル数 |
 | `UPDATED` | `updated_at` | 更新時刻 |
 
 ---
@@ -293,9 +312,9 @@ gitee completion bash|zsh|fish|powershell                  # シェル補完
 |-------------|-----------|------|
 | `gitee org list` | `GET /user/orgs` | ユーザーが属する組織を一覧表示 |
 | `gitee org view <org>` | `GET /orgs/{org}` | 組織詳細を表示 |
-| `gitee org member list <org>` | `GET /orgs/{org}/members` | 組織メンバーを一覧表示 |
-| `gitee org repo list <org>` | `GET /orgs/{org}/repos` | 組織のリポジトリを一覧表示 |
-| `gitee org issue list <org>` | `GET /orgs/{org}/issues` | 組織内の Issue を一覧表示 |
+| `gitee org members <org>` | `GET /orgs/{org}/members` | 組織メンバーを一覧表示 |
+| `gitee org repos <org>` | `GET /orgs/{org}/repos` | 組織のリポジトリを一覧表示 |
+| `gitee org issues <org>` | `GET /orgs/{org}/issues` | 組織内の Issue を一覧表示 |
 
 ---
 
@@ -308,6 +327,12 @@ gitee completion bash|zsh|fish|powershell                  # シェル補完
 | `gitee search repos <query>` | `GET /search/repositories` | リポジトリを検索 |
 | `gitee search issues <query>` | `GET /search/issues` | Issue を検索 |
 | `gitee search users <query>` | `GET /search/users` | ユーザーを検索 |
+| `gitee search code <query>` | `GET /search/code` | コード検索（この Gitee インスタンスでは 404、CLI が説明して非 0 終了） |
+| `gitee search commits <query>` | `GET /search/commits` | コミット検索（この Gitee インスタンスでは 404、CLI が説明して非 0 終了） |
+
+> ⚠️ 現状（v0.13.2 実測）：`search issues` / `search users` は動作。`search repos` はどのクエリでも
+> 空（上流 API の挙動変化、CLI は `(no results)` を表示）。`search code` / `search commits` は
+> このインスタンスでは利用できません。
 
 **`gitee search repos` パラメータ：**
 
@@ -408,11 +433,11 @@ gitee completion fish > ~/.config/fish/completions/gitee.fish
 - `view` コマンドは単一の JSON オブジェクトを返す
 - エラーメッセージは stderr に出力（パイプラに影響なし）
 
-### 4.3 CSV 形式（`--output csv`）
+### 4.3 CSV（**非対応**）
 
-- 最初の行は見出し（小文字フィールド名）
-- 値はダブルクォートでラップ、内部のダブルクォートは `""` でエスケープ
-- Excel/データベースへのインポートに適している
+`-o/--output` は `table` と `json` のみ受け付けます。それ以外の値（初期ドキュメントが
+謳っていた `csv` を含む）はエラー終了し、table へ黙ってフォールバックしません。
+表形式のデータが必要な場合は `-o json` + `jq` を使ってください（`gitee help formatting` 参照）。
 
 ### 4.4 ページネーション出力
 
@@ -425,27 +450,26 @@ gitee completion fish > ~/.config/fish/completions/gitee.fish
 
 ## 5. エラー処理仕様
 
-| シナリオ | 終了コード | stderr 出力 |
+| シナリオ | 終了コード | stderr 出力（`Error: <operation>: <detail>` 形式） |
 |---------|-----------|------------|
-| 未ログイン | 1 | `Error: not authenticated. Run 'gitee auth login' first.` |
-| ネットワークタイムアウト | 1 | `Error: failed to connect to gitee.com: <detail>` |
-| API が 401 を返す | 1 | `Error: authentication failed. Token may be expired. Run 'gitee auth refresh'.` |
-| API が 403 を返す | 1 | `Error: insufficient permissions: <message>` |
-| API が 404 を返す | 1 | `Error: not found: <resource>` |
-| API が 422 を返す | 1 | `Error: validation failed: <field errors>` |
-| API が 5xx を返す | 1 | `Error: Gitee server error (HTTP <code>): <message>` |
-| パラメータエラー | 2 | `Error: <description>` + 使用法ヘルプ |
-| Token 期限切れ | 1 | `gitee auth refresh` または `gitee auth login` をプロンプト |
-| 操作がキャンセルされた | 1 | `Aborted.` |
+| 未ログイン（ローカル判定・リクエストなし） | 1 | `not authenticated. Set GITEE_TOKEN or run 'gitee auth login'` |
+| ネットワークエラー / タイムアウト | 1 | `<transport error>`（例：`context deadline exceeded`、`connection refused`） |
+| API が 401 を返す | 1 | `HTTP 401: <Gitee message>`。body に message が無ければ `HTTP 401: authentication failed: run 'gitee auth login' or set GITEE_TOKEN` |
+| API が 403 を返す | 1 | `HTTP 403: <Gitee message>`、無ければ `HTTP 403: permission denied` |
+| API が 404 を返す | 1 | `HTTP 404: <Gitee message>`、無ければ `HTTP 404: resource does not exist or you lack read access` |
+| API が 422 を返す | 1 | `HTTP 422: <Gitee message>`、無ければ `HTTP 422: validation failed` |
+| API が 5xx を返す | 1 | `HTTP 5xx: <Gitee message>`、無ければ `internal server error` / `service unavailable` |
+| パラメータエラー | 1 | `unknown flag: --x` / `unknown command "x" for "gitee ..."`（Cobra の出力。`Error: ` 接頭辞付き） |
+| 操作キャンセル（確認で拒否） | 0 | `Cancelled` と表示し、何も実行しない |
 
 ---
 
 ## 6. 国際化（i18n）
 
-- デフォルト言語：中国語（`zh-CN`）
-- `--lang en` で英語出力に切り替え可能（または `GITEE_LANG=en`）
-- 言語パックは `internal/i18n/` ディレクトリにある（`zh_CN.go`、`en_US.go`）
-- エラーメッセージ、ヘルptest、コマンドの説明はすべて i18n をサポート
+- **未実装。** `--lang` も言語パックのディレクトリも実行時の言語切替もありません。
+  コマンドヘルプと出力は固定文言です。
+- 多言語対応はドキュメント層のみ：`README.md` / `README_en.md` / `README_ja.md` と
+  `docs/{zh,en,ja}/`。
 
 ---
 
@@ -454,10 +478,10 @@ gitee completion fish > ~/.config/fish/completions/gitee.fish
 | 要件 | 値 |
 |------|---|
 | 起動時間 | < 100ms（`gitee --version` コールドスタート） |
-| 初回コンパイル時間 | < 15s（Go 1.23 增量コンパイル） |
+| 初回コンパイル時間 | < 20s（Go 1.27 増分コンパイル、マシン依存） |
 | ネットワークタイムアウト | デフォルト 30s（`--timeout` でオーバーライド可能） |
-| リトライ戦略 | 5xx は自動リトライ 3 回（指数バックオフ、最大 8s） |
-| Token キャッシュ | ユーザー情報は 5 分間キャッシュ（`GET /user` の繰り返しを回避） |
+| リトライ戦略 | **GET のみ**：5xx/ネットワークエラーを 3 回リトライ（2s 起点、最大 8s）。書き込みは自動リトライしない |
+| ユーザー名の取得元 | `settings.json` の username を優先し、無ければ `GET /user` にフォールバック（TTL キャッシュなし） |
 | プロキシ | `HTTPS_PROXY` / `HTTP_PROXY` / `NO_PROXY` 環境変数を尊重 |
 | クロスプラットフォーム | Linux amd64/arm64、macOS amd64/arm64（M1）、Windows amd64 |
 | バイナリサイズ | < 20MB（`-ldflags="-s -w"` で圧縮有効） |
@@ -475,5 +499,5 @@ gitee completion fish > ~/.config/fish/completions/gitee.fish
 | 組織（Org） | 14 | 5 エンドポイント |
 | ユーザー（User） | 18 | auth/search 経由 |
 | 検索（Search） | 3 | 3 エンドポイント（全カバレッジ） |
-| Webhook | 6 | まだ未カバレッジ（v2.0 プラン） |
-| エンタープライズ（Enterprise） | 20+ | まだ未カバレッジ（v2.0 プラン） |
+| Webhook | 6 | 実装済み（create / list / view / edit / delete / ping） |
+| エンタープライズ（Enterprise） | 20+ | `--hostname` / `GITEE_HOSTNAME` でプライベートデプロイに対応 |

@@ -15,6 +15,7 @@ var editFlags struct {
 
 var editCmd = &cobra.Command{
 	Use:   "edit",
+	Args:  cobra.NoArgs,
 	Short: "Edit an existing label (rename or change color)",
 	Example: `  gitee label edit --repo owner/repo --name bug --color 00ff00
   gitee label edit -R owner/repo -n bug --new-name fixed-bug`,

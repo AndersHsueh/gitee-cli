@@ -14,6 +14,7 @@ var listFlags struct {
 
 var listCmd = &cobra.Command{
 	Use:   "list",
+	Args:  cobra.NoArgs,
 	Short: "List labels in a repository",
 	Example: `  gitee label list --repo owner/repo
   gitee label list -R owner/repo --limit 50`,

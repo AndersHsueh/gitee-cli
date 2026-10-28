@@ -1,11 +1,13 @@
 # gitee-cli
 
+[中文](README.md) | **English** | [日本語](README_ja.md)
+
 > Gitee Official CLI Tool — Complete Gitee operations in the terminal, equivalent to GitHub's `gh`
 
 [![Go Version](https://img.shields.io/badge/go-1.27+-blue.svg)](https://golang.org)
 [![License](https://img.shields.io/badge/license-MulanPSL--2.0-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey.svg)]()
-[![Version](https://img.shields.io/badge/version-v0.13.1-orange.svg)](https://gitee.com/andershsueh/gitee-cli/releases/latest)
+[![Version](https://img.shields.io/badge/version-v0.13.2-orange.svg)](https://gitee.com/andershsueh/gitee-cli/releases/latest)
 
 ---
 
@@ -15,15 +17,24 @@
 gitee auth        # Authentication (login / logout / status / token)               ✅ Implemented
 gitee issue       # Issue Management (list / create / view / edit / close / reopen / comment) ✅ Implemented
 gitee config      # Configuration (set / get / list / unset)                        ✅ Implemented
-gitee search      # Search repos / issues / users                                   ✅ Implemented
+gitee search      # Search issues / users (repos currently empty upstream; code/commits unsupported) ⚠️ Partial
 gitee completion  # Shell Completion (bash / zsh / fish / powershell)                ✅ Implemented
 gitee version     # Version Info                                                    ✅ Implemented
-gitee repo        # Repo Management (list / create / view / fork / edit / delete / clone / browse / branches) ✅ Implemented
+gitee repo        # Repo Management (list / create / view / fork / edit / delete / clone / browse / branches / star / watch / protect / file / commits / compare) ✅ Implemented
 gitee pr          # Pull Request (list / create / view / merge / review / comments / diff) ✅ Implemented
 gitee gist        # Gist (list / create / view / edit / delete / star / unstar)     ✅ Implemented
 gitee org         # Organization (list / view / members / repos / issues)           ✅ Implemented
 gitee api         # Direct Gitee API v5 calls (GET / POST / PUT / PATCH / DELETE)   ✅ Implemented
+gitee --agent-help # Structured, agent-targeted help (11 dimensions per command)    ✅ Implemented
 ```
+
+> `search` reality check (v0.13.2): `gitee search issues` / `gitee search users` work;
+> `gitee search repos` currently returns no results for every query (upstream API behavior)
+> and prints `(no results)`; `gitee search code` / `gitee search commits` return 404 on
+> this Gitee instance — the CLI explains this and exits non-zero instead of pretending success.
+
+> 📖 The full `--help` / `--agent-help` dual-surface design rationale lives in the
+> Chinese [README.md](README.md) and [docs/philosophy.md](docs/philosophy.md).
 
 ---
 
@@ -34,8 +45,7 @@ gitee api         # Direct Gitee API v5 calls (GET / POST / PUT / PATCH / DELETE
 ```bash
 git clone https://gitee.com/andershsueh/gitee-cli.git
 cd gitee-cli
-go build -o gitee ./cmd/gitee
-sudo mv gitee /usr/local/bin/
+go install ./cmd/gitee    # installs to $(go env GOPATH)/bin
 ```
 
 ### Authentication
@@ -63,45 +73,49 @@ export GITEE_TOKEN=your_access_token
 
 ## Installation
 
-**Homebrew (macOS / Linux)**
-
-```bash
-brew install gitee/tap/gitee
-```
-
 **Binary Download**
 
-Download binaries from [Releases](https://gitee.com/gitee/gitee-cli/releases):
+Download release archives from [Releases](https://gitee.com/andershsueh/gitee-cli/releases/latest):
 
 | Platform | Filename |
 |----------|----------|
-| Linux amd64 | `gitee-linux-amd64` |
-| Linux arm64 | `gitee-linux-arm64` |
-| macOS amd64 | `gitee-darwin-amd64` |
-| macOS arm64 (M1/M2) | `gitee-darwin-arm64` |
-| Windows amd64 | `gitee-windows-amd64.exe` |
+| Linux amd64 | `gitee-linux-amd64.tar.gz` |
+| Linux arm64 | `gitee-linux-arm64.tar.gz` |
+| macOS amd64 | `gitee-darwin-amd64.tar.gz` |
+| macOS arm64 (M1/M2) | `gitee-darwin-arm64.tar.gz` |
+| Windows amd64 | `gitee-windows-amd64.exe.zip` |
+
+Each archive contains the binary and `LICENSE`; `SHA256SUMS.txt` is published alongside
+them (`sha256sum -c SHA256SUMS.txt` on Linux/macOS, `certutil -hashfile <file> SHA256` on Windows).
 
 **Build from Source**
 
 ```bash
-git clone https://gitee.com/gitee/gitee-cli.git
+git clone https://gitee.com/andershsueh/gitee-cli.git
 cd gitee-cli
-go build -o gitee ./cmd/gitee
-sudo mv gitee /usr/local/bin/
+go install ./cmd/gitee    # installs to $(go env GOPATH)/bin
 ```
 
 ### Authentication
 
-```bash
-gitee auth login
-# Follow the prompts to complete authorization in browser, token auto-saved to ~/.gitee-cli/settings.json
-```
-
-Or use existing token:
+`gitee auth login` does **not** run an OAuth device flow or open a browser. It reads an
+existing personal access token (from `GITEE_TOKEN` or `~/.gitee-cli/settings.json`) and
+verifies it against `/user`:
 
 ```bash
-echo "your_access_token" | gitee auth login --with-token
+export GITEE_TOKEN=your_access_token   # recommended: not written to disk
+gitee auth status                      # verify the token
+
+# or persist a token to ~/.gitee-cli/settings.json (0600)
+gitee auth login --token your_access_token
 ```
+
+`gitee auth refresh` is currently a stub: it prints that token refresh is not supported and
+tells you to run `gitee auth login` again. It does not refresh anything and is **not** an OAuth
+`refresh_token` exchange.
+
+> ⚠️ A `--token` value is visible to other local users via `ps` and lands in shell history;
+> prefer `GITEE_TOKEN` outside one-off scripts.
 
 ---
 
@@ -164,7 +178,7 @@ gitee pr create --title "feat: add search functionality" --source feature/search
 gitee pr diff 18
 
 # Merge PR (squash)
-gitee pr merge 18 --squash --delete-branch
+gitee pr merge 18 --squash
 
 # Review PR
 gitee pr review 18 --approve
@@ -174,14 +188,17 @@ gitee pr review 18 --request-changes --body "Please add unit tests"
 ### Search
 
 ```bash
-# Search Go repos, sort by stars
-gitee search repos "web framework" --language go --sort stars
+# Search issues (works)
+gitee search issues "memory leak" --state open
 
-# Search users
+# Search users (works)
 gitee search users "john"
 
-# Search issues
-gitee search issues "memory leak" --state open
+# ⚠️ Upstream currently returns no results for repository search
+gitee search repos "web framework" --language go --sort stars   # ⚠️ currently returns no results
+
+# ⚠️ Code / commit search is NOT supported on this Gitee instance
+gitee search code "func main" --repo owner/repo   # ⚠️ 404 here, not supported (CLI explains, exits non-zero)
 ```
 
 ### Raw API Access
@@ -197,8 +214,8 @@ gitee api POST /user/repos --field name=test --field private=true
 # Paginate through all results
 gitee api GET /user/repos --paginate
 
-# View response headers
-gitee api GET /user --include
+# Inspect HTTP traffic
+gitee api GET /user --verbose
 ```
 
 ### Configuration
@@ -217,29 +234,41 @@ gitee config unset editor           # Delete config item
 
 | Option | Description | Default |
 |--------|-------------|---------|
-| `--token string` | Access Token (overrides config) | from config |
+| `-R, --repo string` | Target repository (owner/repo); inferred from git remote when omitted | auto |
+| `--token string` | Access Token (overrides config); prefer `GITEE_TOKEN` | from config |
 | `--hostname string` | Gitee instance address (enterprise) | `gitee.com` |
-| `-o, --output string` | Output format: `table` \| `json` \| `csv` | `table` |
+| `--api-url string` | API base URL (non-standard private deployments) | `https://{hostname}/api/v5` |
+| `-o, --output string` | Output format: `table` \| `json` (no CSV; invalid values error out) | `table` |
 | `-P, --paginate` | Auto-paginate, fetch all results | `false` |
-| `--limit int` | Max results | `0` (unlimited) |
-| `--page int` | Page number | `1` |
+| `--limit int` | Max results (total cap across pages with `--paginate`; `0` = unlimited) | `30` |
+| `--page int` | Page number (when `--paginate` is off) | `1` |
 | `--per-page int` | Items per page (max 100) | `30` |
+| `--agent-help` | Long, structured help for agents (selected commands) | `false` |
+| `--no-extensions` | Skip loading external extensions | `false` |
 | `--verbose` | Print HTTP request/response details | `false` |
 | `--no-color` | Disable ANSI colors | `false` |
-| `--no-interaction` | Silent mode (CI/CD) | `false` |
-| `--lang string` | UI language: `zh` \| `en` | `zh` |
-| `--timeout int` | Network timeout in seconds | `30` |
+| `--timeout int` | HTTP timeout in seconds | `30` |
 
-**Environment Variables:**
+**Environment Variables** (13 total; run `gitee help environment` for the full table):
 
 | Variable | Description |
 |----------|-------------|
-| `GITEE_TOKEN` | Access Token |
+| `GITEE_TOKEN` | Access Token (same as `--token`) |
 | `GITEE_HOSTNAME` | Gitee instance address |
-| `GITEE_OUTPUT` | Default output format |
-| `GITEE_API_URL` | API root URL |
-| `HTTPS_PROXY` | HTTPS proxy |
-| `NO_COLOR` | Disable colors (standard) |
+| `GITEE_API_URL` | API base URL |
+| `GITEE_OUTPUT` | Default output format `table` \| `json` |
+| `GITEE_VERBOSE` | Set to `1`/`true`/`yes`/`on` to print HTTP details to stderr |
+| `GITEE_TIMEOUT` | HTTP timeout in seconds |
+| `GITEE_LIMIT` | Default `--limit` value |
+| `GITEE_PAGINATE` | Set to `1`/`true`/`yes`/`on` to enable `--paginate` by default |
+| `GITEE_NO_EXTENSIONS` | Set to `1`/`true`/`yes`/`on` to skip extension loading |
+| `NO_COLOR` | Non-empty disables colors (standard variable) |
+| `GITEE_ALIASES_FILE` | Override aliases file (default `~/.gitee-cli/aliases.json`) |
+| `GITEE_EXT_DIR` | Override extension directory (default `~/.gitee-cli/extensions`) |
+| `BROWSER` | Browser binary used by `repo browse` |
+
+> Proxy support comes from Go's standard `net/http` variables (`HTTPS_PROXY` / `NO_PROXY`);
+> the CLI does not parse them itself.
 
 ---
 
@@ -303,10 +332,10 @@ See [`docs/en/developer-guide.md`](docs/en/developer-guide.md)
 
 ```bash
 # Clone
-git clone https://gitee.com/gitee/gitee-cli.git && cd gitee-cli
+git clone https://gitee.com/andershsueh/gitee-cli.git && cd gitee-cli
 
-# Build
-go build -o bin/gitee ./cmd/gitee
+# Build and install
+go install ./cmd/gitee
 
 # Test
 go test ./... -race -count=1
@@ -314,9 +343,12 @@ go test ./... -race -count=1
 # Lint
 golangci-lint run ./...
 
-# Functional test
+# Functional test (requires a built binary + auth)
 ./test/run.sh
 ```
+
+Exact test/command counts (packages, test files, test functions, agent-help coverage)
+are measured from the current tree — see the Chinese README for the published numbers.
 
 ### Project Documentation
 
@@ -331,7 +363,7 @@ golangci-lint run ./...
 ## References
 
 - [Gitee API v5 Documentation](https://gitee.com/api/v5/swagger)
-- [Gitee OAuth2 Documentation](https://gitee.com/api/v5/oauth_doc)
+- [Gitee personal access tokens](https://gitee.com/profile/personal_access_tokens)
 - [GitHub gh CLI](https://github.com/cli/cli) (design reference)
 - [GitLab glab CLI](https://github.com/gitlab-org/cli) (design reference)
 

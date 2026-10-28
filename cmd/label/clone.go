@@ -13,6 +13,7 @@ var cloneFlags struct {
 
 var cloneCmd = &cobra.Command{
 	Use:   "clone",
+	Args:  cobra.NoArgs,
 	Short: "Copy the entire label set from one repository to another",
 	Example: `  gitee label clone --source owner/template-repo --target owner/new-repo
   gitee label clone --source myorg/template --target myorg/new-app`,

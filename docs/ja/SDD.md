@@ -1,6 +1,13 @@
 # gitee-cli システム設計書（System Design Document）
 
-バージョン：1.0.0 | 技術スタック：Go 1.23+ / Cobra / Viper / Resty
+> ⚠️ **ステータス通知（v0.13.2、2026-10 メンテナンス）**：本文書は初期の設計ドラフトであり、
+> **未実装または古くなった**記述を含みます（Viper 設定、OAuth2 デバイスフロー、
+> `internal/auth` / `printer` / `i18n` モジュール、goreleaser リリースなど）。現在の実装と
+> 挙動はコード、`gitee --help`、`gitee <cmd> --agent-help`、`gitee help reference` が正です。
+> 現状と大きく乖離する章は本文中で修正しています。
+
+
+バージョン：1.0.0（設計ドラフト。現状は冒頭通知を参照）| 技術スタック：Go 1.27+ / Cobra / Resty / 手書き JSON 設定
 
 ---
 
@@ -8,14 +15,14 @@
 
 | コンポーネント | 技術選択 | バージョン | 選択理由 |
 |-------------|---------|-----------|---------|
-| 言語 | Go | 1.23+ | クロスコンパイルが簡単、静的バイナリ、成熟したエコシステム |
-| CLI フレームワーク | Cobra | v1.8+ | gh/glab と同じ、ヘルプ/補完/フラグ生成が優秀 |
-| 設定管理 | Viper | v1.18+ | YAML/ENV/フラグ三層設定、Cobra との完璧な統合 |
-| HTTP クライアント | resty | v2.x | チェーン可能 API、自动リトライ、リクエスト/レスポンスミドルウェア |
-| OAuth2 | `golang.org/x/oauth2` | latest | 標準実装、Device Flow をサポート |
-| テーブル出力 | `tabwriter` (stdlib) | — | 追加依存なし、軽量 |
-| カラー | `github.com/fatih/color` | v1.x | クロスプラットフォーム ANSI カラー、`NO_COLOR` をサポート |
-| テスト | `testing` + `testify` | v1.x | 標準 + アサーションライブラリ |
+| 言語 | Go | 1.27+（go.mod は `go 1.27.3`） | クロスコンパイルが簡単、静的バイナリ、成熟したエコシステム |
+| CLI フレームワーク | Cobra | v1.10 | gh/glab と同じ、ヘルプ/補完/フラグ生成が優秀 |
+| 設定管理 | 手書き JSON（`encoding/json`） | stdlib | 構造が単純で Viper 不要；アトミック書き込み + 0600 |
+| HTTP クライアント | resty | v2.17 | チェーン可能 API、自動リトライ、リクエスト/レスポンスミドルウェア |
+| 認証 | パーソナルアクセストークン（PAT） | — | ヘッダー `Authorization: token <PAT>`；**OAuth2 / x/oauth2 依存なし** |
+| テーブル出力 | `tabwriter` (stdlib) | — | `internal/output.NewTableWriter` に統一 |
+| カラー | `github.com/fatih/color` | v1.19 | クロスプラットフォーム ANSI カラー、`NO_COLOR` をサポート |
+| テスト | `testing` + `testify` | v1.12 | 標準 + アサーションライブラリ |
 | HTTP モック | `httptest` (stdlib) | — | 組み込みサーバー、ゼロ依存 |
 
 ---
@@ -95,32 +102,17 @@ gitee-cli/
 │   │   └── unset.go
 │   └── completion/
 │       └── shell.go
-├── internal/                     # 内部パッケージ（外部にエクスポートしない）
-│   ├── api/
-│   │   ├── client.go            # HTTP クライアントラッパー（resty + ミドルウェア）
-│   │   ├── endpoints.go         # API エンドポイントパス定数
-│   │   ├── errors.go            # API エラータイプ + HTTP ステータスコードマッピング
-│   │   └── pagination.go        # ページネーション Link Header 解析
-│   ├── auth/
-│   │   ├── token.go             # 認証情報読み書き（settings.json）
-│   │   ├── oauth.go             # OAuth2 Device Flow 実装
-│   │   └── config.go            # Token ストレージ設定
-│   ├── config/
-│   │   ├── config.go            # Viper 設定ラッパー
-│   │   └── migrate.go           # 設定移行（バージョン互換性）
-│   ├── printer/
-│   │   ├── printer.go           # Printer インターフェース定義
-│   │   ├── table.go             # tabwriter テーブル出力
-│   │   ├── json.go              # JSON 整形出力
-│   │   └── csv.go               # CSV 出力
-│   ├── terminal/
-│   │   ├── prompt.go            # インタラクティブプロンプト（確認/質問）
-│   │   ├── spinner.go           # ローディングアニメーション
-│   │   └── browser.go           # ブラウザ開く（クロスプラットフォーム）
-│   └── i18n/
-│       ├── i18n.go              # 翻訳関数 T()
-│       ├── zh_CN.go             # 中国語言語パック
-│       └── en_US.go             # 英語言語パック
+├── internal/                     # 内部パッケージ（非公開）
+│   ├── api/                     # HTTP クライアント（resty）：client / endpoints / errors / pagination
+│   ├── alias/                   # ユーザー別名の解決と保存
+│   ├── atomicfile/              # アトミックなファイル書き込み（temp + chmod + rename）
+│   ├── cmdkit/                  # リストコマンド骨格（RunList）と共通オプション
+│   ├── config/                  # 手書き JSON 設定（settings.json、0600 / 0700）
+│   ├── domain/                  # コマンド横断の業務ロジック（label / milestone / notification / webhook）
+│   ├── extension/               # 動的拡張の読み込みと保存
+│   ├── output/                  # 統一 tabwriter（NewTableWriter）と PrintJSON
+│   ├── terminal/                # ターミナル対話（prompt）
+│   └── utils/                   # 共通ユーティリティ（repo 解決、flag、git、検証）
 ├── pkg/                         # 再利用可能公開パッケージ
 │   └── types/
 │       ├── repo.go              # Repository タイプ
@@ -134,9 +126,27 @@ gitee-cli/
 │   └── main.go                  # プログラムエントリ
 ├── go.mod
 ├── go.sum
-├── Makefile
-├── .goreleaser.toml
+├── scripts/                      # ci.sh / release.sh / publish-release.sh
 └── README.md
+```
+
+---
+
+### 2.1 実際のディレクトリ構造（v0.13.x）
+
+上記の設計稿のツリーは**現在のコードと差異があります**。以下が実測構造です
+（`git ls-files` / `ls` で再現可能）：
+
+```
+cmd/            # グループごとに 1 パッケージ：agent alias api auth completion config extension
+                # gist issue label milestone notification org pr release repo search ssh-key
+                # status user webhook help_topics + root.go / runtime.go / cmdkit ヘルパー
+internal/       # api alias atomicfile cmdkit config domain extension output terminal utils
+                # （auth/、printer/、i18n/ は存在しない。認証は cmd/auth + internal/config）
+pkg/types/      # API データモデル
+docs/           # 本設計書 + philosophy.md + 多言語 README
+scripts/        # ci.sh / release.sh / publish-release.sh（Makefile / goreleaser はない）
+test/           # 機能テスト bash スクリプト + ドキュメント検証スクリプト
 ```
 
 ---
@@ -216,40 +226,32 @@ client.SetTimeout(time.Duration(timeout) * time.Second)
 
 ---
 
-### 3.2 認証モジュール（`internal/auth/`）
+### 3.2 認証モジュール（`cmd/auth/` + `internal/config/`）
 
-**認証情報保存場所：**
+> 設計稿は `internal/auth/` + OAuth2 Device Flow としていましたが、**そのパッケージは存在せず
+> OAuth2 も使いません**。認証 = パーソナルアクセストークン（PAT）：解決（`--token` >
+> `GITEE_TOKEN` > `settings.json`）→ `GET /user` で検証 → 必要なら `settings.json` へ保存。
+
+**資格情報の保存先：**
 
 ```
 ~/.gitee-cli/
-└── settings.json      # すべてのユーザー設定と認証情報を統合保存（ファイル権限 0600）
+└── settings.json      # 設定と資格情報を一元管理（ファイル 0600、ディレクトリ 0700）
 ```
 
-> 旧パス `~/.config/gitee/` は廃止、ツール起動時に自動移行。
-
-**`~/.gitee-cli/settings.json` 完全構造：**
+**`~/.gitee-cli/settings.json` の実際の構造（`internal/config/config.go` 準拠）：**
 
 ```json
 {
   "git": {
-    "user": {
-      "name": "<your-name>",
-      "email": "<your-email>"
-    }
+    "user": { "name": "<your-name>", "email": "<your-email>" }
   },
   "hosts": {
     "gitee.com": {
       "token": "<your-access-token>",
       "username": "<your-username>",
       "protocol": "https",
-      "scopes": [
-        "user_info",
-        "projects",
-        "pull_requests",
-        "issues",
-        "gists"
-      ],
-      "expires_at": ""
+      "scopes": ["user_info", "projects", "pull_requests", "issues", "gists"]
     }
   },
   "preferences": {
@@ -257,74 +259,43 @@ client.SetTimeout(time.Duration(timeout) * time.Second)
     "editor": "",
     "browser": "",
     "prompt": "enabled",
-    "pager": ""
+    "pager": "",
+    "protocol": "",
+    "active_host": "gitee.com"
   }
 }
 ```
+
+> 注：`expires_at` は `HostConfig` に存在せず、ファイルに書いても無視されます。
 
 > ⚠️ **セキュリティ注意**
-> - ファイル作成時に必須権限 `0600` を強制（所有者の読み書きのみ）
-> - `token` フィールドは Gitee Access Token、**絶対にバージョン管理にコミットしない**
-> - `~/.gitee-cli/` を `~/.gitignore_global` に追加
-> - CI/CD で使用する場合は、環境変数 `GITEE_TOKEN` で注入、ファイルには書き込まない
+> - 作成時は `0600`。読み込み時に権限が広すぎる場合は自動で絞り込み警告を出します
+> - `token` は Gitee のアクセストークンであり、**絶対にコミットしない**こと
+> - CI/CD では `GITEE_TOKEN` を環境変数で注入し、ファイルに書かない
+> - `--token` は `ps` とシェル履歴に残るため、使い捨て以外は `GITEE_TOKEN` を推奨
 
-**マルチホストサポート（エンタープライズプライベートデプロイ）：**
-
-```json
-{
-  "hosts": {
-    "gitee.com": {
-      "token": "<public-token>",
-      "username": "<public-username>"
-    },
-    "your-company.gitee.com": {
-      "token": "<enterprise-token>",
-      "username": "<enterprise-username>",
-      "protocol": "ssh"
-    }
-  }
-}
-```
-
-**`git` フィールドの説明：**
-
-`settings.json` の `git.user` はシステムの `git config --global` と同期を維持し、コミット作成時に自動的に署名情報を入力するために使用されます。ツールの初回実行時にグローバル git 設定を読み取ってこのフィールドに書き込みます。`gitee config` コマンドで個別に変更することもできます。
-
-**OAuth2 Device Flow シーケンス：**
+**認証シーケンス（実際の実装）：**
 
 ```
-Client (gitee-cli)          Gitee Server           User Browser
-      |                          |                        |
-      |  POST /oauth/device/code |                        |
-      |  {client_id, scope}      |                        |
-      |------------------------->|                        |
-      |  {device_code,           |                        |
-      |   user_code: "ABCD-1234" |                        |
-      |   verification_uri,      |                        |
-      |   expires_in: 900,       |                        |
-      |   interval: 5}           |                        |
-      |<-------------------------|                        |
-      |                          |                        |
-      |  user_code をユーザーに表示  |
-      |  ブラウザを開く            |                        |
-      |-------------------------------------------------------->|
-      |                          |    ユーザーが ABCD-1234 を入力   |
-      |                          |<------------------------|
-      |                          |    ユーザーが授權をクリック   |
-      |                          |<------------------------|
-      |                          |                        |
-      |  [5 秒ごとにポーリング]     |                        |
-      |  POST /oauth/device/token |                        |
-      |  {device_code, grant_type}                        |
-      |------------------------->|                        |
-      |  {access_token,          |                        |
-      |   token_type: "bearer"   |                        |
-      |   scope, refresh_token}  |                        |
-      |<-------------------------|                        |
-      |                          |                        |
-      |  settings.json に書き込み  |                        |
-      |  GET /user → ユーザー名を検証 |                        |
+Client (gitee-cli)                 Gitee API v5
+      |                                  |
+      | 1. トークンの優先順位を解決      |
+      |    --token > GITEE_TOKEN > settings.json
+      |                                  |
+      | 2. GET /user                     |
+      |    Authorization: token <PAT>    |
+      |--------------------------------->|
+      |    200 {login, id, ...}          |
+      |<---------------------------------|
+      |                                  |
+      | 3. --token 明示時のみ            |
+      |    settings.json ← token (0600)  |
+      |    ディレクトリ 0700 / ファイル 0600
 ```
+
+`gitee auth refresh` はスタブ実装で、「Token refresh is not yet supported. Please
+re-authenticate with 'gitee auth login'.」と表示して終了コード 0 になります。更新も再検証もせず、
+OAuth の `refresh_token` 交換でもありません。
 
 ---
 
@@ -383,36 +354,18 @@ func SyncGitConfig() {
 
 ---
 
-### 3.4 出力モジュール（`internal/printer/`）
+### 3.4 出力モジュール（`internal/output/`）
 
-**Printer インターフェース：**
+> 設計稿は `internal/printer/` + `Printer` インターフェースでしたが、**そのパッケージは
+> 存在しません**。現状：`internal/output.NewTableWriter()` が tabwriter を生成し、
+> `output.PrintJSON()` が JSON を出力。`-o` は `table` / `json` のみ
+> （**csv なし**、不正値はエラー終了）。
 
-```go
-type Printer interface {
-    PrintHeader(fields ...string)
-    PrintRow(values ...string)
-    PrintFooter(msg string)
-    Flush() error
-}
-
-// --output フラグに基づくファクトリメソッド
-func New(format string, w io.Writer) Printer {
-    switch format {
-    case "json":
-        return &JsonPrinter{w: w}
-    case "csv":
-        return &CsvPrinter{w: w}
-    default:
-        return &TablePrinter{w: tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)}
-    }
-}
-```
-
-**テーブル出力ルール：**
-- 表頭：`color.New(color.Bold).Sprint(field)`
-- 時間フィールド：`humanize.Time(t)` で相対時間を出力
-- 長い文字列：60 文字で切り捨てて `…` を追加
-- ターミナル幅を自動検出（`term.GetSize()`）
+**テーブル出力の規則：**
+- ヘッダーは太字（`fatih/color`、`NO_COLOR` / `--no-color` でプレーンテキストへ）
+- 時刻フィールドは安定した形式で表示（一部は相対時刻）
+- 長い文字列は `…` で切り詰め（`utils.Truncate`）
+- `text/tabwriter` で整列、パイプ出力時はプレーンテキストへ縮退
 
 ---
 
@@ -616,77 +569,41 @@ type User struct {
 
 ## 5. ビルドとリリース
 
-### 5.1 Makefile
+> 設計稿は Makefile + `.goreleaser.toml` でしたが、**どちらも存在しません**。リリースは
+> shell スクリプト + 2 つの CI バックエンド（GitHub Actions / Gitee Go）が `scripts/ci.sh` を
+> 共有する構成です。
 
-```makefile
-.PHONY: build test lint install cross-build release clean
+### 5.1 ビルドとローカル開発
 
-BINARY_NAME := gitee
-VERSION     := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
-LDFLAGS     := -ldflags="-s -w -X main.version=$(VERSION)"
+```bash
+# $GOPATH/bin へインストール（日常開発はこちら）
+go install ./cmd/gitee
 
-build:
-	go build $(LDFLAGS) -o bin/$(BINARY_NAME) ./cmd/gitee
+# 一度きりのローカルビルド（PATH には入らない）
+go build -o gitee ./cmd/gitee
 
-test:
-	go test ./... -v -count=1 -race
+# CI と完全に同じゲート
+bash scripts/ci.sh     # gofmt / vet / golangci-lint / build / test -race / クロスビルド / govulncheck
 
-test-cover:
-	go test ./... -coverprofile=coverage.out
-	go tool cover -html=coverage.out -o coverage.html
-
-lint:
-	golangci-lint run ./...
-
-install:
-	go install $(LDFLAGS) ./cmd/gitee
-
-cross-build:
-	GOOS=linux   GOARCH=amd64  go build $(LDFLAGS) -o dist/gitee-linux-amd64 ./cmd/gitee
-	GOOS=linux   GOARCH=arm64  go build $(LDFLAGS) -o dist/gitee-linux-arm64 ./cmd/gitee
-	GOOS=darwin  GOARCH=amd64  go build $(LDFLAGS) -o dist/gitee-darwin-amd64 ./cmd/gitee
-	GOOS=darwin  GOARCH=arm64  go build $(LDFLAGS) -o dist/gitee-darwin-arm64 ./cmd/gitee
-	GOOS=windows GOARCH=amd64  go build $(LDFLAGS) -o dist/gitee-windows-amd64.exe ./cmd/gitee
-
-release:
-	goreleaser release --snapshot --clean
-
-clean:
-	rm -rf bin/ dist/ coverage.out coverage.html
+# 手動クロスコンパイル
+GOOS=linux   GOARCH=amd64 go build -o dist/gitee-linux-amd64 ./cmd/gitee
+GOOS=windows GOARCH=amd64 go build -o dist/gitee-windows-amd64.exe ./cmd/gitee
 ```
 
-### 5.2 `.goreleaser.toml` コア設定
+### 5.2 リリースチェーン
 
-```toml
-project_name = "gitee-cli"
-
-builds:
-  - id: gitee
-    main: ./cmd/gitee
-    binary: gitee
-    env:
-      - CGO_ENABLED=0
-    goos: [linux, darwin, windows]
-    goarch: [amd64, arm64]
-    ldflags:
-      - "-s -w -X main.version={{.Version}}"
-
-archives:
-  - format: tar.gz
-    format_overrides:
-      - goos: windows
-        format: zip
-
-checksum:
-  name_template: "checksums.txt"
-
-brews:
-  - name: gitee
-    homepage: "https://gitee.com/gitee-cli"
-    tap:
-      owner: gitee
-      name: homebrew-tap
+```bash
+git tag -a v0.13.2 -m v0.13.2 && git push origin v0.13.2
+GITEE_TOKEN=... bash scripts/release.sh --publish
 ```
+
+- `scripts/release.sh`：5 プラットフォームの成果物（`gitee-<os>-<arch>.tar.gz`、Windows は
+  `.zip`）をビルドし `SHA256SUMS.txt` を生成、`publish-release.sh` で Gitee release を作成し
+  アセットをアップロード（冪等）
+- `scripts/publish-release.sh`：「release 作成 + アセットアップロード」のみを担当し、
+  `gitee release create/upload` を再利用
+- バージョンは ldflags で注入、README バッジは `TestReadmeVersionMatchesVersionVar` が固定
+- Homebrew tap なし、goreleaser なし
 
 ---
 
@@ -697,8 +614,8 @@ brews:
 | 設定ファイル権限 | `~/.gitee-cli/settings.json` は作成時に必須の `0600` を設定（`os.OpenFile(..., 0600)`） |
 | Token がログに記録されない | `--verbose` モードでは Authorization ヘッダーを `token ***` としてサニタイズ出力 |
 | Token がコミットされない | `.gitignore_global` で `~/.gitee-cli/` を除外；ツール初期化時にユーザーにプロンプト |
-| HTTPS を強制 | デフォルトで有効、`--insecure` は明示的に設定する必要がある |
-| 証明書検証 | システムの CA バンドルを使用、`--insecure` でスキップ |
+| HTTPS | `https://` のエンドポイントのみ使用。TLS 検証を飛ばす `--insecure` は存在しない |
+| 証明書検証 | システムの CA バンドル + 標準 `net/http` 検証 |
 | 入力検証 | リポジトリ名、ユーザー名は正規表現 `^[a-zA-Z0-9_.-]+$` で検証 |
 | CI/CD セキュリティ | Token は環境変数 `GITEE_TOKEN` で注入、ファイルには依存しない |
 | 依存関係セキュリティ | CI で `govulncheck ./...` を実行 |

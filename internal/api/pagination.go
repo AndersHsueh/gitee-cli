@@ -111,6 +111,16 @@ func FetchAllPages[T any](ctx context.Context, client *Client, basePath string, 
 // "listing issues assigned to you"). It is purely for log message clarity.
 func FetchListOrAll[T any](ctx context.Context, client *Client, basePath string, paginate bool, perPage, limit, page int, errCtx string) ([]T, error) {
 	perPage = clampPerPage(perPage)
+	// --limit is "maximum results". Without --paginate the user still
+	// expects at most `limit` rows, so never ask the API for more than
+	// that (and truncate defensively in case the server ignores the
+	// small per_page). Keeping this here — at the single shared entry
+	// point for paginated reads — means every list path (cmdkit's
+	// RunList, status, repo commits, hand-rolled callers) honors the
+	// same contract instead of each caller re-implementing it.
+	if !paginate && limit > 0 && limit < perPage {
+		perPage = limit
+	}
 	var out []T
 	if paginate {
 		if err := FetchAllPages(ctx, client, basePath, perPage, limit, &out); err != nil {
@@ -129,6 +139,9 @@ func FetchListOrAll[T any](ctx context.Context, client *Client, basePath string,
 			return nil, nil // empty list is a valid answer
 		}
 		return nil, fmt.Errorf("%s: %w", errCtx, err)
+	}
+	if limit > 0 && len(out) > limit {
+		out = out[:limit]
 	}
 	return out, nil
 }

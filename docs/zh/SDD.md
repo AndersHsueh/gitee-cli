@@ -1,6 +1,12 @@
 # gitee-cli 系统设计文档（System Design Document）
 
-版本：1.0.0 | 技术栈：Go 1.23+ / Cobra / Viper / Resty
+> ⚠️ **状态提示（v0.13.2，2026-10 维护轮）**：本文档是早期设计稿，部分内容**未实现或已过期**
+> （例如 Viper 配置、OAuth2 设备流、`internal/auth` / `printer` / `i18n` 模块、goreleaser 发布链）。
+> 当前实现与行为以代码、`gitee --help`、`gitee <cmd> --agent-help`、`gitee help reference`
+> 为准；与现状差异最大的章节已在文中修正。
+
+
+版本：1.0.0（设计稿；现状修订见页首横幅）| 技术栈：Go 1.27+ / Cobra / Resty / 手写 JSON 配置
 
 ---
 
@@ -8,14 +14,14 @@
 
 | 组件 | 技术选型 | 版本 | 选型理由 |
 |------|---------|------|---------|
-| 语言 | Go | 1.23+ | 交叉编译简单，二进制无依赖，生态成熟 |
-| CLI 框架 | Cobra | v1.8+ | gh/glab 同款，帮助/补全/Flag 生成完善 |
-| 配置管理 | Viper | v1.18+ | YAML/ENV/Flag 三层配置，与 Cobra 完美集成 |
-| HTTP 客户端 | resty | v2.x | 链式 API、自动重试、请求/响应中间件 |
-| OAuth2 | `golang.org/x/oauth2` | latest | 标准实现，支持 Device Flow |
-| 输出表格 | `tabwriter` (stdlib) | — | 无额外依赖，轻量 |
-| 颜色 | `github.com/fatih/color` | v1.x | 跨平台 ANSI 颜色，支持 `NO_COLOR` |
-| 测试 | `testing` + `testify` | v1.x | 标准 + 断言库 |
+| 语言 | Go | 1.27+（go.mod `go 1.27.3`） | 交叉编译简单，二进制无依赖，生态成熟 |
+| CLI 框架 | Cobra | v1.10 | gh/glab 同款，帮助/补全/Flag 生成完善 |
+| 配置管理 | 手写 JSON（`encoding/json`） | stdlib | 结构简单，避免为几层配置引入 Viper；原子写 + 0600 |
+| HTTP 客户端 | resty | v2.17 | 链式 API、自动重试、请求/响应中间件 |
+| 认证 | 个人访问令牌（PAT） | — | 请求头 `Authorization: token <PAT>`；**无 OAuth2 / x/oauth2 依赖** |
+| 输出表格 | `tabwriter` (stdlib) | — | 统一走 `internal/output.NewTableWriter` |
+| 颜色 | `github.com/fatih/color` | v1.19 | 跨平台 ANSI 颜色，支持 `NO_COLOR` |
+| 测试 | `testing` + `testify` | v1.12 | 标准 + 断言库 |
 | Mock HTTP | `httptest` (stdlib) | — | 内置服务器，零依赖 |
 
 ---
@@ -96,31 +102,16 @@ gitee-cli/
 │   └── completion/
 │       └── shell.go
 ├── internal/                     # 内部包（不对外暴露）
-│   ├── api/
-│   │   ├── client.go            # HTTP 客户端封装（resty + 中间件）
-│   │   ├── endpoints.go         # API 端点路径常量
-│   │   ├── errors.go            # API 错误类型 + HTTP 状态码映射
-│   │   └── pagination.go        # 分页 Link Header 解析
-│   ├── auth/
-│   │   ├── token.go             # 凭证读写（settings.json）
-│   │   ├── oauth.go             # OAuth2 Device Flow 实现
-│   │   └── config.go            # Token 存储配置
-│   ├── config/
-│   │   ├── config.go            # Viper 配置封装
-│   │   └── migrate.go           # 配置迁移（版本兼容）
-│   ├── printer/
-│   │   ├── printer.go           # Printer 接口定义
-│   │   ├── table.go             # tabwriter 表格输出
-│   │   ├── json.go              # JSON 美化输出
-│   │   └── csv.go               # CSV 输出
-│   ├── terminal/
-│   │   ├── prompt.go            # 交互式提示（询问/确认）
-│   │   ├── spinner.go           # 加载动画
-│   │   └── browser.go           # 浏览器打开（跨平台）
-│   └── i18n/
-│       ├── i18n.go              # 翻译函数 T()
-│       ├── zh_CN.go             # 中文语言包
-│       └── en_US.go             # 英文语言包
+│   ├── api/                     # HTTP 客户端（resty）：client / endpoints / errors / pagination
+│   ├── alias/                   # 用户别名解析与存储
+│   ├── atomicfile/              # 原子文件写（temp + chmod + rename）
+│   ├── cmdkit/                  # 列表命令骨架（RunList）与通用选项
+│   ├── config/                  # 手写 JSON 配置（settings.json，0600 / 0700）
+│   ├── domain/                  # 跨命令共享业务逻辑（label / milestone / notification / webhook）
+│   ├── extension/               # 动态扩展加载与存储
+│   ├── output/                  # 统一 tabwriter（NewTableWriter）与 PrintJSON
+│   ├── terminal/                # 终端交互（prompt）
+│   └── utils/                   # 通用工具（repo 解析、flag、git、校验）
 ├── pkg/                         # 可复用公开包
 │   └── types/
 │       ├── repo.go              # Repository 类型
@@ -134,9 +125,26 @@ gitee-cli/
 │   └── main.go                  # 程序入口
 ├── go.mod
 ├── go.sum
-├── Makefile
-├── .goreleaser.toml
+├── scripts/                      # ci.sh / release.sh / publish-release.sh
 └── README.md
+```
+
+---
+
+### 2.1 实际目录结构（v0.13.x 现状）
+
+上面的设计稿目录与当前代码**有差异**，以下为实测结构（`git ls-files` / `ls` 可复现）：
+
+```
+cmd/            # 每组一个包：agent alias api auth completion config extension gist issue
+                # label milestone notification org pr release repo search ssh-key status
+                # user webhook help_topics + root.go / runtime.go / cmdkit 辅助
+internal/       # api alias atomicfile cmdkit config domain extension output terminal utils
+                # （没有 auth/、printer/、i18n/；认证逻辑在 cmd/auth + internal/config）
+pkg/types/      # API 数据模型
+docs/           # 本设计文档 + philosophy.md + 多语 README
+scripts/        # ci.sh / release.sh / publish-release.sh（发布全靠脚本，无 Makefile/goreleaser）
+test/           # 功能测试 bash 脚本 + 校验脚本
 ```
 
 ---
@@ -216,40 +224,32 @@ client.SetTimeout(time.Duration(timeout) * time.Second)
 
 ---
 
-### 3.2 认证模块（`internal/auth/`）
+### 3.2 认证模块（`cmd/auth/` + `internal/config/`）
+
+> 设计稿原写作 `internal/auth/` + OAuth2 Device Flow；**实际没有该包，也没有 OAuth2**。
+> 认证 = 个人访问令牌（PAT）：读取（`--token` > `GITEE_TOKEN` > `settings.json`）→
+> `GET /user` 校验 → 可选写回 `settings.json`。
 
 **凭证存储位置：**
 
 ```
 ~/.gitee-cli/
-└── settings.json      # 统一存放所有用户设置与凭证（文件权限 0600）
+└── settings.json      # 统一存放所有用户设置与凭证（文件权限 0600，目录 0700）
 ```
 
-> 旧路径 `~/.config/gitee/` 已废弃，工具启动时自动迁移。
-
-**`~/.gitee-cli/settings.json` 完整结构：**
+**`~/.gitee-cli/settings.json` 实际结构（字段以 `internal/config/config.go` 为准）：**
 
 ```json
 {
   "git": {
-    "user": {
-      "name": "<your-name>",
-      "email": "<your-email>"
-    }
+    "user": { "name": "<your-name>", "email": "<your-email>" }
   },
   "hosts": {
     "gitee.com": {
       "token": "<your-access-token>",
       "username": "<your-username>",
       "protocol": "https",
-      "scopes": [
-        "user_info",
-        "projects",
-        "pull_requests",
-        "issues",
-        "gists"
-      ],
-      "expires_at": ""
+      "scopes": ["user_info", "projects", "pull_requests", "issues", "gists"]
     }
   },
   "preferences": {
@@ -257,74 +257,41 @@ client.SetTimeout(time.Duration(timeout) * time.Second)
     "editor": "",
     "browser": "",
     "prompt": "enabled",
-    "pager": ""
+    "pager": "",
+    "protocol": "",
+    "active_host": "gitee.com"
   }
 }
 ```
+
+> 注：`expires_at` 不在 `HostConfig` 结构体中，写进文件会被忽略。
 
 > ⚠️ **安全须知**
-> - 文件创建时强制设置权限 `0600`（仅属主可读写）
+> - 文件创建时强制 `0600`（仅属主可读写）；读取时若发现权限过宽会自动收紧并告警
 > - `token` 字段为 Gitee Access Token，**绝对不可提交到版本控制**
-> - 请将 `~/.gitee-cli/` 加入 `~/.gitignore_global`
-> - 如需在 CI/CD 中使用，应通过环境变量 `GITEE_TOKEN` 注入，而非写入文件
+> - CI/CD 中通过环境变量 `GITEE_TOKEN` 注入，而非写入文件
+> - `--token` 会出现在 `ps` 与 shell history，一次性脚本之外不建议使用
 
-**多 Host 支持（企业私有部署）：**
-
-```json
-{
-  "hosts": {
-    "gitee.com": {
-      "token": "<public-token>",
-      "username": "<public-username>"
-    },
-    "your-company.gitee.com": {
-      "token": "<enterprise-token>",
-      "username": "<enterprise-username>",
-      "protocol": "ssh"
-    }
-  }
-}
-```
-
-**`git` 字段说明：**
-
-`settings.json` 中的 `git.user` 与系统 `git config --global` 保持同步，用于在创建 commit 时自动填充署名信息。工具首次运行时会读取全局 git 配置并写入此字段；也可通过 `gitee config` 命令单独修改。
-
-**OAuth2 Device Flow 时序：**
+**认证时序（真实实现）：**
 
 ```
-Client (gitee-cli)          Gitee Server           User Browser
-      |                          |                        |
-      |  POST /oauth/device/code |                        |
-      |  {client_id, scope}      |                        |
-      |------------------------->|                        |
-      |  {device_code,           |                        |
-      |   user_code: "ABCD-1234" |                        |
-      |   verification_uri,      |                        |
-      |   expires_in: 900,       |                        |
-      |   interval: 5}           |                        |
-      |<-------------------------|                        |
-      |                          |                        |
-      | 显示 user_code 给用户     |                        |
-      | 打开浏览器                |                        |
-      |-------------------------------------------------------->|
-      |                          |    用户输入 ABCD-1234   |
-      |                          |<------------------------|
-      |                          |    用户点击授权          |
-      |                          |<------------------------|
-      |                          |                        |
-      |  [轮询每 5s]              |                        |
-      |  POST /oauth/device/token|                        |
-      |  {device_code, grant_type}                        |
-      |------------------------->|                        |
-      |  {access_token,          |                        |
-      |   token_type: "bearer"   |                        |
-      |   scope, refresh_token}  |                        |
-      |<-------------------------|                        |
-      |                          |                        |
-      | 写入 settings.json       |                        |
-      | GET /user → 验证用户名   |                        |
+Client (gitee-cli)                 Gitee API v5
+      |                                  |
+      | 1. 解析 token 优先级              |
+      |    --token > GITEE_TOKEN > settings.json
+      |                                  |
+      | 2. GET /user                     |
+      |    Authorization: token <PAT>    |
+      |--------------------------------->|
+      |    200 {login, id, ...}          |
+      |<---------------------------------|
+      |                                  |
+      | 3. 仅 --token 显式传入时          |
+      |    settings.json ← token (0600)  |
+      |    目录 0700 / 文件 0600          |
 ```
+
+`gitee auth refresh` 是占位实现：打印「Token refresh is not yet supported. Please re-authenticate with 'gitee auth login'.」后退出 0，不刷新也不重新校验；**不是** OAuth `refresh_token` 交换。
 
 ---
 
@@ -383,36 +350,17 @@ func SyncGitConfig() {
 
 ---
 
-### 3.4 输出模块（`internal/printer/`）
+### 3.4 输出模块（`internal/output/`）
 
-**Printer 接口：**
-
-```go
-type Printer interface {
-    PrintHeader(fields ...string)
-    PrintRow(values ...string)
-    PrintFooter(msg string)
-    Flush() error
-}
-
-// 根据 --output flag 工厂方法
-func New(format string, w io.Writer) Printer {
-    switch format {
-    case "json":
-        return &JsonPrinter{w: w}
-    case "csv":
-        return &CsvPrinter{w: w}
-    default:
-        return &TablePrinter{w: tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)}
-    }
-}
-```
+> 设计稿原写作 `internal/printer/` + `Printer` 接口；**实际没有该包**。现状：
+> `internal/output.NewTableWriter()` 统一创建 tabwriter，`output.PrintJSON()` 输出 JSON；
+> `-o` 只支持 `table` / `json`（**没有 csv**，非法值报错退出）。
 
 **表格输出规则：**
-- 表头：`color.New(color.Bold).Sprint(field)`
-- 时间字段：调用 `humanize.Time(t)` 输出相对时间
-- 长字符串：超过 60 字符截断并添加 `…`
-- 自动检测终端宽度（`term.GetSize()`）
+- 表头加粗（`fatih/color`，`NO_COLOR` / `--no-color` 时降级为纯文本）
+- 时间字段按格式显示（部分是相对时间）
+- 长字符串截断并添加 `…`（`utils.Truncate`）
+- 统一 `text/tabwriter` 对齐，管道输出时自动退化为纯文本
 
 ---
 
@@ -616,77 +564,38 @@ type User struct {
 
 ## 5. 构建与发布
 
-### 5.1 Makefile
+> 设计稿原写作 Makefile + `.goreleaser.toml`；**实际两者都不存在**，发布链路是 shell 脚本 +
+> 两个 CI 后端（GitHub Actions / Gitee Go）共用 `scripts/ci.sh`。
 
-```makefile
-.PHONY: build test lint install cross-build release clean
+### 5.1 构建与本地开发
 
-BINARY_NAME := gitee
-VERSION     := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
-LDFLAGS     := -ldflags="-s -w -X main.version=$(VERSION)"
+```bash
+# 安装到 $GOPATH/bin（日常开发用这个）
+go install ./cmd/gitee
 
-build:
-	go build $(LDFLAGS) -o bin/$(BINARY_NAME) ./cmd/gitee
+# 一次性本地构建（不装到 PATH）
+go build -o gitee ./cmd/gitee
 
-test:
-	go test ./... -v -count=1 -race
+# 与 CI 完全一致的门禁
+bash scripts/ci.sh     # gofmt / vet / golangci-lint / build / test -race / 交叉编译 / govulncheck
 
-test-cover:
-	go test ./... -coverprofile=coverage.out
-	go tool cover -html=coverage.out -o coverage.html
-
-lint:
-	golangci-lint run ./...
-
-install:
-	go install $(LDFLAGS) ./cmd/gitee
-
-cross-build:
-	GOOS=linux   GOARCH=amd64  go build $(LDFLAGS) -o dist/gitee-linux-amd64 ./cmd/gitee
-	GOOS=linux   GOARCH=arm64  go build $(LDFLAGS) -o dist/gitee-linux-arm64 ./cmd/gitee
-	GOOS=darwin  GOARCH=amd64  go build $(LDFLAGS) -o dist/gitee-darwin-amd64 ./cmd/gitee
-	GOOS=darwin  GOARCH=arm64  go build $(LDFLAGS) -o dist/gitee-darwin-arm64 ./cmd/gitee
-	GOOS=windows GOARCH=amd64  go build $(LDFLAGS) -o dist/gitee-windows-amd64.exe ./cmd/gitee
-
-release:
-	goreleaser release --snapshot --clean
-
-clean:
-	rm -rf bin/ dist/ coverage.out coverage.html
+# 手动交叉编译
+GOOS=linux  GOARCH=amd64 go build -o dist/gitee-linux-amd64 ./cmd/gitee
+GOOS=windows GOARCH=amd64 go build -o dist/gitee-windows-amd64.exe ./cmd/gitee
 ```
 
-### 5.2 `.goreleaser.toml` 核心配置
+### 5.2 发布链
 
-```toml
-project_name = "gitee-cli"
-
-builds:
-  - id: gitee
-    main: ./cmd/gitee
-    binary: gitee
-    env:
-      - CGO_ENABLED=0
-    goos: [linux, darwin, windows]
-    goarch: [amd64, arm64]
-    ldflags:
-      - "-s -w -X main.version={{.Version}}"
-
-archives:
-  - format: tar.gz
-    format_overrides:
-      - goos: windows
-        format: zip
-
-checksum:
-  name_template: "checksums.txt"
-
-brews:
-  - name: gitee
-    homepage: "https://gitee.com/gitee-cli"
-    tap:
-      owner: gitee
-      name: homebrew-tap
+```bash
+git tag -a v0.13.2 -m v0.13.2 && git push origin v0.13.2
+GITEE_TOKEN=... bash scripts/release.sh --publish
 ```
+
+- `scripts/release.sh`：构建 5 平台产物（`gitee-<os>-<arch>.tar.gz` / Windows `.zip`）、
+  生成 `SHA256SUMS.txt`、调用 `publish-release.sh` 创建 Gitee release 并上传资产（幂等）
+- `scripts/publish-release.sh`：只做「创建 release + 上传资产」，复用 `gitee release create/upload`
+- 版本号由 ldflags 注入；README 徽章由测试 `TestReadmeVersionMatchesVersionVar` 锁定
+- 无 Homebrew tap、无 goreleaser
 
 ---
 
@@ -697,8 +606,8 @@ brews:
 | 设置文件权限 | `~/.gitee-cli/settings.json` 创建时强制 `0600`（`os.OpenFile(..., 0600)`） |
 | Token 不写入日志 | `--verbose` 模式下 Authorization header 脱敏输出为 `token ***` |
 | Token 不提交 | `.gitignore_global` 中排除 `~/.gitee-cli/`；工具初始化时提示用户 |
-| HTTPS 强制 | 默认启用，`--insecure` 需显式开启 |
-| 证书验证 | 使用系统 CA bundle，`--insecure` 跳过 |
+| HTTPS | 默认只连 `https://` 站点；没有 `--insecure` 开关（不提供跳过证书校验的入口） |
+| 证书验证 | 使用系统 CA bundle 与标准 `net/http` 校验 |
 | 输入验证 | 仓库名、用户名通过正则 `^[a-zA-Z0-9_.-]+$` 校验 |
 | CI/CD 安全 | Token 通过环境变量 `GITEE_TOKEN` 注入，不依赖文件 |
 | 依赖安全 | CI 中运行 `govulncheck ./...` |

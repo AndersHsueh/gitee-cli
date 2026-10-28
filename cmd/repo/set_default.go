@@ -33,7 +33,7 @@ Run with no arguments to view the current default. Use --owner and
 func init() {
 	f := setDefaultCmd.Flags()
 	f.StringVar(&setDefaultFlags.owner, "owner", "", "Repository owner")
-	f.StringVar(&setDefaultFlags.repo, "repo", "", "Repository name")
+	f.StringVarP(&setDefaultFlags.repo, "repo", "R", "", "Repository name")
 
 	RepoCmd.AddCommand(setDefaultCmd)
 }

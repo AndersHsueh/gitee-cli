@@ -13,7 +13,7 @@ description: >
 
 # 双界面 CLI 设计：一份命令行工具，两种打开方式
 
-> **一句话总结**：命令行工具其实有两类使用者——**人**和 **AI Agent**。他们对"帮助文档"的需求不是详细版和简略版的区别，而是**两套完全不同的需求**。gitee-cli 为此做了 `--help`（给人看）和 `--agent-help`（给 AI Agent 看）两套并行的帮助系统，我们把这种做法称为**双界面 CLI 设计（Dual-surface CLI Design）**。截至 v0.12.6，这套设计已经覆盖 129 个命令，由自动化测试守护正确性，并且遵循三条我们称之为"可达性法则"的原则。这篇文章会讲清楚：为什么传统 --help 从设计上就注定两头不讨好、双界面架构具体怎么落地、我们踩过什么坑，以及为什么这个思路值得被更多项目借鉴。
+> **一句话总结**：命令行工具其实有两类使用者——**人**和 **AI Agent**。他们对"帮助文档"的需求不是详细版和简略版的区别，而是**两套完全不同的需求**。gitee-cli 为此做了 `--help`（给人看）和 `--agent-help`（给 AI Agent 看）两套并行的帮助系统，我们把这种做法称为**双界面 CLI 设计（Dual-surface CLI Design）**。截至 v0.13.2，这套设计已经覆盖 137 个命令，由自动化测试守护正确性，并且遵循三条我们称之为"可达性法则"的原则。这篇文章会讲清楚：为什么传统 --help 从设计上就注定两头不讨好、双界面架构具体怎么落地、我们踩过什么坑，以及为什么这个思路值得被更多项目借鉴。
 
 ---
 
@@ -252,7 +252,7 @@ Agent 看到这句话就知道：这条命令不归自己来编排，跳过就�
 
 ## 目前的覆盖情况
 
-截至 v0.12.6（2026-08-17），已经有 **129 个命令**拥有完整的 `--agent-help` 文档（统计方式：用 `gitee help reference` 列出全部叶子命令，逐一执行 `--agent-help`，统计输出以 `# gitee` 开头的条数）：
+截至 v0.13.2（2026-10-28），已经有 **137 个命令**拥有完整的 `--agent-help` 文档（统计方式：用 `gitee help reference` 列出全部命令路径——当前 177 条，含 `version`——逐一执行 `--agent-help`，统计输出首行为 `# <命令路径> — Agent Help` 的条数）：
 
 | 命令组 | 已覆盖的子命令 |
 |--------|----------------|
@@ -264,7 +264,7 @@ Agent 看到这句话就知道：这条命令不归自己来编排，跳过就�
 | ssh-key | list, add, delete |
 | user | view, follow, unfollow, followers, following |
 | webhook | list, create, view, edit, delete, test |
-| org | list, view, member, repo, issue |
+| org | list, view, members, repos, issues |
 | release | list, view, create, edit, delete, download, upload, delete-asset |
 | label | list, view, create, edit, delete, clone |
 | milestone | list, view, create, edit, delete |
@@ -290,7 +290,7 @@ Agent 看到这句话就知道：这条命令不归自己来编排，跳过就�
 | 更新覆盖清单 | 1 分钟 |
 | **单个命令合计** | **约 30 分钟** |
 
-129 个命令 × 30 分钟 ≈ 65 小时。听起来不算少？这里有个挺值得说一说的循环：
+137 个命令 × 30 分钟 ≈ 69 小时。听起来不算少？这里有个挺值得说一说的循环：
 
 gitee-cli 从 v0.11 到 v0.12 的大部分 Agent 文档，实际上是由**一组 AI Agent 协作写出来的**——人类负责定义 11 维度的模板和验收标准，契约测试负责把关，Agent 负责批量生产内容，再由另一个独立的 Agent 逐条验收。**给 AI Agent 用的文档，交给 AI Agent 来写，边际成本几乎为零；人类的角色从"作者"变成了"标准制定者 + 验收者"。**
 

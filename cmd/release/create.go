@@ -24,6 +24,7 @@ var createFlags struct {
 
 var createCmd = &cobra.Command{
 	Use:   "create",
+	Args:  cobra.NoArgs,
 	Short: "Create a new release",
 	Example: `  gitee release create --repo owner/repo --tag v1.0.0 --name "1.0.0" --target main
   gitee release create -R owner/repo -t v0.2.0 --body "Initial beta" --prerelease`,

@@ -23,6 +23,7 @@ import (
 
 var StatusCmd = &cobra.Command{
 	Use:   "status",
+	Args:  cobra.NoArgs,
 	Short: "Show issues assigned to you and PRs awaiting your review",
 	Long: `Show a focused, at-a-glance view of what's currently waiting on you
 in a Gitee repository: issues assigned to you, and open pull requests that

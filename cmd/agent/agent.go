@@ -1,6 +1,8 @@
 package agent
 
 import (
+	"gitee-cli/cmd"
+
 	"github.com/spf13/cobra"
 )
 
@@ -16,6 +18,8 @@ etc.) can use gitee-cli effectively and reliably.
 
 Start with 'gitee agent onboard' to generate a .gitee/agent.md
 file with pre-built orchestration templates.`,
+	// GroupRunE: unknown verbs exit non-zero with a suggestion; no args shows help.
+	RunE: cmd.GroupRunE,
 }
 
 func init() {

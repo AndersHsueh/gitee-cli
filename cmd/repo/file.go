@@ -68,10 +68,9 @@ the target branch.
 		}
 		return nil
 	},
-	RunE: func(c *cobra.Command, args []string) error {
-		// No subcommand given — show help so users discover view/push/delete.
-		return c.Help()
-	},
+	// GroupRunE prints help with no args and returns an error (with the
+	// correct fully-qualified form) when given a positional arg — see cmd.GroupRunE.
+	RunE: cmd.GroupRunE,
 }
 
 var fileViewCmd = &cobra.Command{

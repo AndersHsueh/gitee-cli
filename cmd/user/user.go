@@ -1,6 +1,8 @@
 package user
 
 import (
+	"gitee-cli/cmd"
+
 	"github.com/spf13/cobra"
 )
 
@@ -20,6 +22,8 @@ enumerate the social graph of any user.
 
 Run ` + "`" + `gitee user view` + "`" + ` (no <username>) to view the authenticated
 user's own profile.`,
+	// GroupRunE: unknown verbs exit non-zero with a suggestion; no args shows help.
+	RunE: cmd.GroupRunE,
 }
 
 func init() {

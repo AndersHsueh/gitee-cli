@@ -1,8 +1,11 @@
 package issue
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
 
+	"gitee-cli/cmd"
 	"gitee-cli/cmd/label"
 )
 
@@ -19,6 +22,8 @@ var labelCmd = &cobra.Command{
 This is the LEGACY path: 'gitee issue label'. The top-level
 'gitee label' is the canonical form going forward. Both commands
 call the same underlying handler and behave identically.`,
+	// GroupRunE: unknown verbs exit non-zero with a suggestion; no args shows help.
+	RunE: cmd.GroupRunE,
 }
 
 func init() {
@@ -34,10 +39,23 @@ func init() {
 			Short:   src.Short,
 			Long:    src.Long,
 			Example: src.Example,
-			RunE:    src.RunE,
-			// Inherit PreRunE from the source so --agent-help still works
-			// on the legacy path.
-			PreRunE: src.PreRunE,
+			// Inherit the canonical verb's positional-args contract
+			// (label verbs take no positional args — all input is flags).
+			Args: src.Args,
+			RunE: src.RunE,
+		}
+		// Agent-help: the doc body is shared with the top-level label verb,
+		// but the heading must name the path the user actually invoked
+		// (`gitee issue label list`, not `gitee label list`). Retitle it.
+		md := label.AgentHelpMarkdown(src.Name())
+		alias.PreRunE = func(c *cobra.Command, args []string) error {
+			if rt := cmd.RuntimeFromCmd(c); rt != nil && rt.AgentHelp {
+				if md == "" {
+					return fmt.Errorf("no agent help available for %q", c.CommandPath())
+				}
+				cmd.PrintAgentHelpForCommand(c, md)
+			}
+			return nil
 		}
 		alias.Flags().AddFlagSet(src.Flags())
 		labelCmd.AddCommand(alias)

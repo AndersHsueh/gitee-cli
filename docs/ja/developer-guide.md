@@ -1,6 +1,12 @@
 # gitee-cli 開発者ガイド
 
-バージョン：1.0.0 | 対象：貢献者 / チーム開発メンバー
+> ⚠️ **ステータス通知（v0.13.2、2026-10 メンテナンス）**：本文書は初期の設計ドラフトであり、
+> 一部の例は**現在のコードと一致しません**（モジュールパス、`internal/printer`、
+> Viper/oauth2、Makefile/goreleaser など）。事実はコード、`gitee --help`、
+> `gitee <cmd> --agent-help`、`bash scripts/ci.sh` が正です。乖離の大きい節は本文中で修正済み。
+
+
+バージョン：1.0.0（設計ドラフト。現状は冒頭通知を参照）| 対象：貢献者 / チーム開発メンバー
 
 ---
 
@@ -9,21 +15,17 @@
 ### 1.1 必需ツール
 
 ```bash
-# Go 1.23+（必須）
-go version    # 1.23 以上が必要
+# Go 1.27+（必須。go.mod は `go 1.27.3`）
+go version    # 1.27 以上が必要
 
-# Cobra CLI（コマンドテンプレートジェネレーター）
-go install github.com/spf13/cobra-cli@latest
+# golangci-lint（コード品質チェック。CI は v2.15.0、設定は v2 schema）
+go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0
 
-# golangci-lint（コード品質チェック）
-curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh \
-  | sh -s -- -b $(go env GOPATH)/bin v1.59.0
-
-# goreleaser（リリース自動化）
-go install github.com/goreleaser/goreleaser@latest
-
-# govulncheck（脆弱性スキャン）
+# govulncheck（脆弱性スキャン。go.mod の tool 依存でバージョン固定）
 go install golang.org/x/vuln/cmd/govulncheck@latest
+
+# リリースと CI はリポジトリ内スクリプト。Makefile / goreleaser は不要
+bash scripts/ci.sh --fast   # ローカル品質ゲート
 ```
 
 ### 1.2 推奨ツール
@@ -39,41 +41,30 @@ go install go.uber.org/mock/mockgen@latest
 ### 1.3 クローンと初期化
 
 ```bash
-git clone https://gitee.com/<your-user>/gitee-cli.git
+git clone https://gitee.com/andershsueh/gitee-cli.git
 cd gitee-cli
 go mod download
-go build -o bin/gitee ./cmd/gitee
-./bin/gitee --version
+go install ./cmd/gitee      # $GOPATH/bin にインストール（日常開発はこちら）
+gitee version
 ```
 
 ---
 
-## 2. プロジェクト初期化（新規プロジェクト用）
+## 2. リポジトリの初期化（現状）
+
+本リポジトリは**既に作成済み**で、`go mod init` / `cobra-cli` は不要です。要点：
+
+- モジュールパスは `gitee-cli`（`gitee.com/<org>/gitee-cli` ではない）なので、内部 import は
+  `gitee-cli/internal/api`、`gitee-cli/cmd` と書きます。
+- 依存は Cobra、resty v2、fatih/color、testify（+ 間接依存）のみ。
+  **Viper も golang.org/x/oauth2 もありません**。
+- 設定は手書き JSON（`internal/config`）で Viper 不使用、認証は PAT で OAuth ではありません。
 
 ```bash
-# Go モジュール初期化（モジュールパスは gitee.com/<org>/gitee-cli に従う）
-go mod init gitee.com/gitee/gitee-cli
-
-# 依存関係を追加
-go get github.com/spf13/cobra
-go get github.com/spf13/viper
-go get github.com/go-resty/resty/v2
-go get golang.org/x/oauth2
-go get github.com/fatih/color
-go get github.com/stretchr/testify
-
-# Cobra CLI でスケルトンを生成
-cobra-cli init --viper --author "Gitee Team" --license apache
-cobra-cli add auth
-cobra-cli add repo
-cobra-cli add issue
-cobra-cli add pr
-cobra-cli add gist
-cobra-cli add org
-cobra-cli add search
-cobra-cli add api
-cobra-cli add config
-cobra-cli add completion
+# go.mod に従って依存とツールを取得
+go mod download
+go build ./...              # コンパイル自己チェック
+bash scripts/ci.sh --fast   # gofmt + vet + build + test（ローカル高速ゲート）
 ```
 
 ---
@@ -86,79 +77,85 @@ cobra-cli add completion
 
 **Step 1：コマンドファイル作成**
 
+実際の `cmd/issue/list.go` を参照（ここでは簡略化）：
+
 ```go
 // cmd/issue/list.go
 package issue
 
 import (
-    "context"
-    "fmt"
+    "net/url"
+
+    "gitee-cli/cmd"
+    "gitee-cli/internal/api"
+    "gitee-cli/internal/cmdkit"
+    "gitee-cli/internal/utils"
+    "gitee-cli/pkg/types"
 
     "github.com/spf13/cobra"
-    "gitee.com/gitee/gitee-cli/internal/api"
-    "gitee.com/gitee/gitee-cli/internal/printer"
-    "gitee.com/gitee/gitee-cli/pkg/types"
 )
 
 var listFlags struct {
-    State    string
-    Labels   string
-    Assignee string
-    Repo     string
+    state    string
+    labels   string
+    assignee string
 }
 
 var listCmd = &cobra.Command{
     Use:   "list",
-    Short: "Issue の一覧表示",
-    Long:  "現在のリポジトリまたは指定リポジトリの Issue を一覧表示。状態、ラベル、担当者でフィルター可能。",
-    RunE:  runList,
+    Short: "List issues in a repository",
+    Example: `  gitee issue list --repo owner/repo
+  gitee issue list --repo owner/repo --state closed --labels bug`,
+    PreRunE: func(c *cobra.Command, args []string) error {
+        if cmd.RuntimeFromCmd(c).AgentHelp {
+            cmd.PrintAgentHelp(issueListAgentHelp)   // 任意：このコマンドの agent-help 文言
+        }
+        return nil
+    },
+    RunE: runList,
 }
 
 func init() {
     f := listCmd.Flags()
-    f.StringVarP(&listFlags.State, "state", "s", "open", "Issue の状態: open/closed/all")
-    f.StringVarP(&listFlags.Labels, "labels", "l", "", "ラベルフィルター（カンマ区切り）")
-    f.StringVarP(&listFlags.Assignee, "assignee", "a", "", "担当者フィルター")
-    f.StringVarP(&listFlags.Repo, "repo", "R", "", "リポジトリ（owner/name 形式）")
-
+    f.StringVar(&listFlags.state, "state", "open", "Filter by state: open|closed|all")
+    f.StringVar(&listFlags.labels, "labels", "", "Filter by labels (comma-separated)")
+    f.StringVar(&listFlags.assignee, "assignee", "", "Filter by assignee username")
+    // --limit / --per-page / --paginate は root の永続フラグ。ここで再登録しない。
     IssueCmd.AddCommand(listCmd)
 }
 
-func runList(cmd *cobra.Command, args []string) error {
-    ctx := context.Background()
-    client, err := api.NewClientFromConfig()
+func runList(cobraCmd *cobra.Command, args []string) error {
+    rt := cmd.RuntimeFromCmd(cobraCmd)
+    client, err := cmd.NewAPIClientFrom(rt)
     if err != nil {
         return err
     }
 
-    owner, repo, err := resolveRepo(listFlags.Repo)
-    if err != nil {
-        return err
-    }
-
-    var issues []types.Issue
-    path := fmt.Sprintf("/repos/%s/%s/issues?state=%s", owner, repo, listFlags.State)
-    if listFlags.Labels != "" {
-        path += "&labels=" + listFlags.Labels
-    }
-    if err := client.List(ctx, path, nil, &issues); err != nil {
-        return err
-    }
-
-    outputFmt, _ := cmd.Flags().GetString("output")
-    p := printer.New(outputFmt, cmd.OutOrStdout())
-    p.PrintHeader("#", "TITLE", "STATE", "LABELS", "ASSIGNEE", "UPDATED")
-    for _, i := range issues {
-        p.PrintRow(
-            fmt.Sprintf("#%d", i.Number),
-            truncate(i.Title, 60),
-            i.State,
-            joinLabels(i.Labels, 3),
-            firstAssignee(i.Assignees),
-            humanTime(i.UpdatedAt),
-        )
-    }
-    return p.Flush()
+    // list コマンドは cmdkit.RunList 骨格に統一：ページネーション、テーブル、JSON、
+    // 空結果メッセージを一箇所で処理。
+    opts := cmd.NewCmdkitOptionsFrom(rt, client)
+    return cmdkit.RunList[types.Issue](opts, cmdkit.ListSpec[types.Issue]{
+        ResolveOwnerRepo: func() (string, string, error) {
+            return utils.ResolveRepo(rt.Repo, "", nil)
+        },
+        Path: func(owner, repoName string) string {
+            qv := url.Values{}
+            qv.Set("state", listFlags.state)
+            if listFlags.labels != "" {
+                qv.Set("labels", listFlags.labels)
+            }
+            if listFlags.assignee != "" {
+                qv.Set("assignee", listFlags.assignee)
+            }
+            return api.IssuesList(owner, repoName) + "?" + qv.Encode()
+        },
+        Columns: []string{"#", "TITLE", "STATE", "LABELS", "UPDATED"},
+        Row: func(i types.Issue) []string {
+            return []string{i.Number, utils.Truncate(i.Title, 60), i.State, "-", i.UpdatedAt.Format("2006-01-02")}
+        },
+        EmptyText: func(o, r string) string { return "No issues found in " + o + "/" + r },
+        ErrCtx:    "listing issues",
+    })
 }
 ```
 
@@ -179,13 +176,18 @@ func init() {
 
 **Step 3：API エンドポイント追加（必要な場合）**
 
+エンドポイントは `internal/api/endpoints.go` の builder 関数だけで組み立てます。
+**cmd 層で `fmt.Sprintf` による URL 結合は禁止**：
+
 ```go
 // internal/api/endpoints.go
-const (
-    EndpointIssues = "/repos/%s/%s/issues"
-    EndpointIssue  = "/repos/%s/%s/issues/%d"
-    EndpointIssueComments = "/repos/%s/%s/issues/%d/comments"
-)
+func IssuesList(owner, repo string) string {
+    return "/repos/" + owner + "/" + repo + "/issues"
+}
+
+func IssueGet(owner, repo string, number int) string {
+    return IssuesList(owner, repo) + "/" + strconv.Itoa(number)
+}
 ```
 
 **Step 4：型定義の追加/更新**
@@ -200,41 +202,42 @@ const (
 
 ### 3.2 新規 API エンドポイント呼び出しの追加
 
-```go
-// internal/api/client.go にセマンティックメソッドを追加
-func (c *client) ListIssues(ctx context.Context, owner, repo, state string) ([]types.Issue, error) {
-    var issues []types.Issue
-    path := fmt.Sprintf("/repos/%s/%s/issues?state=%s", owner, repo, state)
-    err := c.List(ctx, path, &PageOptions{PerPage: 30}, &issues)
-    return issues, err
-}
+生成済みの Client メソッド（`Get/Post/Patch/PatchForm/Put/Delete/DeleteWithBody/UploadFile`）を
+再利用し、`internal/api` に業務メソッドを増やさない方針です：
 
-func (c *client) CreateIssue(ctx context.Context, owner, repo string, body types.IssueCreateRequest) (*types.Issue, error) {
-    var issue types.Issue
-    path := fmt.Sprintf("/repos/%s/%s/issues", owner, repo)
-    err := c.Post(ctx, path, body, &issue)
-    return &issue, err
-}
+```go
+// 読み取り：result のポインタを渡す
+var issue types.Issue
+err := client.Get(ctx, api.IssueGet(owner, repo, number), &issue)
+
+// 書き込み：JSON body
+err := client.Post(ctx, api.IssuesCreate(owner, repo), req, &created)
+
+// 書き込み：Gitee v5 の一部 write パスは formData のみ（issue close/reopen/edit）
+err := client.PatchForm(ctx, api.IssuesEdit(owner, number), url.Values{
+    "repo":  {repo},
+    "state": {"closed"},
+})
+
+// 一覧：FetchListOrAll / cmdkit.RunList を優先し、paginate 分岐を手書きしない
+issues, err := api.FetchListOrAll[types.Issue](ctx, client, path, paginate, perPage, limit, page, "listing issues")
 ```
 
 ---
 
 ### 3.3 リポジトリコンテキスト検出
 
-多くのコマンドは git remote から解析された現在のリポジトリを自動検出する必要があります（`gh` と同様）：
+リポジトリ解決は `internal/utils` に統一し、コマンド内で git remote を解析しない：
 
 ```go
-// internal/git/remote.go
-func DetectRepo() (owner, repo string, err error) {
-    // 1. --repo フラグをチェック
-    // 2. git remote origin URL を解析
-    //    - https://gitee.com/owner/repo.git
-    //    - git@gitee.com:owner/repo.git
-    // 3. owner, repo を返す
-    remoteURL, err := exec.Command("git", "remote", "get-url", "origin").Output()
-    // ... 解析ロジック
-}
+// utils.ParseOwnerRepo("owner/repo") → owner, repo
+// utils.ResolveRepo(owner, repo, args) → --repo / 位置引数 / git remote の順で解決
+owner, repoName, err := utils.ResolveRepo(rt.Repo, "", args)
 ```
+
+- `--repo` / `-R`（一部コマンド）が指定されれば最優先；
+- 次に位置引数（例：`gitee repo view owner/repo`）；
+- 最後にカレントディレクトリの git remote（`git remote get-url origin`）。
 
 ---
 
@@ -262,10 +265,7 @@ func TestClient_ListIssues(t *testing.T) {
     }))
     defer ts.Close()
 
-    client := api.NewClient(
-        api.WithBaseURL(ts.URL),
-        api.WithToken("test-token"),
-    )
+    client := api.NewClient("test-token", ts.URL, false, 30)  // token, baseURL, verbose, timeout
 
     issues, err := client.ListIssues(context.Background(), "owner", "repo", "all")
     require.NoError(t, err)
@@ -312,13 +312,16 @@ go test ./... -count=1           # キャッシュ無効化（CI 使用）
 
 ### 4.4 カバレッジ要件
 
-| モジュール | 最低カバレッジ |
+| モジュール | 推奨カバレッジ |
 |-----------|--------------|
-| `internal/api/` | 80% |
-| `internal/auth/` | 70% |
-| `internal/printer/` | 90% |
+| `internal/api/` | 高（HTTP クライアントとエラーマッピング） |
+| `internal/config/` | 高（権限、アトミック書き込み、優先順位） |
+| `internal/domain/` | 中（現在の弱点。新しい write 経路は httptest を添える） |
 | `pkg/types/` | 強制なし |
-| `cmd/` | 60% |
+| `cmd/` | 中（agent-help 契約テストが文言を担保） |
+
+> 現状：リポジトリ全体で約 30%（歴史的に低い）。CI はカバレッジのハードゲートを持たないため、
+> 新機能は httptest を自前で持参してください。
 
 ---
 
@@ -326,22 +329,9 @@ go test ./... -count=1           # キャッシュ無効化（CI 使用）
 
 ### 5.1 Lint 設定（`.golangci.yml`）
 
-```yaml
-linters:
-  enable:
-    - gofmt
-    - goimports
-    - govet
-    - errcheck
-    - staticcheck
-    - gosec
-    - revive
-    - exhaustive
-
-linters-settings:
-  goimports:
-    local-prefixes: gitee.com/gitee/gitee-cli
-```
+リポジトリの `.golangci.yml` は **v2 schema**（`version: "2"`）で、デフォルトの linter 集
+（errcheck / govet / ineffassign / staticcheck / unused）に加え、テストファイルの未チェック
+戻り値に対する限定的な除外を設定しています。gofmt は `scripts/ci.sh` が別途担保します。
 
 実行：
 
@@ -435,12 +425,15 @@ gitee --api-url "https://your-enterprise.gitee.com/api/v5" repo list
 GITEE_API_URL="https://your-enterprise.gitee.com/api/v5" gitee repo list
 ```
 
-### 6.4 Token を直接使用（OAuth をスキップ）
+### 6.4 Token を直接使用
 
 ```bash
-gitee auth login --with-token
-# stdin から token を読み取り：
-echo "your_access_token" | gitee auth login --with-token
+# 推奨：環境変数（ディスクに残らず、シェル履歴にも残らない）
+export GITEE_TOKEN=your_access_token
+gitee auth status
+
+# 明示的にトークンでログイン（~/.gitee-cli/settings.json に保存）
+gitee auth login --token your_access_token
 ```
 
 ---
@@ -450,67 +443,51 @@ echo "your_access_token" | gitee auth login --with-token
 ### 7.1 ローカルビルド
 
 ```bash
-make build          # bin/gitee にコンパイル
-make install        # $GOPATH/bin にインストール
+go install ./cmd/gitee           # $GOPATH/bin にインストール（日常開発）
+go build -o gitee ./cmd/gitee    # 一度きりのローカルビルド（PATH には入らない）
 ```
 
 ### 7.2 クロスコンパイル
 
 ```bash
-make cross-build
-# 出力：
-# dist/gitee-linux-amd64
-# dist/gitee-linux-arm64
-# dist/gitee-darwin-amd64
-# dist/gitee-darwin-arm64
-# dist/gitee-windows-amd64.exe
+# 手動クロスビルド（リリーススクリプトも同様）
+GOOS=linux   GOARCH=amd64 go build -o dist/gitee-linux-amd64 ./cmd/gitee
+GOOS=linux   GOARCH=arm64 go build -o dist/gitee-linux-arm64 ./cmd/gitee
+GOOS=darwin  GOARCH=amd64 go build -o dist/gitee-darwin-amd64 ./cmd/gitee
+GOOS=darwin  GOARCH=arm64 go build -o dist/gitee-darwin-arm64 ./cmd/gitee
+GOOS=windows GOARCH=amd64 go build -o dist/gitee-windows-amd64.exe ./cmd/gitee
 ```
 
 ### 7.3 リリース
 
 ```bash
-# 先にタグを打つ
-git tag v0.1.0
-git push origin v0.1.0
+# 先にタグを打って push
+git tag -a v0.13.2 -m v0.13.2 && git push origin v0.13.2
 
-# goreleaser が自動的にビルド + アップロード
-make release
+# 5 プラットフォーム成果物 + SHA256SUMS + Gitee release 作成 + アセットアップロード（冪等）
+GITEE_TOKEN=... bash scripts/release.sh --publish
 ```
+
+> Makefile も goreleaser もありません。リリースは `scripts/release.sh`（ビルド/パッケージ/
+> チェックサム）と `scripts/publish-release.sh`（release 作成 + アセットアップロード、
+> `gitee release create/upload` を再利用）で行います。
 
 ---
 
 ## 8. CI/CD パイプライン
 
-### 8.1 GitHub Actions / Gitee Go CI の例
+**2 つの CI バックエンド、1 つのゲート定義**：
 
-```yaml
-# .gitee/workflows/ci.yml
-name: CI
-on: [push, pull_request]
+- `.github/workflows/ci.yml`（GitHub Actions ミラー）
+- `.workflow/ci.yml`（Gitee Go）
+- どちらも `scripts/ci.sh` を呼ぶ：gofmt → go vet → golangci-lint（任意）→ build →
+  `go test -race -count=1` → クロスビルド → govulncheck
 
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version: '1.23'
-      - run: go mod download
-      - run: go vet ./...
-      - run: golangci-lint run ./...
-      - run: go test ./... -v -race -count=1
-      - run: govulncheck ./...
+ローカルで CI を再現：
 
-  build:
-    runs-on: ubuntu-latest
-    needs: test
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version: '1.23'
-      - run: make cross-build
+```bash
+bash scripts/ci.sh          # 全部（クロスビルド + govulncheck）
+bash scripts/ci.sh --fast   # クロスビルド + govulncheck を省略した高速ループ
 ```
 
 ---
@@ -519,12 +496,12 @@ jobs:
 
 | フェーズ | ターゲットコマンド | 説明 |
 |---------|------------------|------|
-| **M0** | `gitee auth` 一式 | OAuth2 Device Flow、Token ストレージ、`auth status/logout/token` |
+| **M0** | `gitee auth` 一式 | PAT 認証（OAuth2 デバイスフローなし）、Token 保存、`auth status/logout/token` |
 | **M1** | `gitee repo` 一式 + `gitee api` | リポジトリ CRUD、生 API アクセス、設定モジュール |
 | **M2** | `gitee issue` 一式 | Issue CRUD、コメント、ラベル管理 |
 | **M3** | `gitee pr` 一式 | PR CRUD、マージ、レビュー、diff/checks |
 | **M4** | `gitee gist` + `gitee search` | Gist 管理、3 種類の検索 |
-| **M5** | `gitee org` + シェル補完 + i18n | 組織管理、Bash/Zsh/Fish 補完、zh/en 切り替え |
+| **M5** | `gitee org` + シェル補完 | 組織管理、Bash/Zsh/Fish/PowerShell 補完（i18n は未実装） |
 | **M6** | エンタープライズデプロイ + マルチアカウント + プラグインシステム | `--hostname` 拡張、credentials マルチホスト、外部コマンド検出 |
 
 ---
@@ -534,9 +511,8 @@ jobs:
 | リソース | リンク |
 |---------|-------|
 | Gitee API v5 Swagger | https://gitee.com/api/v5/swagger |
-| Gitee OAuth2 ドキュメント | https://gitee.com/api/v5/oauth_doc |
+| Gitee パーソナルアクセストークン | https://gitee.com/profile/personal_access_tokens |
 | Cobra 公式ドキュメント | https://pkg.go.dev/github.com/spf13/cobra |
-| Viper 公式ドキュメント | https://pkg.go.dev/github.com/spf13/viper |
 | Resty HTTP クライアント | https://github.com/go-resty/resty |
 | glab プロジェクト（最良の参照実装） | https://github.com/gitlab-org/cli |
 | gh CLI プロジェクト | https://github.com/cli/cli |

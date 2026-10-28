@@ -23,6 +23,7 @@ var createFlags struct {
 
 var createCmd = &cobra.Command{
 	Use:   "create",
+	Args:  cobra.NoArgs,
 	Short: "Create a new webhook for a repository",
 	Example: `  gitee webhook create --repo owner/repo --url https://example.com/hook
   gitee webhook create -R owner/repo -u https://ci.example.com/hook \

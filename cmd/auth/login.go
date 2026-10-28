@@ -16,6 +16,7 @@ import (
 
 var loginCmd = &cobra.Command{
 	Use:   "login",
+	Args:  cobra.NoArgs,
 	Short: "Authenticate with a Gitee host",
 	Long: `Authenticate with gitee.com or a Gitee Enterprise instance.
 

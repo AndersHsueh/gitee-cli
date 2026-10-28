@@ -131,12 +131,13 @@ func TestReadmeVersionMatchesVersionVar(t *testing.T) {
 // The build path is `./gitee` (the main package, at cmd/gitee/main.go)
 // because this test lives in the cmd/ package and go test's cwd is the
 // package directory.
+// buildThrowawayBinary returns the CLI binary under test. The binary is
+// built ONCE by TestMain (cmd/main_test.go) and shared read-only by every
+// test in this package — tests must not modify or delete it.
 func buildThrowawayBinary(t *testing.T) string {
 	t.Helper()
-	bin := filepath.Join(t.TempDir(), "gitee-test")
-	c := exec.Command("go", "build", "-o", bin, "./gitee")
-	if out, err := c.CombinedOutput(); err != nil {
-		t.Fatalf("build throwaway gitee: %v\n%s", err, out)
+	if sharedBinaryPath == "" {
+		t.Fatal("shared test binary is missing — cmd.TestMain should have built it")
 	}
-	return bin
+	return sharedBinaryPath
 }

@@ -1,6 +1,8 @@
 package repo
 
 import (
+	"gitee-cli/cmd"
+
 	"github.com/spf13/cobra"
 )
 
@@ -8,6 +10,8 @@ var RepoCmd = &cobra.Command{
 	Use:   "repo <subcommand>",
 	Short: "Manage repositories",
 	Long:  `Work with Gitee repositories.`,
+	// GroupRunE: unknown verbs exit non-zero with a suggestion; no args shows help.
+	RunE: cmd.GroupRunE,
 }
 
 func init() {

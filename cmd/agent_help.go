@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -54,6 +55,43 @@ func AgentHelpAwareArgs(wrapped cobra.PositionalArgs) cobra.PositionalArgs {
 	}
 }
 
+// RetitleAgentHelp rewrites the first line of an --agent-help markdown
+// document to "# <path> — Agent Help", leaving every other line untouched.
+//
+// Two kinds of commands need this:
+//
+//   - legacy alias paths that reuse another command's doc text
+//     (`gitee issue label list` shares label's doc with `gitee label list`);
+//   - umbrella commands that reuse a child's doc text
+//     (`gitee api` shares `gitee api raw`'s doc).
+//
+// The document title is part of the machine contract: agents parse it to
+// learn which command's documentation they just received, so it must
+// always equal the command path the user actually invoked.
+func RetitleAgentHelp(path, md string) string {
+	if path == "" {
+		return md
+	}
+	first, rest, ok := strings.Cut(md, "\n")
+	if !ok {
+		return md
+	}
+	if !strings.HasPrefix(first, "# ") {
+		return md
+	}
+	return "# " + path + " — Agent Help\n" + rest
+}
+
+// PrintAgentHelpForCommand is PrintAgentHelp with the document title
+// rewritten to c's command path (see RetitleAgentHelp). Prefer it over
+// PrintAgentHelp whenever the markdown is shared between command paths.
+func PrintAgentHelpForCommand(c *cobra.Command, md string) {
+	if c != nil {
+		md = RetitleAgentHelp(c.CommandPath(), md)
+	}
+	PrintAgentHelp(md)
+}
+
 // rootAgentHelp is the agent-targeted help printed when the user runs
 // `gitee --agent-help`. It is intentionally longer and more structured than
 // the default `--help` output: agents read carefully, humans skim.
@@ -95,217 +133,222 @@ gitee-cli ships TWO help systems side-by-side:
 ## Coverage matrix
 
 ### repo — Repository management
-  gitee repo list           --agent-help   ✅ available  🆕 v0.11.0
-  gitee repo create         --agent-help   ✅ available  🆕 v0.11.0
-  gitee repo view           --agent-help   ✅ available  🆕 v0.11.0
-  gitee repo fork           --agent-help   ✅ available  🆕 v0.11.0
-  gitee repo edit           --agent-help   ✅ available  🆕 v0.11.0
-  gitee repo delete         --agent-help   ✅ available  🆕 v0.11.0
-  gitee repo clone          --agent-help   ✅ available  🆕 v0.11.0
-  gitee repo browse         --agent-help   ✅ available  🆕 v0.11.0
-  gitee repo branches       --agent-help   ✅ available  🆕 v0.11.0
-  gitee repo tag            --agent-help   ✅ available  🆕 v0.12.0
-  gitee repo tag list       --agent-help   ✅ available  🆕 v0.12.0
-  gitee repo tag create     --agent-help   ✅ available  🆕 v0.12.0
-  gitee repo collaborator            --agent-help   ✅ available  🆕 v0.12.0
-  gitee repo collaborator list       --agent-help   ✅ available  🆕 v0.12.0
-  gitee repo collaborator add        --agent-help   ✅ available  🆕 v0.12.0
-  gitee repo collaborator remove     --agent-help   ✅ available  🆕 v0.12.0
-  gitee repo star                    --agent-help   ✅ available  🆕 v0.12.0
-  gitee repo unstar                  --agent-help   ✅ available  🆕 v0.12.0
-  gitee repo star list               --agent-help   ✅ available  🆕 v0.12.0
-  gitee repo watch                   --agent-help   ✅ available  🆕 v0.12.0
-  gitee repo unwatch                 --agent-help   ✅ available  🆕 v0.12.0
-  gitee repo file                    --agent-help   ✅ available  🆕 v0.12.0
-  gitee repo file view               --agent-help   ✅ available  🆕 v0.12.0
-  gitee repo file push               --agent-help   ✅ available  🆕 v0.12.0
-  gitee repo file delete             --agent-help   ✅ available  🆕 v0.12.0
-  gitee repo commits                 --agent-help   ✅ available  🆕 v0.12.0
-  gitee repo commits list            --agent-help   ✅ available  🆕 v0.12.0
-  gitee repo commits view            --agent-help   ✅ available  🆕 v0.12.0
-  gitee repo compare                 --agent-help   ✅ available  🆕 v0.12.0
-  gitee repo protect                 --agent-help   ✅ available  🆕 v0.12.0
-  gitee repo unprotect               --agent-help   ✅ available  🆕 v0.12.0
-  gitee repo archive        --agent-help   ✅ available  🆕 v0.5.0
-  gitee repo sync           --agent-help   ✅ available  🆕 v0.5.0
-  gitee repo rename         --agent-help   ✅ available  🆕 v0.5.0
-  gitee repo set-default    --agent-help   n/a  (operational/config — use --help)
+  gitee repo list                --agent-help   ✅ available  🆕 v0.11.0
+  gitee repo create              --agent-help   ✅ available  🆕 v0.11.0
+  gitee repo view                --agent-help   ✅ available  🆕 v0.11.0
+  gitee repo fork                --agent-help   ✅ available  🆕 v0.11.0
+  gitee repo edit                --agent-help   ✅ available  🆕 v0.11.0
+  gitee repo delete              --agent-help   ✅ available  🆕 v0.11.0
+  gitee repo clone               --agent-help   ✅ available  🆕 v0.11.0
+  gitee repo browse              --agent-help   ✅ available  🆕 v0.11.0
+  gitee repo branches            --agent-help   ✅ available  🆕 v0.11.0
+  gitee repo tag                 --agent-help   ✅ available  🆕 v0.12.0
+  gitee repo tag list            --agent-help   ✅ available  🆕 v0.12.0
+  gitee repo tag create          --agent-help   ✅ available  🆕 v0.12.0
+  gitee repo collaborator        --agent-help   ✅ available  🆕 v0.12.0
+  gitee repo collaborator list   --agent-help   ✅ available  🆕 v0.12.0
+  gitee repo collaborator add    --agent-help   ✅ available  🆕 v0.12.0
+  gitee repo collaborator remove --agent-help   ✅ available  🆕 v0.12.0
+  gitee repo star                --agent-help   ✅ available  🆕 v0.12.0
+  gitee repo star star           --agent-help   ✅ available  🆕 v0.12.0
+  gitee repo star unstar         --agent-help   ✅ available  🆕 v0.12.0
+  gitee repo star list           --agent-help   ✅ available  🆕 v0.12.0
+  gitee repo watch               --agent-help   ✅ available  🆕 v0.12.0
+  gitee repo watch watch         --agent-help   ✅ available  🆕 v0.12.0
+  gitee repo watch unwatch       --agent-help   ✅ available  🆕 v0.12.0
+  gitee repo file                --agent-help   ✅ available  🆕 v0.12.0
+  gitee repo file view           --agent-help   ✅ available  🆕 v0.12.0
+  gitee repo file push           --agent-help   ✅ available  🆕 v0.12.0
+  gitee repo file delete         --agent-help   ✅ available  🆕 v0.12.0
+  gitee repo commits             --agent-help   ✅ available  🆕 v0.12.0
+  gitee repo commits list        --agent-help   ✅ available  🆕 v0.12.0
+  gitee repo commits view        --agent-help   ✅ available  🆕 v0.12.0
+  gitee repo compare             --agent-help   ✅ available  🆕 v0.12.0
+  gitee repo protect             --agent-help   ✅ available  🆕 v0.12.0
+  gitee repo protect protect     --agent-help   ✅ available  🆕 v0.12.0
+  gitee repo protect unprotect   --agent-help   ✅ available  🆕 v0.12.0
+  gitee repo unprotect           --agent-help   ✅ available  🆕 v0.12.0
+  gitee repo archive             --agent-help   ✅ available  🆕 v0.5.0
+  gitee repo sync                --agent-help   ✅ available  🆕 v0.5.0
+  gitee repo rename              --agent-help   ✅ available  🆕 v0.5.0
+  gitee repo set-default         --agent-help   n/a  (operational/config — use --help)
 
 ### issue — Issue management
-  gitee issue list          --agent-help   ✅ available  🆕 v0.11.0
-  gitee issue create        --agent-help   ✅ available
-  gitee issue view          --agent-help   ✅ available  🆕 v0.11.0
-  gitee issue edit          --agent-help   ✅ available  🆕 v0.11.0
-  gitee issue close         --agent-help   ✅ available  🆕 v0.11.0
-  gitee issue reopen        --agent-help   ✅ available  🆕 v0.11.0
-  gitee issue comment       --agent-help   ✅ available  🆕 v0.11.0
-  gitee issue comments      --agent-help   ✅ available  🆕 v0.8.0
-  gitee issue status        --agent-help   ✅ available  🆕 v0.10.0
-  gitee issue label list    --agent-help   ✅ available  (legacy alias; canonical at 'gitee label')
-  gitee issue label view    --agent-help   ✅ available  (legacy alias; canonical at 'gitee label')
-  gitee issue label create  --agent-help   ✅ available  (legacy alias; canonical at 'gitee label')
-  gitee issue label edit    --agent-help   ✅ available  (legacy alias; canonical at 'gitee label')
-  gitee issue label delete  --agent-help   ✅ available  (legacy alias; canonical at 'gitee label')
-  gitee issue label clone   --agent-help   ✅ available  (legacy alias; canonical at 'gitee label')
+  gitee issue list               --agent-help   ✅ available  🆕 v0.11.0
+  gitee issue create             --agent-help   ✅ available
+  gitee issue view               --agent-help   ✅ available  🆕 v0.11.0
+  gitee issue edit               --agent-help   ✅ available  🆕 v0.11.0
+  gitee issue close              --agent-help   ✅ available  🆕 v0.11.0
+  gitee issue reopen             --agent-help   ✅ available  🆕 v0.11.0
+  gitee issue comment            --agent-help   ✅ available  🆕 v0.11.0
+  gitee issue comments           --agent-help   ✅ available  🆕 v0.8.0
+  gitee issue status             --agent-help   ✅ available  🆕 v0.10.0
+  gitee issue label list         --agent-help   ✅ available  (legacy alias; canonical at 'gitee label')
+  gitee issue label view         --agent-help   ✅ available  (legacy alias; canonical at 'gitee label')
+  gitee issue label create       --agent-help   ✅ available  (legacy alias; canonical at 'gitee label')
+  gitee issue label edit         --agent-help   ✅ available  (legacy alias; canonical at 'gitee label')
+  gitee issue label delete       --agent-help   ✅ available  (legacy alias; canonical at 'gitee label')
+  gitee issue label clone        --agent-help   ✅ available  (legacy alias; canonical at 'gitee label')
 
 ### pr — Pull Request management
-  gitee pr list             --agent-help   ✅ available  🆕 v0.11.0
-  gitee pr create           --agent-help   ✅ available
-  gitee pr view             --agent-help   ✅ available  🆕 v0.11.0
-  gitee pr merge            --agent-help   ✅ available  🆕 v0.11.0
-  gitee pr review           --agent-help   ✅ available  🆕 v0.11.0
-  gitee pr close            --agent-help   ✅ available  🆕 v0.11.0
-  gitee pr reopen           --agent-help   ✅ available  🆕 v0.11.0
-  gitee pr diff             --agent-help   ✅ available  🆕 v0.11.0
-  gitee pr comments         --agent-help   ✅ available  🆕 v0.11.0
-  gitee pr comment          --agent-help   ✅ available  🆕 v0.8.0
-  gitee pr checkout         --agent-help   ✅ available  🆕 v0.5.0
-  gitee pr ready            --agent-help   ✅ available  🆕 v0.8.0
-  gitee pr edit             --agent-help   ✅ available  🆕 v0.8.0
-  gitee pr checks           --agent-help   ✅ available  🆕 v0.8.0
-  gitee pr status           --agent-help   ✅ available  🆕 v0.10.0
+  gitee pr list                  --agent-help   ✅ available  🆕 v0.11.0
+  gitee pr create                --agent-help   ✅ available
+  gitee pr view                  --agent-help   ✅ available  🆕 v0.11.0
+  gitee pr merge                 --agent-help   ✅ available  🆕 v0.11.0
+  gitee pr review                --agent-help   ✅ available  🆕 v0.11.0
+  gitee pr close                 --agent-help   ✅ available  🆕 v0.11.0
+  gitee pr reopen                --agent-help   ✅ available  🆕 v0.11.0
+  gitee pr diff                  --agent-help   ✅ available  🆕 v0.11.0
+  gitee pr comments              --agent-help   ✅ available  🆕 v0.11.0
+  gitee pr comment               --agent-help   ✅ available  🆕 v0.8.0
+  gitee pr checkout              --agent-help   ✅ available  🆕 v0.5.0
+  gitee pr ready                 --agent-help   ✅ available  🆕 v0.8.0
+  gitee pr edit                  --agent-help   ✅ available  🆕 v0.8.0
+  gitee pr checks                --agent-help   ✅ available  🆕 v0.8.0
+  gitee pr status                --agent-help   ✅ available  🆕 v0.10.0
 
 ### gist — Code snippets
-  gitee gist list           --agent-help   ✅ available  🆕 v0.11.0
-  gitee gist view           --agent-help   ✅ available  🆕 v0.11.0
-  gitee gist create         --agent-help   ✅ available  🆕 v0.11.0
-  gitee gist edit           --agent-help   ✅ available  🆕 v0.11.0
-  gitee gist delete         --agent-help   ✅ available  🆕 v0.11.0
-  gitee gist star           --agent-help   ✅ available  🆕 v0.11.0
-  gitee gist unstar         --agent-help   ✅ available  🆕 v0.11.0
-  gitee gist clone          --agent-help   ✅ available  🆕 v0.6.0
-  gitee gist comments       --agent-help   ✅ available  🆕 v0.12.0
-  gitee gist comment        --agent-help   ✅ available  🆕 v0.12.0
-  gitee gist comment-delete --agent-help   ✅ available  🆕 v0.12.0
+  gitee gist list                --agent-help   ✅ available  🆕 v0.11.0
+  gitee gist view                --agent-help   ✅ available  🆕 v0.11.0
+  gitee gist create              --agent-help   ✅ available  🆕 v0.11.0
+  gitee gist edit                --agent-help   ✅ available  🆕 v0.11.0
+  gitee gist delete              --agent-help   ✅ available  🆕 v0.11.0
+  gitee gist star                --agent-help   ✅ available  🆕 v0.11.0
+  gitee gist unstar              --agent-help   ✅ available  🆕 v0.11.0
+  gitee gist clone               --agent-help   ✅ available  🆕 v0.6.0
+  gitee gist comments            --agent-help   ✅ available  🆕 v0.12.0
+  gitee gist comment             --agent-help   ✅ available  🆕 v0.12.0
+  gitee gist comment-delete      --agent-help   ✅ available  🆕 v0.12.0
 
 ### ssh-key — SSH key management  🆕 v0.6.0
-  gitee ssh-key list        --agent-help   ✅ available
-  gitee ssh-key add         --agent-help   ✅ available
-  gitee ssh-key delete      --agent-help   ✅ available
+  gitee ssh-key list             --agent-help   ✅ available
+  gitee ssh-key add              --agent-help   ✅ available
+  gitee ssh-key delete           --agent-help   ✅ available
 
 ### gpg-key — GPG key management  ⚠  removed 2026-06
   gitee gpg-key *           — Gitee v5 API does not expose a GPG key endpoint
   Manage GPG keys via https://gitee.com/profile/gpg_settings
 
 ### user — Account profiles and follow graph  🆕 v0.12.0
-  gitee user view           --agent-help   ✅ available
-  gitee user follow         --agent-help   ✅ available
-  gitee user unfollow       --agent-help   ✅ available
-  gitee user followers      --agent-help   ✅ available
-  gitee user following      --agent-help   ✅ available
+  gitee user view                --agent-help   ✅ available
+  gitee user follow              --agent-help   ✅ available
+  gitee user unfollow            --agent-help   ✅ available
+  gitee user followers           --agent-help   ✅ available
+  gitee user following           --agent-help   ✅ available
 
 ### webhook — Repository webhooks  🆕 v0.7.0
-  gitee webhook list        --agent-help   ✅ available
-  gitee webhook create      --agent-help   ✅ available
-  gitee webhook view        --agent-help   ✅ available
-  gitee webhook edit        --agent-help   ✅ available
-  gitee webhook delete      --agent-help   ✅ available
-  gitee webhook test        --agent-help   ✅ available
+  gitee webhook list             --agent-help   ✅ available
+  gitee webhook create           --agent-help   ✅ available
+  gitee webhook view             --agent-help   ✅ available
+  gitee webhook edit             --agent-help   ✅ available
+  gitee webhook delete           --agent-help   ✅ available
+  gitee webhook test             --agent-help   ✅ available
 
 ### org — Organization management
-  gitee org list            --agent-help   ✅ available  🆕 v0.11.0
-  gitee org view            --agent-help   ✅ available  🆕 v0.11.0
-  gitee org member          --agent-help   ✅ available  🆕 v0.11.0
-  gitee org repo            --agent-help   ✅ available  🆕 v0.11.0
-  gitee org issue           --agent-help   ✅ available  🆕 v0.11.0
+  gitee org list                 --agent-help   ✅ available  🆕 v0.11.0
+  gitee org view                 --agent-help   ✅ available  🆕 v0.11.0
+  gitee org issues               --agent-help   ✅ available  🆕 v0.11.0
+  gitee org members              --agent-help   ✅ available  🆕 v0.11.0
+  gitee org repos                --agent-help   ✅ available  🆕 v0.11.0
 
 ### agent — Agent onboarding  🆕 v0.11.0
-  gitee agent onboard       --agent-help   ✅ available  🆕 v0.11.0
+  gitee agent onboard            --agent-help   ✅ available  🆕 v0.11.0
 
 ### release — Release management  🆕 v0.5.0
-  gitee release list        --agent-help   ✅ available
-  gitee release view        --agent-help   ✅ available
-  gitee release create      --agent-help   ✅ available
-  gitee release edit        --agent-help   ✅ available
-  gitee release delete      --agent-help   ✅ available
-  gitee release download    --agent-help   ✅ available
-  gitee release upload      --agent-help   ✅ available  🆕 v0.10.0
-  gitee release delete-asset --agent-help  ✅ available  🆕 v0.10.0
+  gitee release list             --agent-help   ✅ available
+  gitee release view             --agent-help   ✅ available
+  gitee release create           --agent-help   ✅ available
+  gitee release edit             --agent-help   ✅ available
+  gitee release delete           --agent-help   ✅ available
+  gitee release download         --agent-help   ✅ available
+  gitee release upload           --agent-help   ✅ available  🆕 v0.10.0
+  gitee release delete-asset     --agent-help   ✅ available  🆕 v0.10.0
 
 ### label — Label management  🆕 v0.5.0 (top-level)
-  gitee label list          --agent-help   ✅ available
-  gitee label view          --agent-help   ✅ available
-  gitee label create        --agent-help   ✅ available
-  gitee label edit          --agent-help   ✅ available
-  gitee label delete        --agent-help   ✅ available
-  gitee label clone         --agent-help   ✅ available
+  gitee label list               --agent-help   ✅ available
+  gitee label view               --agent-help   ✅ available
+  gitee label create             --agent-help   ✅ available
+  gitee label edit               --agent-help   ✅ available
+  gitee label delete             --agent-help   ✅ available
+  gitee label clone              --agent-help   ✅ available
 
 ### milestone — Repository milestones  🆕 v0.12.0
-  gitee milestone list      --agent-help   ✅ available
-  gitee milestone view      --agent-help   ✅ available
-  gitee milestone create    --agent-help   ✅ available
-  gitee milestone edit      --agent-help   ✅ available
-  gitee milestone delete    --agent-help   ✅ available
+  gitee milestone list           --agent-help   ✅ available
+  gitee milestone view           --agent-help   ✅ available
+  gitee milestone create         --agent-help   ✅ available
+  gitee milestone edit           --agent-help   ✅ available
+  gitee milestone delete         --agent-help   ✅ available
 
 ### notification — Notification center  🆕 v0.12.0
-  gitee notification list   --agent-help   ✅ available
-  gitee notification count  --agent-help   ✅ available
-  gitee notification read   --agent-help   ✅ available
+  gitee notification list        --agent-help   ✅ available
+  gitee notification count       --agent-help   ✅ available
+  gitee notification read        --agent-help   ✅ available
 
 ### api — Raw API access
-  gitee api raw             --agent-help   ✅ available  (escape hatch — see --help for usage)
+  gitee api                      --agent-help   ✅ available  (umbrella; shares its doc with 'api raw')
+  gitee api raw                  --agent-help   ✅ available  (escape hatch — see --help for usage)
 
 ### status — Cross-repo activity summary  🆕 v0.9.0
-  gitee status              --agent-help   ✅ available  🆕 v0.9.0
+  gitee status                   --agent-help   ✅ available  🆕 v0.9.0
 
 ### extension — gitee-cli extension management  🆕 v0.9.0
-  gitee extension list      --agent-help   ✅ available  🆕 v0.9.0
-  gitee extension install   --agent-help   ✅ available  🆕 v0.9.0
-  gitee extension remove    --agent-help   ✅ available  🆕 v0.9.0
-  gitee extension upgrade   --agent-help   ✅ available  🆕 v0.9.0
-  gitee extension create    --agent-help   ✅ available  🆕 v0.9.0
+  gitee extension list           --agent-help   ✅ available  🆕 v0.9.0
+  gitee extension install        --agent-help   ✅ available  🆕 v0.9.0
+  gitee extension remove         --agent-help   ✅ available  🆕 v0.9.0
+  gitee extension upgrade        --agent-help   ✅ available  🆕 v0.9.0
+  gitee extension create         --agent-help   ✅ available  🆕 v0.9.0
   External extensions (from ~/.gitee-cli/extensions/) are loaded at startup
   via ` + "`" + `gitee <name>` + "`" + `; --no-extensions disables that loader.
 
 ### alias — User-defined command shortcuts  🆕 v0.9.0
-  gitee alias set           --agent-help   ✅ available  🆕 v0.9.0
-  gitee alias list          --agent-help   ✅ available  🆕 v0.9.0
-  gitee alias delete        --agent-help   ✅ available  🆕 v0.9.0
+  gitee alias set                --agent-help   ✅ available  🆕 v0.9.0
+  gitee alias list               --agent-help   ✅ available  🆕 v0.9.0
+  gitee alias delete             --agent-help   ✅ available  🆕 v0.9.0
   Aliases (from ~/.gitee-cli/aliases.json) are expanded at startup: typing
   ` + "`" + `gitee co 123` + "`" + ` after ` + "`" + `gitee alias set co 'pr checkout'` + "`" + ` is rewritten to
   ` + "`" + `gitee pr checkout 123` + "`" + ` before cobra parses argv. Built-in commands
   always win over aliases of the same name.
 
 ### help topics — Cross-cutting documentation  🆕 v0.9.0
-  gitee help environment    --agent-help   n/a  (use 'gitee help environment')
-  gitee help exit-codes     --agent-help   n/a  (use 'gitee help exit-codes')
-  gitee help formatting     --agent-help   n/a  (use 'gitee help formatting')
-  gitee help reference      --agent-help   n/a  (auto-generated command index)
+  gitee help environment         --agent-help   n/a  (use 'gitee help environment')
+  gitee help exit-codes          --agent-help   n/a  (use 'gitee help exit-codes')
+  gitee help formatting          --agent-help   n/a  (use 'gitee help formatting')
+  gitee help reference           --agent-help   n/a  (auto-generated command index)
   These replace gh-style 'man pages' for things that don't fit under a single
   command. The reference page is generated from the live cobra tree at run time.
 
 ### search — Search (code + commits are 🆕 v0.10.0)
-  gitee search repos        --agent-help   ✅ available  🆕 v0.11.0
-  gitee search issues       --agent-help   ✅ available  🆕 v0.11.0
-  gitee search users        --agent-help   ✅ available  🆕 v0.11.0
-  gitee search code         --agent-help   ✅ available  🆕 v0.10.0
-  gitee search commits      --agent-help   ✅ available  🆕 v0.10.0
+  gitee search repos             --agent-help   ✅ available  🆕 v0.11.0
+  gitee search issues            --agent-help   ✅ available  🆕 v0.11.0
+  gitee search users             --agent-help   ✅ available  🆕 v0.11.0
+  gitee search code              --agent-help   ✅ available  🆕 v0.10.0
+  gitee search commits           --agent-help   ✅ available  🆕 v0.10.0
 
 ### auth — Authentication  (operational, n/a)
-  gitee auth login          --agent-help   n/a  (operational/config — use --help)
-  gitee auth logout         --agent-help   n/a  (operational/config — use --help)
-  gitee auth refresh        --agent-help   n/a  (operational/config — use --help)
-  gitee auth status         --agent-help   n/a  (operational/config — use --help)
-  gitee auth switch         --agent-help   n/a  (operational/config — use --help)
-  gitee auth token          --agent-help   n/a  (operational/config — use --help)
+  gitee auth login               --agent-help   n/a  (operational/config — use --help)
+  gitee auth logout              --agent-help   n/a  (operational/config — use --help)
+  gitee auth refresh             --agent-help   n/a  (operational/config — use --help)
+  gitee auth status              --agent-help   n/a  (operational/config — use --help)
+  gitee auth switch              --agent-help   n/a  (operational/config — use --help)
+  gitee auth token               --agent-help   n/a  (operational/config — use --help)
   Tokens resolved at runtime; --agent-help returns the standard n/a notice.
 
 ### config — Configuration  (operational, n/a)
-  gitee config get          --agent-help   n/a  (operational/config — use --help)
-  gitee config list         --agent-help   n/a  (operational/config — use --help)
-  gitee config set          --agent-help   n/a  (operational/config — use --help)
-  gitee config unset        --agent-help   n/a  (operational/config — use --help)
+  gitee config get               --agent-help   n/a  (operational/config — use --help)
+  gitee config list              --agent-help   n/a  (operational/config — use --help)
+  gitee config set               --agent-help   n/a  (operational/config — use --help)
+  gitee config unset             --agent-help   n/a  (operational/config — use --help)
   Config sourced from ~/.gitee-cli/settings.json; use --help for flags.
 
 ### completion — Shell completion scripts  (operational, n/a)
-  gitee completion bash     --agent-help   n/a  (operational — generates bash script, use the command directly)
-  gitee completion fish     --agent-help   n/a  (operational — generates fish script, use the command directly)
-  gitee completion powershell --agent-help  n/a  (operational — generates powershell script, use the command directly)
-  gitee completion zsh      --agent-help   n/a  (operational — generates zsh script, use the command directly)
+  gitee completion bash          --agent-help   n/a  (operational — generates bash script, use the command directly)
+  gitee completion fish          --agent-help   n/a  (operational — generates fish script, use the command directly)
+  gitee completion powershell    --agent-help   n/a  (operational — generates powershell script, use the command directly)
+  gitee completion zsh           --agent-help   n/a  (operational — generates zsh script, use the command directly)
   Generates shell completion scripts; --agent-help returns the standard n/a notice.
 
 ### version — Version  (operational, n/a)
-  gitee version             --agent-help   n/a  (operational — prints version, use --help for flags)
+  gitee version                  --agent-help   n/a  (operational — prints version, use --help for flags)
   Cobra built-in version; --agent-help returns the standard n/a notice.
 
 ## Roadmap

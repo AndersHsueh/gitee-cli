@@ -25,6 +25,7 @@ var createFlags struct {
 
 var createCmd = &cobra.Command{
 	Use:   "create",
+	Args:  cobra.NoArgs,
 	Short: "Create a pull request",
 	Example: `  gitee pr create --repo owner/repo --title "Add feature" --source feature --target main
   gitee pr create --repo owner/repo --title "Fix bug" --source fix --target dev --draft`,

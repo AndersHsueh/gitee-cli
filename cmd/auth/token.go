@@ -12,6 +12,7 @@ import (
 
 var tokenCmd = &cobra.Command{
 	Use:     "token",
+	Args:    cobra.NoArgs,
 	Short:   "Print the auth token",
 	PreRunE: cmd.AgentHelpNA("auth token"),
 	RunE: func(cobraCmd *cobra.Command, args []string) error {

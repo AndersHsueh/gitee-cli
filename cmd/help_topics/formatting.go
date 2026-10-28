@@ -11,29 +11,34 @@ import (
 
 // formattingTopic is the implementation of `gitee help formatting`.
 //
-// gitee-cli ships with three output formats. This topic explains
+// gitee-cli ships with two output formats. This topic explains
 // the semantics, the machine-friendly patterns, and the
 // --output / GITEE_OUTPUT priority rules.
+//
+// csv is deliberately absent: it was advertised for several releases but
+// never implemented (the flag silently produced a table). Rather than
+// document a lie, -o csv is now rejected with a non-zero exit — see
+// cmd.validateOutputFormat.
 var formattingTopic = &cobra.Command{
 	Use:   "formatting",
-	Short: "How to control output format (table/json/csv) and post-process with jq",
+	Short: "How to control output format (table/json) and post-process with jq",
 	Long: `Output format control for gitee-cli.
 
-Three formats are supported today:
+Two formats are supported:
 
   table  Human-friendly columns, default for TTY output.
   json   Machine-friendly. Use for piping to jq, scripts, agents.
-  csv   Spreadsheet-friendly. Header row included.
 
 Format is selected by the --output / -o flag or GITEE_OUTPUT.
-Precedence (highest first): --output > GITEE_OUTPUT > default ("table").`,
+Precedence (highest first): --output > GITEE_OUTPUT > default ("table").
+Any other value (including csv) is rejected with a non-zero exit code —
+gitee-cli never silently substitutes a different format.`,
 	RunE: func(c *cobra.Command, args []string) error {
 		w := output.NewTableWriter()
 		fmt.Fprintln(w, "FORMAT\tUSE WHEN\tNOTES")
 		rows := []struct{ a, b, c string }{
 			{"table", "Reading in a terminal", "Default. Auto-falls-back to plain (no color, no borders) when piped."},
 			{"json", "Piping to jq / scripts / agents", "Always emits one JSON object per line for collections (NDJSON for streams), or a single object/array for singletons."},
-			{"csv", "Importing to a spreadsheet", "Header row included. Quotes and embedded newlines follow RFC 4180."},
 		}
 		for _, r := range rows {
 			fmt.Fprintf(w, "%s\t%s\t%s\n", r.a, r.b, r.c)

@@ -36,7 +36,7 @@ func TestStarAgentHelpContent(t *testing.T) {
 
 func TestStarStarAgentHelpContent(t *testing.T) {
 	required := []string{
-		"# gitee repo star",
+		"# gitee repo star star",
 		"## Purpose",
 		"## Pre-conditions",
 		"## Required flags / arguments",
@@ -63,7 +63,7 @@ func TestStarStarAgentHelpContent(t *testing.T) {
 
 func TestStarUnstarAgentHelpContent(t *testing.T) {
 	required := []string{
-		"# gitee repo unstar",
+		"# gitee repo star unstar",
 		"## Purpose",
 		"## Pre-conditions",
 		"## Required flags / arguments",

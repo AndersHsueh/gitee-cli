@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -23,6 +24,29 @@ var SearchCmd = &cobra.Command{
 	Example: `  gitee search repos gitee
   gitee search issues "bug fix"
   gitee search users johndoe`,
+	// GroupRunE: unknown verbs exit non-zero with a suggestion; no args shows help.
+	RunE: cmd.GroupRunE,
+}
+
+// queryArgs validates the single positional <query> argument of a search
+// subcommand. It replaces cobra's terse "accepts 1 arg(s), received N"
+// with actionable guidance, and (unlike a bare MinimumNArgs) rejects
+// extra arguments instead of silently ignoring them — a query containing
+// spaces must be quoted, not split.
+//
+// Wrap it in cmd.AgentHelpAwareArgs so --agent-help still works without
+// a query.
+func queryArgs(verb string) cobra.PositionalArgs {
+	return func(c *cobra.Command, args []string) error {
+		switch {
+		case len(args) == 0:
+			return fmt.Errorf("query is required (usage: gitee search %s <query>)", verb)
+		case len(args) > 1:
+			return fmt.Errorf("too many arguments: pass one query, quoted if it contains spaces "+
+				"(usage: gitee search %s \"<query>\")", verb)
+		}
+		return nil
+	}
 }
 
 // newSearchClient creates a client; token is optional for public search endpoints.
@@ -50,7 +74,7 @@ var reposFlags struct {
 var searchReposCmd = &cobra.Command{
 	Use:   "repos <query>",
 	Short: "Search repositories",
-	Args:  cmd.AgentHelpAwareArgs(cobra.MinimumNArgs(1)),
+	Args:  cmd.AgentHelpAwareArgs(queryArgs("repos")),
 	PreRunE: func(c *cobra.Command, args []string) error {
 		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
@@ -127,6 +151,19 @@ func runSearchRepos(c *cobra.Command, args []string) error {
 		return fmt.Errorf("search repos: %w", err)
 	}
 
+	// Gitee's /search/repositories endpoint currently returns an empty
+	// array for every query (upstream behavior, verified 2026-06), so an
+	// empty response is the common case, not an error. Tell the caller
+	// what to do instead of leaving them with a bare "(no results)" —
+	// on stderr (in BOTH table and JSON mode, so scripts that only look
+	// at stderr, or that pipe stdout, still see the diagnosis), and
+	// without changing the exit code (an empty search is a valid result).
+	if len(searchItems(result)) == 0 {
+		fmt.Fprintf(os.Stderr, "gitee search repos: no repositories matched %q. "+
+			"Note: Gitee's repository-search API currently returns no results for most queries; "+
+			"to enumerate a user's or org's repositories use `gitee repo list --owner <owner>`.\n", q)
+	}
+
 	return printSearchResults(result, "repos")
 }
 
@@ -141,7 +178,7 @@ var issuesFlags struct {
 var searchIssuesCmd = &cobra.Command{
 	Use:   "issues <query>",
 	Short: "Search issues across repositories",
-	Args:  cmd.AgentHelpAwareArgs(cobra.MinimumNArgs(1)),
+	Args:  cmd.AgentHelpAwareArgs(queryArgs("issues")),
 	PreRunE: func(c *cobra.Command, args []string) error {
 		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
@@ -188,7 +225,7 @@ var usersFlags struct {
 var searchUsersCmd = &cobra.Command{
 	Use:   "users <query>",
 	Short: "Search users",
-	Args:  cmd.AgentHelpAwareArgs(cobra.MinimumNArgs(1)),
+	Args:  cmd.AgentHelpAwareArgs(queryArgs("users")),
 	PreRunE: func(c *cobra.Command, args []string) error {
 		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
@@ -233,6 +270,7 @@ var codeFlags struct {
 var searchCodeCmd = &cobra.Command{
 	Use:   "code <query>",
 	Short: "Search code across repositories",
+	Args:  cmd.AgentHelpAwareArgs(queryArgs("code")),
 	Long: `Search for code across Gitee repositories.
 
 Note: Code search availability depends on your Gitee instance.
@@ -249,9 +287,7 @@ If the API returns a 404, code search is not enabled for that instance.`,
 
 func runSearchCode(c *cobra.Command, args []string) error {
 	_ = cmd.RuntimeFromCmd(c)
-	if len(args) < 1 {
-		return fmt.Errorf("query is required (usage: gitee search code <query>)")
-	}
+	// args[0] is guaranteed by queryArgs (friendly "query is required").
 	q := args[0]
 	client := newSearchClient()
 
@@ -295,6 +331,7 @@ var commitsFlags struct {
 var searchCommitsCmd = &cobra.Command{
 	Use:   "commits <query>",
 	Short: "Search commits across repositories",
+	Args:  cmd.AgentHelpAwareArgs(queryArgs("commits")),
 	Long: `Search for commits across Gitee repositories.
 
 Note: Commit search availability depends on your Gitee instance.
@@ -311,9 +348,7 @@ If the API returns a 404, commit search is not enabled for that instance.`,
 
 func runSearchCommits(c *cobra.Command, args []string) error {
 	_ = cmd.RuntimeFromCmd(c)
-	if len(args) < 1 {
-		return fmt.Errorf("query is required (usage: gitee search commits <query>)")
-	}
+	// args[0] is guaranteed by queryArgs (friendly "query is required").
 	q := args[0]
 	client := newSearchClient()
 
@@ -336,25 +371,26 @@ func runSearchCommits(c *cobra.Command, args []string) error {
 	return printSearchResults(result, "commits")
 }
 
-// printSearchResults prints search results in a unified format
-func printSearchResults(result interface{}, searchType string) error {
-	var items []interface{}
-
-	// Handle different response formats
+// searchItems normalizes the three response shapes the v5 search
+// endpoints return (bare array, object with "items", nil) into a single
+// slice, so callers can count results before deciding to print.
+func searchItems(result interface{}) []interface{} {
 	switch v := result.(type) {
 	case []interface{}:
-		items = v
+		return v
 	case map[string]interface{}:
 		if arr, ok := v["items"].([]interface{}); ok {
-			items = arr
-		} else {
-			items = []interface{}{v}
+			return arr
 		}
-	case nil:
-		items = []interface{}{}
+		return []interface{}{v}
 	default:
-		items = []interface{}{}
+		return []interface{}{}
 	}
+}
+
+// printSearchResults prints search results in a unified format
+func printSearchResults(result interface{}, searchType string) error {
+	items := searchItems(result)
 
 	// JSON output
 	if cmd.GlobalOutput == "json" {
@@ -655,6 +691,18 @@ inside files; ` + "`" + `gitee search repos` + "`" + ` searches repo metadata.
   returns public results without a token, but the anonymous rate limit
   is much lower.
 
+## ⚠ Known limitation (empty results are expected)
+Gitee's ` + "`" + `/search/repositories` + "`" + ` endpoint currently returns an empty
+array for most if not all queries — this is upstream behavior, not a
+bug in gitee-cli (verified 2026-06). The command therefore exits 0
+with "(no results)" on stdout and an explanatory hint on stderr.
+When you need a repository list, prefer the endpoints that work:
+  gitee repo list --owner <user-or-org>    # all repos of an owner
+  gitee repo view owner/repo               # one repo, by full name
+  gitee search issues "<query>"            # issues work; searchable text
+Do NOT retry the same search hoping for results, and do not treat an
+empty result as "the repo does not exist".
+
 ## Required arguments
   <query> (positional)   Search keywords (e.g. "go cobra cli")
 
@@ -707,7 +755,7 @@ html_url, etc.). Each object is exactly the same shape as
 - 401 Unauthorized:  token expired or invalid          →  gitee auth login
 - 403 Forbidden:     rate limit exceeded for anonymous  →  authenticate
 - 404 Not Found:     malformed query or bad URL        →  check query syntax
-- Empty results:     no repos matched the query         →  try broader terms
+- Empty results:     endpoint returns [] for most queries →  use ` + "`" + `gitee repo list --owner` + "`" + ` (stderr hint says so)
 
 ## Race condition warning ⚠️
 Read-only, but repo metadata is shared, moving state: stars, forks,

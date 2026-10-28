@@ -20,6 +20,7 @@ var branchesFlags struct {
 
 var branchesCmd = &cobra.Command{
 	Use:     "branches",
+	Args:    cobra.NoArgs,
 	Short:   "List branches in a repository",
 	Example: `  gitee repo branches --repo owner/repo`,
 	PreRunE: func(c *cobra.Command, args []string) error {

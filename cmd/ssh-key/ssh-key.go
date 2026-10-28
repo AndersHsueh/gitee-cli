@@ -1,6 +1,8 @@
 package sshkey
 
 import (
+	"gitee-cli/cmd"
+
 	"github.com/spf13/cobra"
 )
 
@@ -14,6 +16,8 @@ var SSHKeyCmd = &cobra.Command{
 These keys let you push/pull Gitee repositories over SSH without entering
 your password. Use this command to list, add, or remove keys without
 opening the web UI.`,
+	// GroupRunE: unknown verbs exit non-zero with a suggestion; no args shows help.
+	RunE: cmd.GroupRunE,
 }
 
 func init() {

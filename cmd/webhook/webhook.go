@@ -8,7 +8,10 @@
 // integration point.
 package webhook
 
-import "github.com/spf13/cobra"
+import (
+	"gitee-cli/cmd"
+	"github.com/spf13/cobra"
+)
 
 // WebhookCmd is the top-level command for managing repository webhooks.
 var WebhookCmd = &cobra.Command{
@@ -23,6 +26,8 @@ create, view, edit, delete, or test webhooks without opening the web UI.
 All subcommands require a target repository via --repo (or the global
 --repo flag). Write operations (create/edit/delete) require repo admin
 rights on the target.`,
+	// GroupRunE: unknown verbs exit non-zero with a suggestion; no args shows help.
+	RunE: cmd.GroupRunE,
 }
 
 func init() {

@@ -18,6 +18,7 @@ var onboardFlags struct {
 
 var onboardCmd = &cobra.Command{
 	Use:   "onboard",
+	Args:  cobra.NoArgs,
 	Short: "Generate .gitee/agent.md with AI agent workflow templates",
 	Long: `Generate a .gitee/agent.md file in the current directory (or --dir)
 with pre-built orchestration templates for AI coding agents.
@@ -118,10 +119,13 @@ var agentMd = "# Agent Guide — gitee-cli Workflow Templates\n" +
 	"# Check if authenticated:\n" +
 	"gitee auth status\n" +
 	"\n" +
-	"# Login (interactive OAuth2 device flow):\n" +
-	"gitee auth login\n" +
+	"# Login verifies a Personal Access Token (PAT) against the API and saves\n" +
+	"# it to ~/.gitee-cli/settings.json. There is NO interactive OAuth2\n" +
+	"# device flow: create a PAT at https://gitee.com/profile/personal_access_tokens\n" +
+	"# (scopes: projects, pull_requests, issues as needed), then:\n" +
+	"gitee auth login --token <your_PAT>\n" +
 	"\n" +
-	"# Or use an existing token:\n" +
+	"# Or use an existing token without persisting it:\n" +
 	"export GITEE_TOKEN=your_access_token\n" +
 	triple + "\n" +
 	"\n" +
@@ -155,7 +159,7 @@ var agentMd = "# Agent Guide — gitee-cli Workflow Templates\n" +
 	"\n" +
 	"# 5. Wait for CI and merge\n" +
 	"gitee pr checks <pr_number> --repo owner/repo\n" +
-	"gitee pr merge <pr_number> --repo owner/repo --squash --delete-branch\n" +
+	"gitee pr merge <pr_number> --repo owner/repo --squash\n" +
 	"\n" +
 	"# 6. Verify the issue is closed\n" +
 	"gitee issue view <number> --repo owner/repo\n" +

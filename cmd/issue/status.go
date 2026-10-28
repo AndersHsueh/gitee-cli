@@ -43,6 +43,7 @@ var issueStatusFlags struct {
 
 var issueStatusCmd = &cobra.Command{
 	Use:   "status",
+	Args:  cobra.NoArgs,
 	Short: "Show cross-repo issue status for the current user",
 	Long: `Show a summary of issues across your Gitee repositories:
 Issues assigned to you and issues you've opened.

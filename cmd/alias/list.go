@@ -12,6 +12,7 @@ import (
 
 var listCmd = &cobra.Command{
 	Use:   "list",
+	Args:  cobra.NoArgs,
 	Short: "List all defined aliases",
 	Example: `  gitee alias list
   gitee alias list --output json`,

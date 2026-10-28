@@ -46,6 +46,7 @@ var prStatusFlags struct {
 
 var prStatusCmd = &cobra.Command{
 	Use:   "status",
+	Args:  cobra.NoArgs,
 	Short: "Show cross-repo PR status for the current user",
 	Long: `Show a summary of pull requests across your Gitee repositories:
 PRs awaiting your review and PRs you've opened.

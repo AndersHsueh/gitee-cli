@@ -13,14 +13,21 @@ package help_topics
 
 import (
 	"fmt"
+	"os"
 
+	"gitee-cli/internal/envconfig"
 	"gitee-cli/internal/output"
 
 	"github.com/spf13/cobra"
 )
 
-// envVar describes a single environment variable for the
-// environment topic table.
+// envVar is the render-time projection of internal/envconfig.Variable used
+// by the environment table (and by content_test).
+//
+// There is deliberately NO list of variables or descriptions in this file:
+// both the set and the wording come from the shared registry in
+// internal/envconfig, so `gitee help environment`, the runtime env layer and
+// the tests can never disagree about which variables exist.
 type envVar struct {
 	Name        string
 	Default     string
@@ -29,15 +36,14 @@ type envVar struct {
 
 // environmentTopic is the implementation of `gitee help environment`.
 //
-// Lists every env var the gitee-cli binary reads, with the effective
-// default (what you'll see if it's unset) and a short description.
-// Read top-to-bottom; the list is ordered by category: auth, host,
-// config, output, debug, network, plugins/extensions.
+// Table contents are derived from envconfig.Variables, the same registry
+// cmd/env.go uses to apply env-provided flag defaults. Adding a variable
+// there automatically documents it here (and vice versa: there is nowhere
+// else to add one).
 //
 // Note: gitee-cli prefers explicit flags (--token, --hostname) over
-// env vars, and the on-disk config (~/.gitee-cli/settings.json)
-// over env vars, in that order. See the priority column in the
-// description when in doubt.
+// env vars, and the on-disk config (~/.gitee-cli/settings.json) over env
+// vars, in that order.
 var environmentTopic = &cobra.Command{
 	Use:   "environment",
 	Short: "Environment variables that gitee-cli reads",
@@ -45,7 +51,9 @@ var environmentTopic = &cobra.Command{
 
 Most users only need GITEE_TOKEN (or --token). The rest cover
 enterprise deployments, output formatting, debug switches, and
-the extension/alias subsystems.
+the extension/alias subsystems. Every variable in the table below is
+actually read by the binary; variables that are not listed are not
+recognized (unknown GITEE_* variables are ignored).
 
 Priority (highest to lowest):
   1. CLI flag           (e.g. --token, --hostname)
@@ -53,106 +61,35 @@ Priority (highest to lowest):
   3. Config file        (~/.gitee-cli/settings.json)
   4. Built-in default`,
 	RunE: func(c *cobra.Command, args []string) error {
-		vars := []envVar{
-			// --- auth ---
-			{
-				Name:        "GITEE_TOKEN",
-				Default:     "(none — required for most commands)",
-				Description: "Personal access token. Equivalent to --token. Used to authenticate every API call.",
-			},
-			// --- host / enterprise ---
-			{
-				Name:        "GITEE_HOSTNAME",
-				Default:     "gitee.com",
-				Description: "Gitee hostname. Override for Gitee Enterprise (e.g. git.gitee.work). Equivalent to --hostname.",
-			},
-			{
-				Name:        "GITEE_API_URL",
-				Default:     "https://{hostname}/api/v5",
-				Description: "Full API base URL. Use when your enterprise deployment has a non-standard API path. Equivalent to --api-url.",
-			},
-			// --- output ---
-			{
-				Name:        "GITEE_OUTPUT",
-				Default:     "table",
-				Description: "Default output format: table|json|csv. Equivalent to --output/-o.",
-			},
-			{
-				Name:        "NO_COLOR",
-				Default:     "(unset — colors enabled when stdout is a TTY)",
-				Description: "Set to any non-empty value to disable ANSI color codes in output. Equivalent to --no-color.",
-			},
-			{
-				Name:        "CLICOLOR_FORCE",
-				Default:     "(unset)",
-				Description: "Set to a non-zero value to force color output even when stdout is piped (used for grep / log capture).",
-			},
-			// --- pagination / limits ---
-			{
-				Name:        "GITEE_PAGINATE",
-				Default:     "(unset — single page only)",
-				Description: "If set, --paginate behaviour is enabled by default (walks all pages). Equivalent to --paginate/-P.",
-			},
-			{
-				Name:        "GITEE_LIMIT",
-				Default:     "30",
-				Description: "Default --limit value (max results). Equivalent to --limit.",
-			},
-			// --- debug / network ---
-			{
-				Name:        "GITEE_VERBOSE",
-				Default:     "(unset — quiet)",
-				Description: "Set to 1 / true / yes to print HTTP request/response details on stderr. Equivalent to --verbose/-v.",
-			},
-			{
-				Name:        "GITEE_TIMEOUT",
-				Default:     "30",
-				Description: "HTTP timeout in seconds. Equivalent to --timeout.",
-			},
-			{
-				Name:        "HTTPS_PROXY",
-				Default:     "(none — direct connection)",
-				Description: "Standard HTTPS proxy URL. Honored by net/http via ProxyFromEnvironment.",
-			},
-			{
-				Name:        "GITEE_INSECURE",
-				Default:     "(unset — TLS verification on)",
-				Description: "Set to 1 to skip TLS certificate verification. Insecure; for testing only.",
-			},
-			// --- extensions ---
-			{
-				Name:        "GITEE_EXT_DIR",
-				Default:     "~/.gitee-cli/extensions",
-				Description: "Override the extension install directory. Mainly useful for portable dotfiles / test isolation.",
-			},
-			{
-				Name:        "GITEE_NO_EXTENSIONS",
-				Default:     "(unset — extensions loaded)",
-				Description: "Set to 1 to skip the dynamic extension loader on startup. Equivalent to --no-extensions.",
-			},
-			// --- aliases ---
-			{
-				Name:        "GITEE_ALIASES_FILE",
-				Default:     "~/.gitee-cli/aliases.json",
-				Description: "Override the aliases JSON file location. Useful for portable dotfiles and CI.",
-			},
-			// --- editor / browser ---
-			{
-				Name:        "GITEE_EDITOR",
-				Default:     "$EDITOR or vi",
-				Description: "Editor for --editor flows (issue/pr create body). Falls back to VISUAL, then EDITOR.",
-			},
-			{
-				Name:        "GITEE_BROWSER",
-				Default:     "platform default",
-				Description: "Browser binary for 'gitee <cmd> --web' style flows. Falls back to BROWSER.",
-			},
-		}
+		vars := environmentVars()
 		w := output.NewTableWriter()
 		fmt.Fprintln(w, "VARIABLE\tDEFAULT\tDESCRIPTION")
 		for _, v := range vars {
 			fmt.Fprintf(w, "%s\t%s\t%s\n", v.Name, v.Default, v.Description)
 		}
-		return w.Flush()
+		if err := w.Flush(); err != nil {
+			return err
+		}
+		_, _ = fmt.Fprintln(os.Stdout)
+		_, _ = fmt.Fprintln(os.Stdout, "Network proxy variables are not gitee-specific: gitee-cli's HTTP")
+		_, _ = fmt.Fprintln(os.Stdout, "client honors the standard Go net/http variables (HTTPS_PROXY,")
+		_, _ = fmt.Fprintln(os.Stdout, "HTTP_PROXY, NO_PROXY) via ProxyFromEnvironment.")
+		return nil
 	},
+}
+
+// environmentVars projects the shared registry (internal/envconfig) into the
+// rows rendered by this topic. It is the ONLY bridge between the runtime env
+// layer and this page — there is no second copy of the names or wording.
+//
+// content_test.go asserts this projection matches envconfig.Variables exactly,
+// and internal/envconfig/envconfig_test.go freezes the canonical set, so a
+// removed registry row is a test failure in both places.
+func environmentVars() []envVar {
+	vars := envconfig.Variables
+	out := make([]envVar, 0, len(vars))
+	for _, v := range vars {
+		out = append(out, envVar{Name: v.Name, Default: v.Default, Description: v.Description})
+	}
+	return out
 }

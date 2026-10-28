@@ -14,6 +14,7 @@ var deleteFlags struct {
 
 var deleteCmd = &cobra.Command{
 	Use:   "delete",
+	Args:  cobra.NoArgs,
 	Short: "Delete a label",
 	Example: `  gitee label delete --repo owner/repo --name bug
   gitee label delete -R owner/repo -n wontfix --force`,

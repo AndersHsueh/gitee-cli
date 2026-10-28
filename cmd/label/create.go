@@ -14,6 +14,7 @@ var createFlags struct {
 
 var createCmd = &cobra.Command{
 	Use:   "create",
+	Args:  cobra.NoArgs,
 	Short: "Create a new label",
 	Example: `  gitee label create --repo owner/repo --name bug --color ff0000
   gitee label create -R owner/repo -n enhancement -c 00ff00`,

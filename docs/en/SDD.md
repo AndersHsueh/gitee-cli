@@ -1,6 +1,13 @@
 # gitee-cli System Design Document
 
-Version: 1.0.0 | Tech Stack: Go 1.23+ / Cobra / Viper / Resty
+> ⚠️ **Status notice (v0.13.2, 2026-10 maintenance round)**: This document is an early design
+> draft; parts of it are **not implemented or out of date** (e.g. Viper config, OAuth2 device
+> flow, `internal/auth` / `printer` / `i18n` modules, goreleaser release chain). The authoritative
+> implementation and behavior are the code, `gitee --help`, `gitee <cmd> --agent-help` and
+> `gitee help reference`. Sections that diverge most are corrected inline.
+
+
+Version: 1.0.0 (design draft; see banner) | Tech Stack: Go 1.27+ / Cobra / Resty / hand-written JSON config
 
 ---
 
@@ -8,14 +15,14 @@ Version: 1.0.0 | Tech Stack: Go 1.23+ / Cobra / Viper / Resty
 
 | Component | Technology | Version | Reason |
 |-----------|------------|---------|--------|
-| Language | Go | 1.23+ | Easy cross-compilation, zero binary dependencies, mature ecosystem |
-| CLI Framework | Cobra | v1.8+ | Same as gh/glab, excellent help/completion/flag generation |
-| Config Management | Viper | v1.18+ | YAML/ENV/Flag three-layer config, perfect Cobra integration |
-| HTTP Client | resty | v2.x | Chainable API, auto-retry, request/response middleware |
-| OAuth2 | `golang.org/x/oauth2` | latest | Standard implementation, supports Device Flow |
-| Table Output | `tabwriter` (stdlib) | — | No extra dependencies, lightweight |
-| Colors | `github.com/fatih/color` | v1.x | Cross-platform ANSI colors, supports `NO_COLOR` |
-| Testing | `testing` + `testify` | v1.x | Standard + assertion library |
+| Language | Go | 1.27+ (`go 1.27.3` in go.mod) | Easy cross-compilation, zero binary dependencies, mature ecosystem |
+| CLI Framework | Cobra | v1.10 | Same as gh/glab, excellent help/completion/flag generation |
+| Config Management | hand-written JSON (`encoding/json`) | stdlib | Simple structure; avoids Viper for a few layers; atomic write + 0600 |
+| HTTP Client | resty | v2.17 | Chainable API, auto-retry, request/response middleware |
+| Auth | Personal access token (PAT) | — | `Authorization: token <PAT>` header; **no OAuth2 / x/oauth2 dependency** |
+| Table Output | `tabwriter` (stdlib) | — | Unified through `internal/output.NewTableWriter` |
+| Colors | `github.com/fatih/color` | v1.19 | Cross-platform ANSI colors, supports `NO_COLOR` |
+| Testing | `testing` + `testify` | v1.12 | Standard + assertion library |
 | Mock HTTP | `httptest` (stdlib) | — | Built-in server, zero dependencies |
 
 ---
@@ -96,31 +103,16 @@ gitee-cli/
 │   └── completion/
 │       └── shell.go
 ├── internal/                     # Internal packages (not exported)
-│   ├── api/
-│   │   ├── client.go            # HTTP client wrapper (resty + middleware)
-│   │   ├── endpoints.go         # API endpoint path constants
-│   │   ├── errors.go            # API error types + HTTP status code mapping
-│   │   └── pagination.go        # Pagination Link Header parsing
-│   ├── auth/
-│   │   ├── token.go             # Credential read/write (settings.json)
-│   │   ├── oauth.go             # OAuth2 Device Flow implementation
-│   │   └── config.go            # Token storage config
-│   ├── config/
-│   │   ├── config.go            # Viper config wrapper
-│   │   └── migrate.go           # Config migration (version compatibility)
-│   ├── printer/
-│   │   ├── printer.go           # Printer interface definition
-│   │   ├── table.go             # tabwriter table output
-│   │   ├── json.go              # JSON pretty output
-│   │   └── csv.go               # CSV output
-│   ├── terminal/
-│   │   ├── prompt.go            # Interactive prompts (ask/confirm)
-│   │   ├── spinner.go           # Loading animation
-│   │   └── browser.go           # Browser open (cross-platform)
-│   └── i18n/
-│       ├── i18n.go              # Translation function T()
-│       ├── zh_CN.go             # Chinese language pack
-│       └── en_US.go             # English language pack
+│   ├── api/                     # HTTP client (resty): client / endpoints / errors / pagination
+│   ├── alias/                   # User alias resolution and storage
+│   ├── atomicfile/              # Atomic file write (temp + chmod + rename)
+│   ├── cmdkit/                  # List-command skeleton (RunList) + shared options
+│   ├── config/                  # Hand-written JSON config (settings.json, 0600 / 0700)
+│   ├── domain/                  # Cross-command business logic (label / milestone / notification / webhook)
+│   ├── extension/               # Dynamic extension loading and storage
+│   ├── output/                  # Unified tabwriter (NewTableWriter) and PrintJSON
+│   ├── terminal/                # Terminal interaction (prompt)
+│   └── utils/                   # Shared helpers (repo resolution, flags, git, validation)
 ├── pkg/                         # Reusable public packages
 │   └── types/
 │       ├── repo.go              # Repository type
@@ -134,9 +126,27 @@ gitee-cli/
 │   └── main.go                  # Program entry
 ├── go.mod
 ├── go.sum
-├── Makefile
-├── .goreleaser.toml
+├── scripts/                      # ci.sh / release.sh / publish-release.sh
 └── README.md
+```
+
+---
+
+### 2.1 Actual Directory Structure (v0.13.x)
+
+The design draft tree above **differs from the current code**. Measured structure
+(reproducible with `git ls-files` / `ls`):
+
+```
+cmd/            # one package per group: agent alias api auth completion config extension gist
+                # issue label milestone notification org pr release repo search ssh-key status
+                # user webhook help_topics + root.go / runtime.go / cmdkit helpers
+internal/       # api alias atomicfile cmdkit config domain extension output terminal utils
+                # (no auth/, printer/, i18n/; auth logic lives in cmd/auth + internal/config)
+pkg/types/      # API data models
+docs/           # this design doc + philosophy.md + multilingual READMEs
+scripts/        # ci.sh / release.sh / publish-release.sh (no Makefile / goreleaser)
+test/           # functional bash tests + doc-example verifier
 ```
 
 ---
@@ -216,40 +226,32 @@ client.SetTimeout(time.Duration(timeout) * time.Second)
 
 ---
 
-### 3.2 Authentication Module (`internal/auth/`)
+### 3.2 Authentication Module (`cmd/auth/` + `internal/config/`)
 
-**Credential Storage Location:**
+> The draft said `internal/auth/` + OAuth2 Device Flow; **no such package exists and there is no
+> OAuth2**. Auth = personal access token (PAT): resolve (`--token` > `GITEE_TOKEN` >
+> `settings.json`) → verify with `GET /user` → optionally persist back to `settings.json`.
+
+**Credential storage location:**
 
 ```
 ~/.gitee-cli/
-└── settings.json      # Unified storage for all user settings and credentials (file mode 0600)
+└── settings.json      # unified storage for user settings and credentials (file 0600, dir 0700)
 ```
 
-> Legacy path `~/.config/gitee/` is deprecated, auto-migrated on tool startup.
-
-**`~/.gitee-cli/settings.json` Full Structure:**
+**Actual `~/.gitee-cli/settings.json` structure (fields per `internal/config/config.go`):**
 
 ```json
 {
   "git": {
-    "user": {
-      "name": "<your-name>",
-      "email": "<your-email>"
-    }
+    "user": { "name": "<your-name>", "email": "<your-email>" }
   },
   "hosts": {
     "gitee.com": {
       "token": "<your-access-token>",
       "username": "<your-username>",
       "protocol": "https",
-      "scopes": [
-        "user_info",
-        "projects",
-        "pull_requests",
-        "issues",
-        "gists"
-      ],
-      "expires_at": ""
+      "scopes": ["user_info", "projects", "pull_requests", "issues", "gists"]
     }
   },
   "preferences": {
@@ -257,74 +259,43 @@ client.SetTimeout(time.Duration(timeout) * time.Second)
     "editor": "",
     "browser": "",
     "prompt": "enabled",
-    "pager": ""
+    "pager": "",
+    "protocol": "",
+    "active_host": "gitee.com"
   }
 }
 ```
 
-> ⚠️ **Security Notice**
-> - File created with mandatory permissions `0600` (owner read/write only)
-> - `token` field is Gitee Access Token, **never commit to version control**
-> - Add `~/.gitee-cli/` to `~/.gitignore_global`
-> - For CI/CD, inject via environment variable `GITEE_TOKEN`, not file
+> Note: `expires_at` is not part of `HostConfig`; it is ignored on load.
 
-**Multi-Host Support (Enterprise Private Deployment):**
+> ⚠️ **Security notes**
+> - Files are created with `0600`; overly permissive files are tightened with a warning on load
+> - `token` is a Gitee access token and **must never be committed**
+> - CI/CD should inject `GITEE_TOKEN` instead of writing files
+> - `--token` shows up in `ps` and shell history; prefer `GITEE_TOKEN` outside one-off scripts
 
-```json
-{
-  "hosts": {
-    "gitee.com": {
-      "token": "<public-token>",
-      "username": "<public-username>"
-    },
-    "your-company.gitee.com": {
-      "token": "<enterprise-token>",
-      "username": "<enterprise-username>",
-      "protocol": "ssh"
-    }
-  }
-}
-```
-
-**`git` Field Description:**
-
-`git.user` in `settings.json` stays in sync with system `git config --global`, used to auto-fill commit authorship when creating commits. On first run, the tool reads global git config and writes to this field; can also be modified separately via `gitee config` command.
-
-**OAuth2 Device Flow Sequence:**
+**Authentication sequence (real implementation):**
 
 ```
-Client (gitee-cli)          Gitee Server           User Browser
-      |                          |                        |
-      |  POST /oauth/device/code |                        |
-      |  {client_id, scope}      |                        |
-      |------------------------->|                        |
-      |  {device_code,           |                        |
-      |   user_code: "ABCD-1234" |                        |
-      |   verification_uri,      |                        |
-      |   expires_in: 900,       |                        |
-      |   interval: 5}           |                        |
-      |<-------------------------|                        |
-      |                          |                        |
-      |  Display user_code to user|
-      |  Open browser             |                        |
-      |-------------------------------------------------------->|
-      |                          |    User enters ABCD-1234   |
-      |                          |<------------------------|
-      |                          |    User clicks authorize   |
-      |                          |<------------------------|
-      |                          |                        |
-      |  [Poll every 5s]         |                        |
-      |  POST /oauth/device/token |                        |
-      |  {device_code, grant_type}                        |
-      |------------------------->|                        |
-      |  {access_token,          |                        |
-      |   token_type: "bearer"   |                        |
-      |   scope, refresh_token}  |                        |
-      |<-------------------------|                        |
-      |                          |                        |
-      |  Write to settings.json  |                        |
-      |  GET /user → verify username |                        |
+Client (gitee-cli)                 Gitee API v5
+      |                                  |
+      | 1. Resolve token priority        |
+      |    --token > GITEE_TOKEN > settings.json
+      |                                  |
+      | 2. GET /user                     |
+      |    Authorization: token <PAT>    |
+      |--------------------------------->|
+      |    200 {login, id, ...}          |
+      |<---------------------------------|
+      |                                  |
+      | 3. Only when --token was passed  |
+      |    settings.json <- token (0600) |
+      |    dir 0700 / file 0600          |
 ```
+
+`gitee auth refresh` is a stub: it prints "Token refresh is not yet supported. Please
+re-authenticate with 'gitee auth login'." and exits 0. It refreshes nothing and is **not** an
+OAuth `refresh_token` exchange.
 
 ---
 
@@ -383,36 +354,17 @@ func SyncGitConfig() {
 
 ---
 
-### 3.4 Output Module (`internal/printer/`)
+### 3.4 Output Module (`internal/output/`)
 
-**Printer Interface:**
+> The draft said `internal/printer/` + a `Printer` interface; **no such package exists**. Current
+> state: `internal/output.NewTableWriter()` creates the tabwriter, `output.PrintJSON()` emits JSON;
+> `-o` only accepts `table` / `json` (**no csv**; invalid values error out).
 
-```go
-type Printer interface {
-    PrintHeader(fields ...string)
-    PrintRow(values ...string)
-    PrintFooter(msg string)
-    Flush() error
-}
-
-// Factory method based on --output flag
-func New(format string, w io.Writer) Printer {
-    switch format {
-    case "json":
-        return &JsonPrinter{w: w}
-    case "csv":
-        return &CsvPrinter{w: w}
-    default:
-        return &TablePrinter{w: tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)}
-    }
-}
-```
-
-**Table Output Rules:**
-- Header: `color.New(color.Bold).Sprint(field)`
-- Time fields: call `humanize.Time(t)` for relative time
-- Long strings: truncate at 60 chars with `…`
-- Auto-detect terminal width (`term.GetSize()`)
+**Table output rules:**
+- Header is bold (`fatih/color`, degraded to plain text with `NO_COLOR` / `--no-color`)
+- Time fields are rendered in a stable format (some relative)
+- Long strings are truncated with `…` (`utils.Truncate`)
+- `text/tabwriter` alignment; piped output degrades to plain text
 
 ---
 
@@ -616,77 +568,40 @@ type User struct {
 
 ## 5. Build and Release
 
-### 5.1 Makefile
+> The draft said Makefile + `.goreleaser.toml`; **neither exists**. The release chain is shell
+> scripts plus two CI backends (GitHub Actions / Gitee Go) sharing `scripts/ci.sh`.
 
-```makefile
-.PHONY: build test lint install cross-build release clean
+### 5.1 Build and local development
 
-BINARY_NAME := gitee
-VERSION     := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
-LDFLAGS     := -ldflags="-s -w -X main.version=$(VERSION)"
+```bash
+# Install into $GOPATH/bin (normal development)
+go install ./cmd/gitee
 
-build:
-	go build $(LDFLAGS) -o bin/$(BINARY_NAME) ./cmd/gitee
+# One-off local build (not on PATH)
+go build -o gitee ./cmd/gitee
 
-test:
-	go test ./... -v -count=1 -race
+# Exact CI gate
+bash scripts/ci.sh     # gofmt / vet / golangci-lint / build / test -race / cross-build / govulncheck
 
-test-cover:
-	go test ./... -coverprofile=coverage.out
-	go tool cover -html=coverage.out -o coverage.html
-
-lint:
-	golangci-lint run ./...
-
-install:
-	go install $(LDFLAGS) ./cmd/gitee
-
-cross-build:
-	GOOS=linux   GOARCH=amd64  go build $(LDFLAGS) -o dist/gitee-linux-amd64 ./cmd/gitee
-	GOOS=linux   GOARCH=arm64  go build $(LDFLAGS) -o dist/gitee-linux-arm64 ./cmd/gitee
-	GOOS=darwin  GOARCH=amd64  go build $(LDFLAGS) -o dist/gitee-darwin-amd64 ./cmd/gitee
-	GOOS=darwin  GOARCH=arm64  go build $(LDFLAGS) -o dist/gitee-darwin-arm64 ./cmd/gitee
-	GOOS=windows GOARCH=amd64  go build $(LDFLAGS) -o dist/gitee-windows-amd64.exe ./cmd/gitee
-
-release:
-	goreleaser release --snapshot --clean
-
-clean:
-	rm -rf bin/ dist/ coverage.out coverage.html
+# Manual cross-compilation
+GOOS=linux   GOARCH=amd64 go build -o dist/gitee-linux-amd64 ./cmd/gitee
+GOOS=windows GOARCH=amd64 go build -o dist/gitee-windows-amd64.exe ./cmd/gitee
 ```
 
-### 5.2 `.goreleaser.toml` Core Config
+### 5.2 Release chain
 
-```toml
-project_name = "gitee-cli"
-
-builds:
-  - id: gitee
-    main: ./cmd/gitee
-    binary: gitee
-    env:
-      - CGO_ENABLED=0
-    goos: [linux, darwin, windows]
-    goarch: [amd64, arm64]
-    ldflags:
-      - "-s -w -X main.version={{.Version}}"
-
-archives:
-  - format: tar.gz
-    format_overrides:
-      - goos: windows
-        format: zip
-
-checksum:
-  name_template: "checksums.txt"
-
-brews:
-  - name: gitee
-    homepage: "https://gitee.com/gitee-cli"
-    tap:
-      owner: gitee
-      name: homebrew-tap
+```bash
+git tag -a v0.13.2 -m v0.13.2 && git push origin v0.13.2
+GITEE_TOKEN=... bash scripts/release.sh --publish
 ```
+
+- `scripts/release.sh`: builds 5 platform artifacts (`gitee-<os>-<arch>.tar.gz`, Windows `.zip`),
+  writes `SHA256SUMS.txt`, calls `publish-release.sh` to create the Gitee release and upload
+  assets (idempotent)
+- `scripts/publish-release.sh`: only creates the release and uploads assets, reusing
+  `gitee release create/upload`
+- Version is injected via ldflags; README badges are locked by `TestReadmeVersionMatchesVersionVar`
+- No Homebrew tap, no goreleaser
 
 ---
 
@@ -697,8 +612,8 @@ brews:
 | Config file permissions | `~/.gitee-cli/settings.json` created with mandatory `0600` (`os.OpenFile(..., 0600)`) |
 | Token not in logs | `--verbose` mode sanitizes Authorization header as `token ***` |
 | Token not committed | `~/.gitee-cli/` excluded in `.gitignore_global`; tool prompts user on init |
-| HTTPS enforced | Enabled by default, `--insecure` must be explicitly set |
-| Certificate validation | Use system CA bundle, `--insecure` skips |
+| HTTPS | Only talks to `https://` endpoints; there is no `--insecure` switch to skip TLS verification |
+| Certificate validation | System CA bundle + standard `net/http` verification |
 | Input validation | Repo name, username validated via regex `^[a-zA-Z0-9_.-]+$` |
 | CI/CD security | Token injected via environment variable `GITEE_TOKEN`, not file |
 | Dependency security | `govulncheck ./...` runs in CI |

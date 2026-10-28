@@ -69,14 +69,14 @@ ISO-8601 timestamps (e.g. ` + "`" + `2026-01-01T00:00:00Z` + "`" + `).`,
 		}
 		return nil
 	},
-	RunE: func(c *cobra.Command, args []string) error {
-		// No subcommand given — show help so users discover list/view.
-		return c.Help()
-	},
+	// GroupRunE prints help with no args and returns an error (with the
+	// correct fully-qualified form) when given a positional arg — see cmd.GroupRunE.
+	RunE: cmd.GroupRunE,
 }
 
 var commitsListCmd = &cobra.Command{
 	Use:   "list",
+	Args:  cobra.NoArgs,
 	Short: "List commits on a repository (default branch or --sha)",
 	Example: `  gitee repo commits list --repo owner/repo
   gitee repo commits list -R owner/repo --author alice

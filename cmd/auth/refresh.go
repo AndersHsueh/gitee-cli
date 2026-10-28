@@ -10,6 +10,7 @@ import (
 
 var refreshCmd = &cobra.Command{
 	Use:     "refresh",
+	Args:    cobra.NoArgs,
 	Short:   "Refresh stored authentication credentials",
 	PreRunE: cmd.AgentHelpNA("auth refresh"),
 	RunE: func(cobraCmd *cobra.Command, args []string) error {

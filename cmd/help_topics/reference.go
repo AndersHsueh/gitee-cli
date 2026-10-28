@@ -27,10 +27,13 @@ var referenceTopic = &cobra.Command{
 	Long: `Auto-generated command reference.
 
 Walks the cobra command tree and prints every verb the gitee-cli
-binary knows about, with its Use path and Short description. This
-page is generated on every run, so it always matches what the
-binary actually does — unlike a hand-maintained docs site, it
-cannot go stale.
+binary knows about — including 'version' and the cross-cutting help
+topics — with its Use path and Short description. This page is
+generated on every run, so it always matches what the binary
+actually does — unlike a hand-maintained docs site, it cannot go
+stale. (Hidden commands, such as the 'gitee co' alias of
+'gitee pr checkout', are intentionally omitted, matching what
+'gitee --help' shows.)
 
 For full docs on a specific command, run 'gitee help <command>'
 or 'gitee <command> --agent-help' (when available).`,
@@ -46,8 +49,9 @@ or 'gitee <command> --agent-help' (when available).`,
 // walkCommands recursively prints every command in the tree. We
 // recurse into "help" so the help topics are included, but we
 // don't print "help" itself (it's a dispatcher; its subcommands
-// are the real commands the user would invoke). Version is
-// skipped entirely because it's covered by 'gitee --version'.
+// are the real commands the user would invoke). Version IS printed:
+// it is a real command with its own flags, and leaving it out made
+// the reference an incomplete index of the binary's commands.
 //
 // We print the parent BEFORE the children so the output reads
 // top-down (matches `gitee --help` and `gitee help <cmd>`).
@@ -55,9 +59,6 @@ or 'gitee <command> --agent-help' (when available).`,
 // never appear twice — no dedup map needed.
 func walkCommands(w *tabwriter.Writer, cmd *cobra.Command, prefix string) {
 	for _, sub := range cmd.Commands() {
-		if sub.Name() == "version" {
-			continue
-		}
 		full := strings.TrimSpace(prefix + " " + sub.Name())
 		if sub.Name() != "help" && !sub.Hidden {
 			short := sub.Short

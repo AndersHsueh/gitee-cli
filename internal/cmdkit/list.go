@@ -129,6 +129,9 @@ func RunList[T any](opts Options, spec ListSpec[T]) error {
 		if spec.Limit != nil {
 			limit = spec.Limit()
 		}
+		// The single-page/--paginate limit semantics live in
+		// api.FetchListOrAll (one shared implementation for every read
+		// path); the skeleton only forwards the values.
 		items, err = api.FetchListOrAll[T](ctx, client, spec.Path(owner, repo),
 			opts.Paginate, opts.PerPage, limit, opts.Page, spec.ErrCtx)
 	}

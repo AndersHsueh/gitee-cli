@@ -1,6 +1,8 @@
 package pr
 
 import (
+	"gitee-cli/cmd"
+
 	"github.com/spf13/cobra"
 )
 
@@ -8,6 +10,8 @@ var PRCmd = &cobra.Command{
 	Use:   "pr <subcommand>",
 	Short: "Manage pull requests",
 	Long:  `Work with pull requests on Gitee repositories.`,
+	// GroupRunE: unknown verbs exit non-zero with a suggestion; no args shows help.
+	RunE: cmd.GroupRunE,
 }
 
 // CoCmd is a top-level alias of `gitee pr checkout`.

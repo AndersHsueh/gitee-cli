@@ -1,6 +1,11 @@
 # gitee-cli 开发指导文档（Developer Guide）
 
-版本：1.0.0 | 面向：贡献者 / 团队开发成员
+> ⚠️ **状态提示（v0.13.2，2026-10 维护轮）**：本文档是早期设计稿，部分示例**已与当前代码不一致**
+> （模块路径、`internal/printer`、Viper/oauth2、Makefile/goreleaser 等）。当前事实以代码、
+> `gitee --help`、`gitee <cmd> --agent-help`、`bash scripts/ci.sh` 为准；差异最大的段落已修正。
+
+
+版本：1.0.0（设计稿；现状修订见页首横幅）| 面向：贡献者 / 团队开发成员
 
 ---
 
@@ -9,21 +14,17 @@
 ### 1.1 必需工具
 
 ```bash
-# Go 1.23+（必须）
-go version    # 需 >= 1.23
+# Go 1.27+（必须；go.mod 为 `go 1.27.3`）
+go version    # 需 >= 1.27
 
-# Cobra CLI（命令模板生成器）
-go install github.com/spf13/cobra-cli@latest
+# golangci-lint（代码质量检查；CI 使用 v2.15.0，配置是 v2 schema）
+go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0
 
-# golangci-lint（代码质量检查）
-curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh \
-  | sh -s -- -b $(go env GOPATH)/bin v1.59.0
-
-# goreleaser（发版自动化）
-go install github.com/goreleaser/goreleaser@latest
-
-# govulncheck（漏洞扫描）
+# govulncheck（漏洞扫描；go.mod 以 tool 依赖固定版本）
 go install golang.org/x/vuln/cmd/govulncheck@latest
+
+# 发布与 CI 都是仓库内脚本，不需要 Makefile / goreleaser
+bash scripts/ci.sh --fast   # 本地质量门禁
 ```
 
 ### 1.2 推荐工具
@@ -39,41 +40,30 @@ go install go.uber.org/mock/mockgen@latest
 ### 1.3 克隆与初始化
 
 ```bash
-git clone https://gitee.com/<your-user>/gitee-cli.git
+git clone https://gitee.com/andershsueh/gitee-cli.git
 cd gitee-cli
 go mod download
-go build -o bin/gitee ./cmd/gitee
-./bin/gitee --version
+go install ./cmd/gitee      # 装到 $GOPATH/bin，日常开发用这个
+gitee version
 ```
 
 ---
 
-## 2. 项目初始化（新建时）
+## 2. 仓库初始化（现状）
+
+本仓库**已经建好**，不需要再跑 `go mod init` / `cobra-cli`。关键事实：
+
+- 模块路径是 `gitee-cli`（不是 `gitee.com/<org>/gitee-cli`），
+  所以内部 import 写作 `gitee-cli/internal/api`、`gitee-cli/cmd`。
+- 依赖只有 Cobra、resty v2、fatih/color、testify（+ 间接依赖）；
+  **没有 Viper、没有 golang.org/x/oauth2**。
+- 配置是手写 JSON（`internal/config`），不是 Viper；认证是 PAT，不是 OAuth。
 
 ```bash
-# 初始化 Go 模块（模块路径遵循 gitee.com/<org>/gitee-cli）
-go mod init gitee.com/gitee/gitee-cli
-
-# 添加依赖
-go get github.com/spf13/cobra
-go get github.com/spf13/viper
-go get github.com/go-resty/resty/v2
-go get golang.org/x/oauth2
-go get github.com/fatih/color
-go get github.com/stretchr/testify
-
-# 使用 Cobra CLI 生成骨架
-cobra-cli init --viper --author "Gitee Team" --license apache
-cobra-cli add auth
-cobra-cli add repo
-cobra-cli add issue
-cobra-cli add pr
-cobra-cli add gist
-cobra-cli add org
-cobra-cli add search
-cobra-cli add api
-cobra-cli add config
-cobra-cli add completion
+# 拉依赖 + 装工具链（照 go.mod）
+go mod download
+go build ./...              # 语法/编译自检
+bash scripts/ci.sh --fast   # gofmt + vet + build + test（本地快速门禁）
 ```
 
 ---
@@ -86,79 +76,84 @@ cobra-cli add completion
 
 **Step 1：创建命令文件**
 
+真实写法参考 `cmd/issue/list.go`（这里做了简化）：
+
 ```go
 // cmd/issue/list.go
 package issue
 
 import (
-    "context"
-    "fmt"
+    "net/url"
+
+    "gitee-cli/cmd"
+    "gitee-cli/internal/api"
+    "gitee-cli/internal/cmdkit"
+    "gitee-cli/internal/utils"
+    "gitee-cli/pkg/types"
 
     "github.com/spf13/cobra"
-    "gitee.com/gitee/gitee-cli/internal/api"
-    "gitee.com/gitee/gitee-cli/internal/printer"
-    "gitee.com/gitee/gitee-cli/pkg/types"
 )
 
 var listFlags struct {
-    State    string
-    Labels   string
-    Assignee string
-    Repo     string
+    state    string
+    labels   string
+    assignee string
 }
 
 var listCmd = &cobra.Command{
     Use:   "list",
-    Short: "列出 Issue",
-    Long:  "列出当前仓库或指定仓库的 Issue，支持按状态、标签、指派人筛选。",
-    RunE:  runList,
+    Short: "List issues in a repository",
+    Example: `  gitee issue list --repo owner/repo
+  gitee issue list --repo owner/repo --state closed --labels bug`,
+    PreRunE: func(c *cobra.Command, args []string) error {
+        if cmd.RuntimeFromCmd(c).AgentHelp {
+            cmd.PrintAgentHelp(issueListAgentHelp)   // 可选：本命令的 agent-help 文案
+        }
+        return nil
+    },
+    RunE: runList,
 }
 
 func init() {
     f := listCmd.Flags()
-    f.StringVarP(&listFlags.State, "state", "s", "open", "Issue 状态: open/closed/all")
-    f.StringVarP(&listFlags.Labels, "labels", "l", "", "标签筛选（逗号分隔）")
-    f.StringVarP(&listFlags.Assignee, "assignee", "a", "", "指派人筛选")
-    f.StringVarP(&listFlags.Repo, "repo", "R", "", "仓库（owner/name 格式）")
-
+    f.StringVar(&listFlags.state, "state", "open", "Filter by state: open|closed|all")
+    f.StringVar(&listFlags.labels, "labels", "", "Filter by labels (comma-separated)")
+    f.StringVar(&listFlags.assignee, "assignee", "", "Filter by assignee username")
+    // --limit / --per-page / --paginate 是 root 的全局 flag，不要在这里重复注册。
     IssueCmd.AddCommand(listCmd)
 }
 
-func runList(cmd *cobra.Command, args []string) error {
-    ctx := context.Background()
-    client, err := api.NewClientFromConfig()
+func runList(cobraCmd *cobra.Command, args []string) error {
+    rt := cmd.RuntimeFromCmd(cobraCmd)
+    client, err := cmd.NewAPIClientFrom(rt)
     if err != nil {
         return err
     }
 
-    owner, repo, err := resolveRepo(listFlags.Repo)
-    if err != nil {
-        return err
-    }
-
-    var issues []types.Issue
-    path := fmt.Sprintf("/repos/%s/%s/issues?state=%s", owner, repo, listFlags.State)
-    if listFlags.Labels != "" {
-        path += "&labels=" + listFlags.Labels
-    }
-    if err := client.List(ctx, path, nil, &issues); err != nil {
-        return err
-    }
-
-    outputFmt, _ := cmd.Flags().GetString("output")
-    p := printer.New(outputFmt, cmd.OutOrStdout())
-    p.PrintHeader("#", "TITLE", "STATE", "LABELS", "ASSIGNEE", "UPDATED")
-    for _, i := range issues {
-        p.PrintRow(
-            fmt.Sprintf("#%d", i.Number),
-            truncate(i.Title, 60),
-            i.State,
-            joinLabels(i.Labels, 3),
-            firstAssignee(i.Assignees),
-            humanTime(i.UpdatedAt),
-        )
-    }
-    return p.Flush()
+    // list 命令统一走 cmdkit.RunList 骨架：分页、表格、JSON、空结果提示一次搞定。
+    opts := cmd.NewCmdkitOptionsFrom(rt, client)
+    return cmdkit.RunList[types.Issue](opts, cmdkit.ListSpec[types.Issue]{
+        ResolveOwnerRepo: func() (string, string, error) {
+            return utils.ResolveRepo(rt.Repo, "", nil)
+        },
+        Path: func(owner, repoName string) string {
+            qv := url.Values{}
+            qv.Set("state", listFlags.state)
+            if listFlags.labels != "" {
+                qv.Set("labels", listFlags.labels)
+            }
+            if listFlags.assignee != "" {
+                qv.Set("assignee", listFlags.assignee)
+            }
+            return api.IssuesList(owner, repoName) + "?" + qv.Encode()
+        },
+        Columns: []string{"#", "TITLE", "STATE", "LABELS", "UPDATED"},
+        Row: func(i types.Issue) []string {
+            return []string{i.Number, utils.Truncate(i.Title, 60), i.State, "-", i.UpdatedAt.Format("2006-01-02")}
+        },
+        EmptyText: func(o, r string) string { return "No issues found in " + o + "/" + r },
+        ErrCtx:    "listing issues",
+    })
 }
 ```
 
@@ -179,13 +174,17 @@ func init() {
 
 **Step 3：添加 API 端点（如需新端点）**
 
+端点只用 `internal/api/endpoints.go` 里的 builder 函数拼接，**禁止在 cmd 层 `fmt.Sprintf` 拼 URL**：
+
 ```go
 // internal/api/endpoints.go
-const (
-    EndpointIssues = "/repos/%s/%s/issues"
-    EndpointIssue  = "/repos/%s/%s/issues/%d"
-    EndpointIssueComments = "/repos/%s/%s/issues/%d/comments"
-)
+func IssuesList(owner, repo string) string {
+    return "/repos/" + owner + "/" + repo + "/issues"
+}
+
+func IssueGet(owner, repo string, number int) string {
+    return IssuesList(owner, repo) + "/" + strconv.Itoa(number)
+}
 ```
 
 **Step 4：添加/更新类型定义**
@@ -200,41 +199,42 @@ const (
 
 ### 3.2 新增 API 端点调用
 
-```go
-// internal/api/client.go 中添加语义化方法
-func (c *client) ListIssues(ctx context.Context, owner, repo, state string) ([]types.Issue, error) {
-    var issues []types.Issue
-    path := fmt.Sprintf("/repos/%s/%s/issues?state=%s", owner, repo, state)
-    err := c.List(ctx, path, &PageOptions{PerPage: 30}, &issues)
-    return issues, err
-}
+优先复用已生成的 Client 方法（`Get/Post/Patch/PatchForm/Put/Delete/DeleteWithBody/UploadFile`），
+不要再往 `internal/api` 里塞业务方法：
 
-func (c *client) CreateIssue(ctx context.Context, owner, repo string, body types.IssueCreateRequest) (*types.Issue, error) {
-    var issue types.Issue
-    path := fmt.Sprintf("/repos/%s/%s/issues", owner, repo)
-    err := c.Post(ctx, path, body, &issue)
-    return &issue, err
-}
+```go
+// 读：直接传 result 指针
+var issue types.Issue
+err := client.Get(ctx, api.IssueGet(owner, repo, number), &issue)
+
+// 写：JSON body
+err := client.Post(ctx, api.IssuesCreate(owner, repo), req, &created)
+
+// 写：Gitee v5 某些写路径只接受 formData（issue close/reopen/edit）
+err := client.PatchForm(ctx, api.IssuesEdit(owner, number), url.Values{
+    "repo":  {repo},
+    "state": {"closed"},
+})
+
+// 列表：优先 FetchListOrAll / cmdkit.RunList，不要手写 paginate 分支
+issues, err := api.FetchListOrAll[types.Issue](ctx, client, path, paginate, perPage, limit, page, "listing issues")
 ```
 
 ---
 
 ### 3.3 仓库上下文检测
 
-很多命令需要自动检测当前仓库（类似 `gh`），从 git remote 解析：
+仓库解析统一走 `internal/utils`，不要在命令里自己解析 git remote：
 
 ```go
-// internal/git/remote.go
-func DetectRepo() (owner, repo string, err error) {
-    // 1. 检查 --repo flag
-    // 2. 解析 git remote origin URL
-    //    - https://gitee.com/owner/repo.git
-    //    - git@gitee.com:owner/repo.git
-    // 3. 返回 owner, repo
-    remoteURL, err := exec.Command("git", "remote", "get-url", "origin").Output()
-    // ... 解析逻辑
-}
+// utils.ParseOwnerRepo("owner/repo") → owner, repo
+// utils.ResolveRepo(owner, repo, args) → 无 flag 时按 --repo / 位置参数 / git remote 顺序解析
+owner, repoName, err := utils.ResolveRepo(rt.Repo, "", args)
 ```
+
+- `--repo` / `-R`（部分命令）显式指定时优先；
+- 否则按位置参数（如 `gitee repo view owner/repo`）；
+- 最后回退到当前目录的 git remote（`git remote get-url origin`）。
 
 ---
 
@@ -262,10 +262,7 @@ func TestClient_ListIssues(t *testing.T) {
     }))
     defer ts.Close()
 
-    client := api.NewClient(
-        api.WithBaseURL(ts.URL),
-        api.WithToken("test-token"),
-    )
+    client := api.NewClient("test-token", ts.URL, false, 30)  // token, baseURL, verbose, timeout
 
     issues, err := client.ListIssues(context.Background(), "owner", "repo", "all")
     require.NoError(t, err)
@@ -312,13 +309,15 @@ go test ./... -count=1           # 禁用缓存（CI 使用）
 
 ### 4.4 覆盖率要求
 
-| 模块 | 最低覆盖率 |
+| 模块 | 建议覆盖率 |
 |------|---------|
-| `internal/api/` | 80% |
-| `internal/auth/` | 70% |
-| `internal/printer/` | 90% |
+| `internal/api/` | 高（HTTP 客户端与错误映射） |
+| `internal/config/` | 高（权限、原子写、优先级） |
+| `internal/domain/` | 中（当前是薄弱区，新增写路径应带 httptest） |
 | `pkg/types/` | 不强制 |
-| `cmd/` | 60% |
+| `cmd/` | 中（`--agent-help` 契约测试已覆盖文案） |
+
+> 现状：全仓库约 30%（历史上偏低），CI 目前不设覆盖率硬门禁；新增功能请自带 httptest。
 
 ---
 
@@ -326,22 +325,9 @@ go test ./... -count=1           # 禁用缓存（CI 使用）
 
 ### 5.1 Lint 配置（`.golangci.yml`）
 
-```yaml
-linters:
-  enable:
-    - gofmt
-    - goimports
-    - govet
-    - errcheck
-    - staticcheck
-    - gosec
-    - revive
-    - exhaustive
-
-linters-settings:
-  goimports:
-    local-prefixes: gitee.com/gitee/gitee-cli
-```
+仓库里的 `.golangci.yml` 是 **v2 schema**（`version: "2"`），使用默认 linter 集
+（errcheck / govet / ineffassign / staticcheck / unused），并对测试文件的未检查返回值做了
+定向豁免。gofmt 由 `scripts/ci.sh` 单独守住。
 
 运行：
 
@@ -435,12 +421,15 @@ gitee --api-url "https://your-enterprise.gitee.com/api/v5" repo list
 GITEE_API_URL="https://your-enterprise.gitee.com/api/v5" gitee repo list
 ```
 
-### 6.4 使用 Token 直接测试（跳过 OAuth）
+### 6.4 使用 Token 直接测试
 
 ```bash
-gitee auth login --with-token
-# 从 stdin 读取 token：
-echo "your_access_token" | gitee auth login --with-token
+# 推荐：环境变量（不落盘、不进 shell history）
+export GITEE_TOKEN=your_access_token
+gitee auth status
+
+# 或指定 token 登录（会写入 ~/.gitee-cli/settings.json）
+gitee auth login --token your_access_token
 ```
 
 ---
@@ -450,67 +439,50 @@ echo "your_access_token" | gitee auth login --with-token
 ### 7.1 本地构建
 
 ```bash
-make build          # 编译到 bin/gitee
-make install        # 安装到 $GOPATH/bin
+go install ./cmd/gitee    # 安装到 $GOPATH/bin（日常开发）
+go build -o gitee ./cmd/gitee   # 一次性本地构建（不进 PATH）
 ```
 
 ### 7.2 交叉编译
 
 ```bash
-make cross-build
-# 输出：
-# dist/gitee-linux-amd64
-# dist/gitee-linux-arm64
-# dist/gitee-darwin-amd64
-# dist/gitee-darwin-arm64
-# dist/gitee-windows-amd64.exe
+# 手动交叉编译（发布脚本也这么干）
+GOOS=linux   GOARCH=amd64 go build -o dist/gitee-linux-amd64 ./cmd/gitee
+GOOS=linux   GOARCH=arm64 go build -o dist/gitee-linux-arm64 ./cmd/gitee
+GOOS=darwin  GOARCH=amd64 go build -o dist/gitee-darwin-amd64 ./cmd/gitee
+GOOS=darwin  GOARCH=arm64 go build -o dist/gitee-darwin-arm64 ./cmd/gitee
+GOOS=windows GOARCH=amd64 go build -o dist/gitee-windows-amd64.exe ./cmd/gitee
 ```
 
 ### 7.3 发布 Release
 
 ```bash
-# 先打标签
-git tag v0.1.0
-git push origin v0.1.0
+# 先打标签并推送
+git tag -a v0.13.2 -m v0.13.2 && git push origin v0.13.2
 
-# goreleaser 自动构建 + 上传
-make release
+# 构建 5 平台产物 + SHA256SUMS + 创建 Gitee release + 上传资产（幂等）
+GITEE_TOKEN=... bash scripts/release.sh --publish
 ```
+
+> 没有 Makefile、没有 goreleaser。发布靠 `scripts/release.sh`（构建/打包/校验和）
+> 与 `scripts/publish-release.sh`（创建 release + 上传资产，复用 `gitee release create/upload`）。
 
 ---
 
 ## 8. CI/CD 流程
 
-### 8.1 GitHub Actions / Gitee Go CI 示例
+CI 有**两个触发面、一份门禁定义**：
 
-```yaml
-# .gitee/workflows/ci.yml
-name: CI
-on: [push, pull_request]
+- `.github/workflows/ci.yml`（GitHub Actions 镜像）
+- `.workflow/ci.yml`（Gitee Go）
+- 两者都调用 `scripts/ci.sh`：gofmt → go vet → golangci-lint（可选）→ build →
+  `go test -race -count=1` → 交叉编译 → govulncheck
 
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version: '1.23'
-      - run: go mod download
-      - run: go vet ./...
-      - run: golangci-lint run ./...
-      - run: go test ./... -v -race -count=1
-      - run: govulncheck ./...
+本地复现 CI：
 
-  build:
-    runs-on: ubuntu-latest
-    needs: test
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version: '1.23'
-      - run: make cross-build
+```bash
+bash scripts/ci.sh          # 全量（含交叉编译 + govulncheck）
+bash scripts/ci.sh --fast   # 跳过交叉编译 + govulncheck，本地快速回路
 ```
 
 ---
@@ -519,12 +491,12 @@ jobs:
 
 | 阶段 | 目标命令 | 说明 |
 |------|---------|------|
-| **M0** | `gitee auth` 全套 | 完成 OAuth2 Device Flow，Token 存储，`auth status/logout/token` |
+| **M0** | `gitee auth` 全套 | PAT 认证（无 OAuth2 设备流），Token 存储，`auth status/logout/token` |
 | **M1** | `gitee repo` 全套 + `gitee api` | 仓库 CRUD，原始 API 访问，配置模块 |
 | **M2** | `gitee issue` 全套 | Issue CRUD，评论，标签管理 |
 | **M3** | `gitee pr` 全套 | PR CRUD，Merge，Review，diff/checks |
 | **M4** | `gitee gist` + `gitee search` | Gist 管理，三类搜索 |
-| **M5** | `gitee org` + Shell 补全 + i18n | 组织管理，Bash/Zsh/Fish 补全，中英文切换 |
+| **M5** | `gitee org` + Shell 补全 | 组织管理，Bash/Zsh/Fish/PowerShell 补全（i18n 未实现） |
 | **M6** | 企业部署支持 + 多账号 + 插件系统 | `--hostname` 扩展，credentials 多 host，外部命令发现 |
 
 ---
@@ -534,9 +506,8 @@ jobs:
 | 资源 | 链接 |
 |------|------|
 | Gitee API v5 Swagger | https://gitee.com/api/v5/swagger |
-| Gitee OAuth2 文档 | https://gitee.com/api/v5/oauth_doc |
+| Gitee 个人访问令牌 | https://gitee.com/profile/personal_access_tokens |
 | Cobra 官方文档 | https://pkg.go.dev/github.com/spf13/cobra |
-| Viper 官方文档 | https://pkg.go.dev/github.com/spf13/viper |
 | Resty HTTP 客户端 | https://github.com/go-resty/resty |
 | glab 项目（最佳参考实现） | https://github.com/gitlab-org/cli |
 | gh CLI 项目 | https://github.com/cli/cli |

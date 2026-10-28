@@ -1,12 +1,16 @@
 package auth
 
 import (
+	"gitee-cli/cmd"
+
 	"github.com/spf13/cobra"
 )
 
 var AuthCmd = &cobra.Command{
 	Use:   "auth <subcommand>",
 	Short: "Authenticate with Gitee",
+	// GroupRunE: unknown verbs exit non-zero with a suggestion; no args shows help.
+	RunE: cmd.GroupRunE,
 }
 
 func init() {

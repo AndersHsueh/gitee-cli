@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"os"
 	"time"
 
 	"github.com/go-resty/resty/v2"
@@ -60,16 +61,20 @@ func NewClient(token, baseURL string, verbose bool, timeout int) *Client {
 	}
 
 	if verbose {
+		// Traces go to STDERR, not stdout: --verbose is a diagnostic
+		// switch, and writing HTTP noise to stdout corrupts machine
+		// output (`-o json` piped to jq would see extra lines). Both
+		// `gitee --verbose` and GITEE_VERBOSE=1 therefore print here.
 		r.OnBeforeRequest(func(_ *resty.Client, req *resty.Request) error {
-			fmt.Printf("> %s %s\n", req.Method, req.URL)
+			fmt.Fprintf(os.Stderr, "> %s %s\n", req.Method, req.URL)
 			if req.Body != nil {
 				b, _ := json.MarshalIndent(req.Body, "", "  ")
-				fmt.Printf("> Body: %s\n", b)
+				fmt.Fprintf(os.Stderr, "> Body: %s\n", b)
 			}
 			return nil
 		})
 		r.OnAfterResponse(func(_ *resty.Client, resp *resty.Response) error {
-			fmt.Printf("< HTTP %d\n", resp.StatusCode())
+			fmt.Fprintf(os.Stderr, "< HTTP %d\n", resp.StatusCode())
 			return nil
 		})
 	}

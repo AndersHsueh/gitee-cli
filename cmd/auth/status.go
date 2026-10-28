@@ -17,6 +17,7 @@ import (
 
 var statusCmd = &cobra.Command{
 	Use:   "status",
+	Args:  cobra.NoArgs,
 	Short: "Show authentication status",
 	Example: `  gitee auth status
   gitee auth status --hostname enterprise.gitee.com`,

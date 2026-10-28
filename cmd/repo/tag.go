@@ -43,14 +43,14 @@ remove a tag once it exists:
 		}
 		return nil
 	},
-	RunE: func(c *cobra.Command, args []string) error {
-		// No subcommand given — show help so users discover list/create.
-		return c.Help()
-	},
+	// GroupRunE prints help with no args and returns an error (with the
+	// correct fully-qualified form) when given a positional arg — see cmd.GroupRunE.
+	RunE: cmd.GroupRunE,
 }
 
 var tagListCmd = &cobra.Command{
 	Use:     "list",
+	Args:    cobra.NoArgs,
 	Short:   "List tags in a repository",
 	Example: `  gitee repo tag list --repo owner/repo`,
 	PreRunE: func(c *cobra.Command, args []string) error {
@@ -65,6 +65,7 @@ var tagListCmd = &cobra.Command{
 
 var tagCreateCmd = &cobra.Command{
 	Use:   "create",
+	Args:  cobra.NoArgs,
 	Short: "Create a tag pointing at a commit",
 	Example: `  gitee repo tag create --repo owner/repo --name v1.0.0 --refs main
   gitee repo tag create --repo owner/repo --name v1.0.0 --refs <sha> --message "release notes"`,

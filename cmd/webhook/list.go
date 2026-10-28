@@ -13,6 +13,7 @@ var listFlags struct {
 
 var listCmd = &cobra.Command{
 	Use:   "list",
+	Args:  cobra.NoArgs,
 	Short: "List webhooks in a repository",
 	Example: `  gitee webhook list --repo owner/repo
   gitee webhook list -R owner/repo --limit 50

@@ -14,6 +14,7 @@ var listFlags struct {
 
 var listCmd = &cobra.Command{
 	Use:   "list",
+	Args:  cobra.NoArgs,
 	Short: "List notification threads",
 	Example: `  gitee notification list
   gitee notification list --unread

@@ -33,6 +33,11 @@ var completionCmd = &cobra.Command{
 See each sub-command's help for details on how to use the generated script.`,
 	// DisableFlagParsing is intentionally NOT set; we want --agent-help
 	// to flow through PersistentPreRunE/PreRunE so the n/a notice fires.
+	//
+	// GroupRunE: `gitee completion <unknown-shell>` must exit non-zero
+	// instead of printing help with a 0 status; bare `gitee completion`
+	// still shows help.
+	RunE: GroupRunE,
 }
 
 // bashCompletionCmd / fishCompletionCmd / powershellCompletionCmd /

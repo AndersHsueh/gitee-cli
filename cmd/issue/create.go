@@ -25,6 +25,7 @@ var createFlags struct {
 
 var createCmd = &cobra.Command{
 	Use:   "create",
+	Args:  cobra.NoArgs,
 	Short: "Create a new issue",
 	Example: `  # Create an issue in the specified repo
   gitee issue create --repo owner/repo --title "Bug: crash on startup"

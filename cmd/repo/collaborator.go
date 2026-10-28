@@ -60,14 +60,14 @@ level, or remove an existing one.
 		}
 		return nil
 	},
-	RunE: func(c *cobra.Command, args []string) error {
-		// No subcommand given — show help so users discover list/add/remove.
-		return c.Help()
-	},
+	// GroupRunE prints help with no args and returns an error (with the
+	// correct fully-qualified form) when given a positional arg — see cmd.GroupRunE.
+	RunE: cmd.GroupRunE,
 }
 
 var collaboratorListCmd = &cobra.Command{
 	Use:   "list",
+	Args:  cobra.NoArgs,
 	Short: "List collaborators on a repository",
 	Example: `  gitee repo collaborator list --repo owner/repo
   gitee repo collaborator list -R owner/repo -o json`,

@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"os/exec"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -169,6 +170,120 @@ func TestCoverageMatrixWellFormed(t *testing.T) {
 	}
 }
 
+// coverageMatrixRowRE matches one coverage-matrix row in rootAgentHelp.
+// Rows are indented two spaces and read `gitee <full-path>  --agent-help`.
+// The path grammar mirrors what cobra accepts: lowercase words, digits,
+// dots and hyphens (e.g. `set-default`, `delete-asset`). At least one
+// space must separate path and flag; alignment padding varies by row.
+var coverageMatrixRowRE = regexp.MustCompile(`^  (gitee [a-z0-9][a-z0-9 .\-]*?) +--agent-help`)
+
+// coverageMatrixPaths extracts every command path listed in the coverage
+// matrix, failing the test on duplicate rows (a duplicated row is always a
+// copy-paste bug — the matrix is an index, not a log).
+func coverageMatrixPaths(t *testing.T) []string {
+	t.Helper()
+	var paths []string
+	seen := make(map[string]bool)
+	for _, line := range strings.Split(rootAgentHelp, "\n") {
+		m := coverageMatrixRowRE.FindStringSubmatch(line)
+		if m == nil {
+			continue
+		}
+		path := m[1]
+		if seen[path] {
+			t.Errorf("coverage matrix lists %q twice", path)
+			continue
+		}
+		seen[path] = true
+		paths = append(paths, path)
+	}
+	if len(paths) == 0 {
+		t.Fatal("coverage matrix appears empty — expected many 'gitee <cmd> --agent-help' rows")
+	}
+	return paths
+}
+
+// TestCoverageMatrixMatchesCommandTree locks the hand-maintained coverage
+// matrix in rootAgentHelp to the live cobra command tree:
+//
+//  1. Every matrix row must name a command that actually exists — this
+//     catches "ghost rows" for deleted/renamed verbs (repo unstar,
+//     repo unwatch, org issue/member/repo all shipped as ghosts at
+//     v0.13.1).
+//  2. Every leaf command in the tree must have a matrix row — this
+//     catches "forgotten leaves" for newly added verbs (repo star
+//     star/unstar, repo watch watch/unwatch, repo protect
+//     protect/unprotect, org issues/members/repos were all missing at
+//     v0.13.1).
+//
+// Parent/umbrella commands (e.g. `gitee repo star`) are allowed to have
+// rows too: several group commands ship their own agent-help. They are
+// simply not *required* to be listed, because their leaves are.
+//
+// The tree is read from the freshly-built binary's `gitee help reference`
+// output (see findCommandPathsFromBinary) — the same live tree agents can
+// actually invoke, including hidden-command filtering, so `gitee co`
+// (hidden alias) is legitimately absent and needs no exemption.
+func TestCoverageMatrixMatchesCommandTree(t *testing.T) {
+	bin := buildThrowawayBinary(t)
+
+	allPaths := findCommandPathsFromBinary(t, bin)
+	if len(allPaths) == 0 {
+		t.Fatal("no command paths discovered from binary — `gitee help reference` may have regressed")
+	}
+	matrixPaths := coverageMatrixPaths(t)
+
+	inTree := make(map[string]bool, len(allPaths))
+	for _, p := range allPaths {
+		inTree[p] = true
+	}
+	inMatrix := make(map[string]bool, len(matrixPaths))
+	for _, p := range matrixPaths {
+		inMatrix[p] = true
+	}
+
+	// 1. No ghost rows.
+	for _, p := range matrixPaths {
+		if !inTree[p] {
+			t.Errorf("coverage matrix has a ghost row: %q does not exist in the live command tree "+
+				"(remove it, or restore the command)", p)
+		}
+	}
+
+	// 2. No missing leaves.
+	leaves := leafCommandPaths(allPaths)
+	if len(leaves) == 0 {
+		t.Fatal("no leaf commands derived — command-tree discovery regressed")
+	}
+	leaf := make(map[string]bool, len(leaves))
+	for _, p := range leaves {
+		leaf[p] = true
+		if !inMatrix[p] {
+			t.Errorf("live leaf command %q has no coverage-matrix row in rootAgentHelp", p)
+		}
+	}
+
+	// 3. No missing parent docs. A parent command normally just dispatches
+	//    and prints help; some umbrellas (`gitee api`, `gitee repo star`, …)
+	//    ship their own full --agent-help document. Those are real agent
+	//    entry points and belong in the matrix too — otherwise an agent
+	//    that trusts the matrix never discovers them (`gitee api` was the
+	//    last one missing).
+	checkedParents := 0
+	for _, p := range allPaths {
+		if leaf[p] || inMatrix[p] {
+			continue
+		}
+		checkedParents++
+		if hasFullAgentHelpDoc(t, bin, p) {
+			t.Errorf("command %q ships a full --agent-help document but has no coverage-matrix row", p)
+		}
+	}
+	t.Logf("probed %d parent commands for undocumented full docs", checkedParents)
+
+	t.Logf("coverage matrix: %d rows; live tree: %d paths (%d leaves)", len(matrixPaths), len(allPaths), len(leaves))
+}
+
 // exemptHelpPathPrefixes lists the cobra subcommand path prefixes whose
 // leaf commands are exempt from the --agent-help contract check below.
 //
@@ -298,4 +413,24 @@ func isExemptedFromAgentHelpCoverage(leaf *cobra.Command) bool {
 		}
 	}
 	return false
+}
+
+// hasFullAgentHelpDoc reports whether `gitee <path> --agent-help` prints a
+// full agent-help document (as opposed to the operational/config n/a notice
+// or ordinary cobra help).
+func hasFullAgentHelpDoc(t *testing.T, bin, path string) bool {
+	t.Helper()
+	args := append(strings.Fields(path)[1:], "--agent-help")
+	run := exec.Command(bin, args...)
+	run.Env = []string{
+		"HOME=" + t.TempDir(),
+		"PATH=/usr/bin:/bin",
+		"GITEE_TOKEN=",
+		"GITEE_HOSTNAME=invalid.example.invalid",
+	}
+	out, err := run.CombinedOutput()
+	if err != nil {
+		t.Fatalf("%s --agent-help failed: %v\noutput:\n%s", path, err, out)
+	}
+	return strings.HasPrefix(strings.TrimLeft(string(out), "\n"), "# gitee")
 }

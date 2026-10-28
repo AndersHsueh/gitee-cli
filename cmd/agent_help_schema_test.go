@@ -104,6 +104,22 @@ func TestAgentHelpSchemaCompleteness(t *testing.T) {
 					"(coverage contract violated). Got:\n%s", path, combined)
 			}
 
+			// Title contract: the document's first line must name the exact
+			// command path the user (or agent) probed. Shared docs are
+			// retitled with cmd.PrintAgentHelpForCommand; a mismatch means an
+			// alias or umbrella leaked another command's title, and agents
+			// would conclude they were handed the wrong command's docs.
+			firstLine := ""
+			for _, line := range strings.Split(combined, "\n") {
+				if strings.HasPrefix(strings.TrimSpace(line), "# ") {
+					firstLine = strings.TrimSpace(line)
+					break
+				}
+			}
+			if wantTitle := "# " + path + " — Agent Help"; firstLine != wantTitle {
+				t.Errorf("%s agent-help title = %q, want %q", path, firstLine, wantTitle)
+			}
+
 			// Collect headings for prefix matching.
 			var headings []string
 			for _, line := range strings.Split(combined, "\n") {
@@ -157,12 +173,18 @@ func TestAgentHelpSchemaCompleteness(t *testing.T) {
 	}
 }
 
-// findLeafCommandPathsFromBinary runs `gitee help reference` on the given
-// binary and returns the command paths (e.g. "gitee pr create") that are
-// leaves — i.e. no other listed path extends them. `help reference` walks
-// the same live cobra tree the binary executes, so this list always
-// matches what users and agents can actually invoke.
-func findLeafCommandPathsFromBinary(t *testing.T, bin string) []string {
+// findCommandPathsFromBinary runs `gitee help reference` on the given
+// binary and returns every command path it lists (parents and leaves),
+// e.g. "gitee pr", "gitee pr create". `help reference` walks the same
+// live cobra tree the binary executes, so this list always matches what
+// users and agents can actually invoke.
+//
+// It fails the test if the same path is listed twice: cobra only allows
+// one child per name, so a duplicate means a *cobra.Command was added to
+// its parent twice (this actually happened to the `issue label` subtree,
+// which printed twice in `help reference` until the duplicate AddCommand
+// call was removed).
+func findCommandPathsFromBinary(t *testing.T, bin string) []string {
 	t.Helper()
 	run := exec.Command(bin, "help", "reference")
 	run.Env = []string{
@@ -177,6 +199,7 @@ func findLeafCommandPathsFromBinary(t *testing.T, bin string) []string {
 	}
 
 	var paths []string
+	seen := make(map[string]bool)
 	for i, line := range strings.Split(string(out), "\n") {
 		if i == 0 || strings.TrimSpace(line) == "" {
 			continue // header row ("COMMAND  SHORT") and blank lines
@@ -198,12 +221,29 @@ func findLeafCommandPathsFromBinary(t *testing.T, bin string) []string {
 		if len(words) < 2 || words[0] != "gitee" {
 			continue
 		}
-		paths = append(paths, strings.Join(words, " "))
+		path := strings.Join(words, " ")
+		if seen[path] {
+			t.Errorf("`gitee help reference` lists %q twice — a command was registered on its parent more than once", path)
+			continue
+		}
+		seen[path] = true
+		paths = append(paths, path)
 	}
+	return paths
+}
 
-	isParent := make(map[string]bool, len(paths))
-	for _, p := range paths {
-		for _, q := range paths {
+// findLeafCommandPathsFromBinary returns the subset of findCommandPathsFromBinary's
+// paths that are leaves — i.e. no other listed path extends them.
+func findLeafCommandPathsFromBinary(t *testing.T, bin string) []string {
+	t.Helper()
+	return leafCommandPaths(findCommandPathsFromBinary(t, bin))
+}
+
+// leafCommandPaths filters allPaths down to the paths no other path extends.
+func leafCommandPaths(allPaths []string) []string {
+	isParent := make(map[string]bool, len(allPaths))
+	for _, p := range allPaths {
+		for _, q := range allPaths {
 			if q != p && strings.HasPrefix(q, p+" ") {
 				isParent[p] = true
 				break
@@ -211,7 +251,7 @@ func findLeafCommandPathsFromBinary(t *testing.T, bin string) []string {
 		}
 	}
 	var leaves []string
-	for _, p := range paths {
+	for _, p := range allPaths {
 		if !isParent[p] {
 			leaves = append(leaves, p)
 		}

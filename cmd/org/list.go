@@ -21,6 +21,7 @@ var listFlags struct {
 
 var listCmd = &cobra.Command{
 	Use:     "list",
+	Args:    cobra.NoArgs,
 	Short:   "List your organizations",
 	Example: `  gitee org list`,
 	PreRunE: func(c *cobra.Command, args []string) error {

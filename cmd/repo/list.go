@@ -30,6 +30,7 @@ var validRepoSorts = map[string]bool{"created": true, "updated": true, "pushed":
 
 var listCmd = &cobra.Command{
 	Use:   "list",
+	Args:  cobra.NoArgs,
 	Short: "List repositories",
 	Example: `  gitee repo list
   gitee repo list --owner gitee --visibility public

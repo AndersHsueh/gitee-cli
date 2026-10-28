@@ -25,6 +25,7 @@ var createFlags struct {
 
 var createCmd = &cobra.Command{
 	Use:   "create",
+	Args:  cobra.NoArgs,
 	Short: "Create a new repository",
 	Example: `  gitee repo create --name my-repo --description "My new repo"
   gitee repo create --name my-repo --private --org my-org

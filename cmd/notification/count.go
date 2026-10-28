@@ -8,6 +8,7 @@ import (
 
 var countCmd = &cobra.Command{
 	Use:   "count",
+	Args:  cobra.NoArgs,
 	Short: "Show the number of unread notifications",
 	Example: `  gitee notification count
   gitee notification count --output json`,

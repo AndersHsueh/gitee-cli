@@ -20,6 +20,7 @@ var listFlags struct {
 
 var listCmd = &cobra.Command{
 	Use:   "list",
+	Args:  cobra.NoArgs,
 	Short: "List your gists",
 	Example: `  gitee gist list
   gitee gist list --limit 20`,

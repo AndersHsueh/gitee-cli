@@ -1,6 +1,11 @@
 # gitee-cli 功能规格文档（Functional Specification Document）
 
-版本：1.0.0 | 语言：Go 1.23+ | 参考：Gitee API v5 + GitHub `gh` CLI
+> ⚠️ **状态提示（v0.13.2，2026-10 维护轮）**：本文档是项目早期的设计稿，部分内容**未实现或已过期**。
+> 当前行为以代码、`gitee --help`、`gitee <cmd> --agent-help`、`gitee help reference`
+> 和 `gitee help environment` 为准。与现状差异最大的段落已在文中直接标注/修正。
+
+
+版本：1.0.0（设计稿；现状修订见页首横幅）| 语言：Go 1.27+ | 参考：Gitee API v5 + GitHub `gh` CLI
 
 ---
 
@@ -12,8 +17,8 @@
 |------|-----|
 | 项目名称 | `gitee-cli` |
 | 类型 | 命令行工具（CLI） |
-| 语言 | Go 1.23+ |
-| 框架 | Cobra + Viper |
+| 语言 | Go 1.27+ |
+| 框架 | Cobra（配置为手写 JSON，未使用 Viper） |
 | 目标 | 成为 Gitee 的官方 CLI 工具，功能对标 GitHub `gh` |
 | API 基址 | `https://gitee.com/api/v5` |
 | 参考项目 | [`gh`](https://github.com/cli/cli)、[`glab`](https://github.com/cli/go-gitlab) |
@@ -21,17 +26,21 @@
 ### 1.2 核心功能摘要
 
 ```
-gitee auth login|logout|status|refresh|token   # OAuth2 认证
-gitee repo list|create|clone|fork|view|edit|delete|browse  # 仓库管理
-gitee issue list|create|view|edit|close|reopen|comment     # Issue 管理
-gitee pr list|create|view|merge|close|reopen|review|diff|checks  # Pull Request
-gitee gist list|create|view|edit|delete|star|clone         # 代码片段
-gitee org list|view|member|repo|issue                      # 组织管理
-gitee search repos|issues|users                            # 搜索
-gitee api <method> <path> [--field key=val]                # 原始 API 访问
-gitee config set|get|list|unset                            # 配置管理
-gitee completion bash|zsh|fish|powershell                  # Shell 补全
+gitee auth login|logout|status|refresh|token        # PAT 认证（无 OAuth2 设备流）
+gitee repo list|create|view|fork|edit|delete|clone|browse|branches  # 仓库管理
+gitee repo tag|collaborator|star|watch|file|commits|compare|protect|archive|rename|sync  # 仓库扩展
+gitee issue list|create|view|edit|close|reopen|comment  # Issue 管理
+gitee pr list|create|view|merge|review|diff|checks|comments|checkout|close|reopen|edit|ready|status  # Pull Request
+gitee gist list|create|view|edit|delete|star|clone|comments  # 代码片段
+gitee org list|view|members|repos|issues             # 组织管理（子命令为复数）
+gitee search issues|users                            # 搜索（repos 返回空；code/commits 该实例不支持）
+gitee api <method> <path> [--field key=val]          # 原始 API 访问
+gitee config set|get|list|unset                      # 配置管理
+gitee completion bash|zsh|fish|powershell            # Shell 补全
+gitee label|milestone|release|webhook|notification|ssh-key|user|alias|extension|agent|status  # 其余命令组
 ```
+
+当前命令面以 `gitee help reference` 为准（每组命令的 help 与 `--agent-help` 是唯一权威）。
 
 ---
 
@@ -39,32 +48,43 @@ gitee completion bash|zsh|fish|powershell                  # Shell 补全
 
 | 标记 | 类型 | 说明 | 默认值 |
 |------|------|------|--------|
+| `--repo string` | string | 目标仓库 owner/repo，缺省从 git remote 推断 | 自动 |
 | `--hostname string` | string | Gitee 服务器地址（企业私有部署） | `gitee.com` |
-| `--token string` | string | OAuth Access Token（优先于配置文件） | 读取配置 |
-| `-o, --output string` | string | 输出格式 (`table`\|`json`\|`csv`) | `table` |
+| `--token string` | string | 访问令牌（PAT，优先于配置文件） | 读取配置 |
+| `--api-url string` | string | API 根地址 | `https://{hostname}/api/v5` |
+| `-o, --output string` | string | 输出格式 `table`\|`json`（**不支持 csv，非法值报错退出**） | `table` |
 | `-P, --paginate` | bool | 自动分页遍历所有结果 | `false` |
 | `--page int` | int | 指定页码 | `1` |
 | `--per-page int` | int | 每页数量（最大 100） | `30` |
-| `--limit int` | int | 结果总数上限（0 = 不限制） | `0` |
-| `-c, --config string` | string | 配置文件路径 | `~/.gitee-cli/settings.json` |
-| `--api-url string` | string | API 根地址 | `https://gitee.com/api/v5` |
+| `--limit int` | int | 结果总数上限（`--paginate` 时为跨页总数；`0` 表示不限） | `30` |
 | `--timeout int` | int | 网络超时秒数 | `30` |
 | `-v, --verbose` | bool | 输出调试信息（HTTP 请求/响应详情） | `false` |
 | `--no-color` | bool | 关闭 ANSI 颜色输出 | `false` |
-| `--no-interaction` | bool | 静默模式，禁止交互提示（CI/CD 场景） | `false` |
-| `--insecure` | bool | 允许不安全的 HTTPS 连接 | `false` |
-| `--lang string` | string | 界面语言 (`zh`\|`en`) | `zh` |
+| `--no-extensions` | bool | 跳过外部扩展加载 | `false` |
+| `--agent-help` | bool | 输出 Agent 向长文档（部分命令支持，`-o json` 可结构化） | `false` |
 
-**环境变量映射（优先级低于 flag，高于配置文件）：**
+> 旧设计稿中的 `--config` / `--no-interaction` / `--insecure` / `--lang` **不存在**；
+> 配置文件路径固定为 `~/.gitee-cli/settings.json`。
 
-| 环境变量 | 对应 Flag |
+**环境变量（13 个，完整说明见 `gitee help environment`）：**
+
+| 环境变量 | 对应/说明 |
 |---------|----------|
-| `GITEE_TOKEN` | `--token` |
-| `GITEE_HOSTNAME` | `--hostname` |
-| `GITEE_OUTPUT` | `--output` |
-| `GITEE_API_URL` | `--api-url` |
-| `HTTPS_PROXY` / `HTTP_PROXY` | 代理设置 |
-| `NO_COLOR` | `--no-color` |
+| `GITEE_TOKEN` | 访问令牌，等价 `--token` |
+| `GITEE_HOSTNAME` | 等价 `--hostname` |
+| `GITEE_API_URL` | 等价 `--api-url` |
+| `GITEE_OUTPUT` | 默认输出格式，等价 `--output`；非 `table`/`json` 报错 |
+| `GITEE_VERBOSE` | `1`/`true`/`yes`/`on` 启用 HTTP 详情（stderr），等价 `--verbose` |
+| `GITEE_TIMEOUT` | HTTP 超时秒数，等价 `--timeout`；非整数报错 |
+| `GITEE_LIMIT` | 默认 `--limit` 值 |
+| `GITEE_PAGINATE` | `1`/`true`/`yes`/`on` 默认开启 `--paginate` |
+| `GITEE_NO_EXTENSIONS` | `1`/`true`/`yes`/`on` 跳过扩展加载，等价 `--no-extensions` |
+| `NO_COLOR` | 非空关闭颜色，等价 `--no-color` |
+| `GITEE_ALIASES_FILE` | 覆盖别名文件路径 |
+| `GITEE_EXT_DIR` | 覆盖扩展目录 |
+| `BROWSER` | `repo browse` 使用的浏览器 |
+
+> 代理支持来自 Go `net/http` 的标准变量（`HTTPS_PROXY` / `HTTP_PROXY` / `NO_PROXY`），CLI 不单独解析。
 
 ---
 
@@ -72,43 +92,34 @@ gitee completion bash|zsh|fish|powershell                  # Shell 补全
 
 ### 3.1 `gitee auth` — 认证管理
 
-**对应 Gitee API：** OAuth2 Device Flow（`/oauth/authorizations/device/*`）
+**实现方式：个人访问令牌（PAT）。** gitee-cli **没有** OAuth2 设备流、没有浏览器授权、
+没有 `refresh_token` 交换。`auth login` 读取已有令牌并用 `GET /user` 校验。
 
-| 子命令 | Gitee API 端点 | 说明 |
-|--------|--------------|------|
-| `gitee auth login` | `POST /oauth/authorizations/device/code` + 轮询 | 启动 OAuth2 设备流程，获取 Access Token |
-| `gitee auth logout` | 本地操作 | 删除 `~/.gitee-cli/settings.json` 中的 Token |
-| `gitee auth status` | `GET /user` | 显示当前登录状态（用户名、Token 有效期） |
-| `gitee auth refresh` | `POST /oauth/token?grant_type=refresh_token` | 刷新过期 Token |
-| `gitee auth token` | 本地操作 | 输出当前 Access Token（供管道使用） |
+**令牌解析优先级：** `--token` flag > `GITEE_TOKEN` 环境变量 > `~/.gitee-cli/settings.json`。
 
-**`gitee auth login` 完整流程：**
+| 子命令 | 行为 |
+|--------|------|
+| `gitee auth login [--token <PAT>]` | 无参：读取已有令牌并校验 `/user`；带 `--token`：校验通过后写入 `~/.gitee-cli/settings.json`（目录 0700 / 文件 0600） |
+| `gitee auth logout` | 删除本地存储的令牌 |
+| `gitee auth status` | `GET /user`，显示登录状态与用户名 |
+| `gitee auth refresh` | 占位实现：打印「Token refresh is not yet supported. Please re-authenticate with 'gitee auth login'.」后正常退出（退出码 0）；不刷新、不重新校验，**不是** OAuth `refresh_token` 流程 |
+| `gitee auth token` | 打印当前访问令牌（供管道使用） |
+
+**`gitee auth login` 真实流程：**
 ```
-1. POST /oauth/authorizations/device/code
-   Body: { client_id, scope }
-   → device_code, user_code, verification_uri, expires_in, interval
-
-2. 显示提示：
-   ! First copy your one-time code: XXXX-XXXX
-   - Press Enter to open gitee.com/device in your browser
-
-3. 打开浏览器 / 或在 --no-interaction 模式下打印 URL
-
-4. 轮询 POST /oauth/authorizations/device/token
-   Body: { client_id, device_code, grant_type="urn:ietf:params:oauth:grant-type:device_code" }
-   → access_token, token_type, scope, refresh_token
-
-5. 将 access_token 写入 ~/.gitee-cli/settings.json（0600 权限）
-
-6. GET /user → 验证并显示 "✓ Logged in as <username>"
+1. 按优先级解析候选令牌（--token > GITEE_TOKEN > settings.json）
+2. GET /user，header `Authorization: token <PAT>` → 校验并取用户名
+3. 仅在显式传 --token 时，把令牌写入 ~/.gitee-cli/settings.json（0600）
 ```
+> ⚠️ `--token` 的值会出现在 `ps` 与 shell history；一次性脚本之外请用 `GITEE_TOKEN`。
 
 **`gitee auth login` 参数：**
 
 | 参数 | 说明 |
 |------|------|
-| `--scopes string` | 请求的 OAuth 权限范围（默认：`user_info,projects,pull_requests,issues,notes,gists`） |
-| `--with-token` | 从 stdin 读取已有 Token 并保存（跳过 OAuth 流程） |
+| `-t, --token string` | 指定令牌并保存（校验通过后写入 settings.json） |
+
+> 旧设计稿里的 `--with-token`（从 stdin 读取）与 `--scopes` **不存在**。
 
 ---
 
@@ -144,9 +155,11 @@ gitee completion bash|zsh|fish|powershell                  # Shell 补全
 |------|------|------|
 | `--owner string` | 指定用户/组织名 | 当前登录用户 |
 | `--visibility string` | `public`\|`private`\|`internal`\|`all` | `all` |
-| `--sort string` | `created`\|`updated`\|`pushed`\|`full_name` | `updated` |
-| `--direction string` | `asc`\|`desc` | `desc` |
-| `--type string` | `owner`\|`member`\|`all` | `owner` |
+| `--sort string` | `created`\|`updated`\|`pushed`\|`full_name`\|`stars` | `full_name` |
+| `--direction string` | `asc`\|`desc` | `asc` |
+| `-L, --limit int` | 返回条数上限 | `30` |
+
+> 旧稿的 `--type` 不存在；该命令不支持位置参数（仓库名用 `--repo` 或从 git remote 推断）。
 
 **`gitee repo create` 参数：**
 
@@ -194,9 +207,10 @@ gitee completion bash|zsh|fish|powershell                  # Shell 补全
 | `#` | `number` | Issue 编号 |
 | `TITLE` | `title` | 标题（截断至 60 字符） |
 | `STATE` | `state` | open/closed |
-| `LABELS` | `labels[].name` | 标签（最多显示 3 个） |
-| `ASSIGNEE` | `assignee.login` | 指派人 |
-| `UPDATED` | `updated_at` | 更新日期（相对时间） |
+| `LABELS` | `labels[].name` | 标签（逗号连接；无标签显示 `-`） |
+| `UPDATED` | `updated_at` | 更新日期（`YYYY-MM-DD`） |
+
+> 表格只有这 5 列，没有 `ASSIGNEE` 列。
 
 **`gitee issue create` 参数：**
 
@@ -231,21 +245,21 @@ gitee completion bash|zsh|fish|powershell                  # Shell 补全
 
 | 参数 | API 字段 | 默认 |
 |------|---------|------|
-| `--state string` | `state` | `open` |
-| `--author string` | `author` | — |
+| `--state string` | `state` | `open`（`open`\|`closed`\|`merged`\|`all`） |
 | `--head string` | `head` | — |
 | `--base string` | `base` | — |
-| `--sort string` | `sort` | `created` |
-| `--direction string` | `direction` | `desc` |
+
+> 旧稿的 `--author` / `--sort` / `--direction` 在 `pr list` 上不存在。
 
 **`gitee pr merge` 参数：**
 
-| 参数 | API 字段 | 说明 |
-|------|---------|------|
-| `--squash` | `merge_method=squash` | Squash 合并 |
-| `--rebase` | `merge_method=rebase` | Rebase 合并 |
-| `--merge-commit-message string` | `merge_commit_message` | 合并提交信息 |
-| `--delete-branch` | — | 合并后删除源分支 |
+| 参数 | 说明 |
+|------|------|
+| `--squash` | Squash 合并（body `squash=true`） |
+| `--squash-message string` | Squash 合并的提交信息（body `squash_message`） |
+
+> 旧设计稿里的 `--rebase` / `--merge-commit-message` / `--delete-branch` **不存在**：
+> CLI 只实现 squash 与 squash-message 两个合并选项。
 
 ---
 
@@ -269,17 +283,20 @@ gitee completion bash|zsh|fish|powershell                  # Shell 补全
 |------|---------|------|
 | `--description string` | `description` | Gist 描述 |
 | `--public` | `public=true` | 设为公开（默认 private） |
-| `--from-stdin` | — | 从 stdin 读取内容（配合文件名 `--filename`） |
-| `--filename string` | — | stdin 模式下的文件名 |
+| `--file stringArray` | `files` | `filename=content` 或 `filename=@路径`，可重复 |
+| `--filename string` | — | stdin 模式下的文件名（内容从 stdin 读） |
+| `-i, --interactive` | — | 交互式编辑模式 |
+
+> 没有 `--from-stdin`；从 stdin 输入时用 `--filename <名字>`（可配 `--file`）。
 
 **`gitee gist list` 输出字段：**
 
 | 字段 | API 字段 | 说明 |
 |------|---------|------|
 | `ID` | `id` | Gist ID |
-| `DESCRIPTION` | `description` | 描述（截断 50 字符） |
-| `FILES` | `files` 数量 | 包含文件数 |
+| `DESCRIPTION` | `description` | 描述（截断 50 字符、空显示 `-`） |
 | `PUBLIC` | `public` | 是否公开 |
+| `FILES` | `files` 数量 | 包含文件数 |
 | `UPDATED` | `updated_at` | 更新时间 |
 
 ---
@@ -292,9 +309,9 @@ gitee completion bash|zsh|fish|powershell                  # Shell 补全
 |--------|-----------|------|
 | `gitee org list` | `GET /user/orgs` | 列出用户所属的组织 |
 | `gitee org view <org>` | `GET /orgs/{org}` | 查看组织详情 |
-| `gitee org member list <org>` | `GET /orgs/{org}/members` | 列出组织成员 |
-| `gitee org repo list <org>` | `GET /orgs/{org}/repos` | 列出组织的仓库 |
-| `gitee org issue list <org>` | `GET /orgs/{org}/issues` | 列出组织内的 Issue |
+| `gitee org members <org>` | `GET /orgs/{org}/members` | 列出组织成员 |
+| `gitee org repos <org>` | `GET /orgs/{org}/repos` | 列出组织的仓库 |
+| `gitee org issues <org>` | `GET /orgs/{org}/issues` | 列出组织内的 Issue |
 
 ---
 
@@ -307,6 +324,11 @@ gitee completion bash|zsh|fish|powershell                  # Shell 补全
 | `gitee search repos <query>` | `GET /search/repositories` | 搜索仓库 |
 | `gitee search issues <query>` | `GET /search/issues` | 搜索 Issue |
 | `gitee search users <query>` | `GET /search/users` | 搜索用户 |
+| `gitee search code <query>` | `GET /search/code` | 代码搜索（该 Gitee 实例返回 404，CLI 提示后非 0 退出） |
+| `gitee search commits <query>` | `GET /search/commits` | 提交搜索（该 Gitee 实例返回 404，CLI 提示后非 0 退出） |
+
+> ⚠️ 现状（v0.13.2 实测）：`search issues` / `search users` 正常；`search repos` 对任意查询返回空
+> （上游接口行为变化，CLI 打印 `(no results)`）；`search code` / `search commits` 在该实例不可用。
 
 **`gitee search repos` 参数：**
 
@@ -407,11 +429,10 @@ gitee completion fish > ~/.config/fish/completions/gitee.fish
 - `view` 命令返回单个 JSON 对象
 - 错误信息输出到 stderr（不影响管道）
 
-### 4.3 CSV 格式（`--output csv`）
+### 4.3 CSV（**不支持**）
 
-- 第一行为表头（字段名小写）
-- 值用双引号包裹，内部双引号用 `""` 转义
-- 适合导入 Excel / 数据库
+`-o/--output` 只接受 `table` 与 `json`；其他值（包括早期文档宣称的 `csv`）会报错退出，
+不会静默回退成 table。需要表格数据时用 `-o json` + `jq`（示例见 `gitee help formatting`）。
 
 ### 4.4 分页输出
 
@@ -424,27 +445,26 @@ gitee completion fish > ~/.config/fish/completions/gitee.fish
 
 ## 5. 错误处理规格
 
-| 场景 | Exit Code | stderr 输出 |
+| 场景 | Exit Code | stderr 输出（`Error: <operation>: <detail>` 形态） |
 |------|-----------|------------|
-| 未登录 | 1 | `Error: not authenticated. Run 'gitee auth login' first.` |
-| 网络超时 | 1 | `Error: failed to connect to gitee.com: <detail>` |
-| API 返回 401 | 1 | `Error: authentication failed. Token may be expired. Run 'gitee auth refresh'.` |
-| API 返回 403 | 1 | `Error: insufficient permissions: <message>` |
-| API 返回 404 | 1 | `Error: not found: <resource>` |
-| API 返回 422 | 1 | `Error: validation failed: <field errors>` |
-| API 返回 5xx | 1 | `Error: Gitee server error (HTTP <code>): <message>` |
-| 参数错误 | 2 | `Error: <description>` + 用法帮助 |
-| Token 过期 | 1 | 提示 `gitee auth refresh` 或 `gitee auth login` |
-| 操作被取消 | 1 | `Aborted.` |
+| 未登录（本地检查，未发请求） | 1 | `not authenticated. Set GITEE_TOKEN or run 'gitee auth login'` |
+| 网络错误 / 超时 | 1 | `<transport error>`（如 `context deadline exceeded`、`connection refused`） |
+| API 返回 401 | 1 | `HTTP 401: <Gitee message>`；body 无 message 时回退 `HTTP 401: authentication failed: run 'gitee auth login' or set GITEE_TOKEN` |
+| API 返回 403 | 1 | `HTTP 403: <Gitee message>`，无 message 时 `HTTP 403: permission denied` |
+| API 返回 404 | 1 | `HTTP 404: <Gitee message>`，无 message 时 `HTTP 404: resource does not exist or you lack read access` |
+| API 返回 422 | 1 | `HTTP 422: <Gitee message>`，无 message 时 `HTTP 422: validation failed` |
+| API 返回 5xx | 1 | `HTTP 5xx: <Gitee message>`，无 message 时 `internal server error` / `service unavailable` |
+| 参数错误 | 1 | `unknown flag: --x` / `unknown command "x" for "gitee ..."`（Cobra 统一输出，同样带 `Error: ` 前缀） |
+| 操作被取消（交互确认拒绝） | 0 | 打印 `Cancelled`，不执行任何动作 |
 
 ---
 
 ## 6. 国际化（i18n）
 
-- 默认语言：中文（`zh-CN`）
-- 支持 `--lang en` 切换英文输出（或 `GITEE_LANG=en`）
-- 语言包位于 `internal/i18n/` 目录（`zh_CN.go`, `en_US.go`）
-- 错误消息、帮助文本、命令描述均支持国际化
+- **未实现。** CLI 没有 `--lang`、没有语言包目录、没有运行时切换语言的机制；
+  命令帮助与输出是固定文案。
+- 多语言只存在于文档层：`README.md` / `README_en.md` / `README_ja.md` 与
+  `docs/{zh,en,ja}/`。
 
 ---
 
@@ -453,10 +473,10 @@ gitee completion fish > ~/.config/fish/completions/gitee.fish
 | 需求 | 要求 |
 |------|------|
 | 启动时间 | < 100ms（`gitee --version` 冷启动） |
-| 首次编译时间 | < 15s（Go 1.23 增量编译） |
+| 首次编译时间 | < 20s（Go 1.27 增量编译，视机器而定） |
 | 网络超时 | 默认 30s（`--timeout` 可覆盖） |
-| 重试策略 | 5xx 自动重试 3 次（指数退避，最大 8s） |
-| Token 缓存 | 用户信息缓存 5 分钟（避免重复 `GET /user`） |
+| 重试策略 | **仅 GET**：5xx/网络错误重试 3 次（2s 起，最长 8s）；写操作不自动重试 |
+| 用户名来源 | 优先读 `settings.json` 缓存的 username，缺失时回退 `GET /user`（无 TTL 缓存） |
 | 代理 | 遵循 `HTTPS_PROXY` / `HTTP_PROXY` / `NO_PROXY` 环境变量 |
 | 跨平台 | Linux amd64/arm64、macOS amd64/arm64（M1）、Windows amd64 |
 | 二进制大小 | < 20MB（启用 `-ldflags="-s -w"` 压缩） |
@@ -474,5 +494,5 @@ gitee completion fish > ~/.config/fish/completions/gitee.fish
 | 组织（Org） | 14 | 5 端点 |
 | 用户（User） | 18 | 通过 auth/search |
 | 搜索（Search） | 3 | 3 端点（全覆盖） |
-| Webhook | 6 | 暂不覆盖（v2.0 规划） |
-| 企业（Enterprise） | 20+ | 暂不覆盖（v2.0 规划） |
+| Webhook | 6 | 已实现（create / list / view / edit / delete / ping） |
+| 企业（Enterprise） | 20+ | 通过 `--hostname` / `GITEE_HOSTNAME` 支持私有部署 |

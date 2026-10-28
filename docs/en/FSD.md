@@ -1,6 +1,13 @@
 # gitee-cli Functional Specification Document
 
-Version: 1.0.0 | Language: Go 1.23+ | Reference: Gitee API v5 + GitHub `gh` CLI
+> ⚠️ **Status notice (v0.13.2, 2026-10 maintenance round)**: This document is an early design
+> draft; parts of it are **not implemented or out of date**. The authoritative behavior is the
+> code, `gitee --help`, `gitee <cmd> --agent-help`, `gitee help reference` and
+> `gitee help environment`. Paragraphs that diverge most from the current implementation are
+> corrected inline.
+
+
+Version: 1.0.0 (design draft; see the banner above for current-state corrections) | Language: Go 1.27+ | Reference: Gitee API v5 + GitHub `gh` CLI
 
 ---
 
@@ -12,8 +19,8 @@ Version: 1.0.0 | Language: Go 1.23+ | Reference: Gitee API v5 + GitHub `gh` CLI
 |-------|-------|
 | Project Name | `gitee-cli` |
 | Type | Command Line Tool (CLI) |
-| Language | Go 1.23+ |
-| Framework | Cobra + Viper |
+| Language | Go 1.27+ |
+| Framework | Cobra (config is hand-written JSON, no Viper) |
 | Goal | Become Gitee's official CLI tool, equivalent to GitHub `gh` |
 | API Base | `https://gitee.com/api/v5` |
 | Reference Projects | [`gh`](https://github.com/cli/cli), [`glab`](https://github.com/cli/go-gitlab) |
@@ -21,17 +28,22 @@ Version: 1.0.0 | Language: Go 1.23+ | Reference: Gitee API v5 + GitHub `gh` CLI
 ### 1.2 Core Features Summary
 
 ```
-gitee auth login|logout|status|refresh|token   # OAuth2 authentication
-gitee repo list|create|clone|fork|view|edit|delete|browse  # Repository management
-gitee issue list|create|view|edit|close|reopen|comment     # Issue management
-gitee pr list|create|view|merge|close|reopen|review|diff|checks  # Pull Request
-gitee gist list|create|view|edit|delete|star|clone         # Gist
-gitee org list|view|member|repo|issue                      # Organization
-gitee search repos|issues|users                            # Search
-gitee api <method> <path> [--field key=val]                # Raw API access
-gitee config set|get|list|unset                            # Configuration
-gitee completion bash|zsh|fish|powershell                  # Shell completion
+gitee auth login|logout|status|refresh|token        # PAT authentication (no OAuth2 device flow)
+gitee repo list|create|view|fork|edit|delete|clone|browse|branches  # Repository management
+gitee repo tag|collaborator|star|watch|file|commits|compare|protect|archive|rename|sync  # Repo extras
+gitee issue list|create|view|edit|close|reopen|comment  # Issue management
+gitee pr list|create|view|merge|review|diff|checks|comments|checkout|close|reopen|edit|ready|status  # Pull Request
+gitee gist list|create|view|edit|delete|star|clone|comments  # Gist
+gitee org list|view|members|repos|issues                   # Organization (plural subcommands)
+gitee search issues|users                            # Search (repos returns empty; code/commits unsupported here)
+gitee api <method> <path> [--field key=val]          # Raw API access
+gitee config set|get|list|unset                      # Configuration
+gitee completion bash|zsh|fish|powershell            # Shell completion
+gitee label|milestone|release|webhook|notification|ssh-key|user|alias|extension|agent|status  # Other groups
 ```
+
+The command surface is authoritative only in `gitee help reference` (per-group `--help` and
+`--agent-help` are the source of truth).
 
 ---
 
@@ -39,32 +51,44 @@ gitee completion bash|zsh|fish|powershell                  # Shell completion
 
 | Flag | Type | Description | Default |
 |------|------|-------------|---------|
+| `--repo string` | string | Target repository (owner/repo); inferred from git remote when omitted | auto |
 | `--hostname string` | string | Gitee server address (enterprise/private deployment) | `gitee.com` |
-| `--token string` | string | OAuth Access Token (priority over config) | from config |
-| `-o, --output string` | string | Output format (`table`\|`json`\|`csv`) | `table` |
+| `--token string` | string | Personal access token (PAT, priority over config) | from config |
+| `--api-url string` | string | API root URL | `https://{hostname}/api/v5` |
+| `-o, --output string` | string | Output format `table`\|`json` (**no csv; invalid values error out**) | `table` |
 | `-P, --paginate` | bool | Auto-paginate through all results | `false` |
 | `--page int` | int | Page number | `1` |
 | `--per-page int` | int | Items per page (max 100) | `30` |
-| `--limit int` | int | Max results (0 = unlimited) | `0` |
-| `-c, --config string` | string | Config file path | `~/.gitee-cli/settings.json` |
-| `--api-url string` | string | API root URL | `https://gitee.com/api/v5` |
-| `--timeout int` | int | Network timeout in seconds | `30` |
-| `-v, --verbose` | bool | Output debug info (HTTP request/response details) | `false` |
+| `--limit int` | int | Max results (total cap across pages with `--paginate`; `0` = unlimited) | `30` |
+| `--timeout int` | int | HTTP timeout in seconds | `30` |
+| `-v, --verbose` | bool | Output HTTP request/response details | `false` |
 | `--no-color` | bool | Disable ANSI color output | `false` |
-| `--no-interaction` | bool | Silent mode, disable interactive prompts (CI/CD) | `false` |
-| `--insecure` | bool | Allow insecure HTTPS connections | `false` |
-| `--lang string` | string | UI language (`zh`\|`en`) | `zh` |
+| `--no-extensions` | bool | Skip loading external extensions | `false` |
+| `--agent-help` | bool | Long, agent-targeted help (selected commands; `-o json` for structure) | `false` |
 
-**Environment Variable Mapping (priority below flag, above config):**
+> The old design flags `--config` / `--no-interaction` / `--insecure` / `--lang` do **not** exist;
+> the config file path is fixed at `~/.gitee-cli/settings.json`.
 
-| Environment Variable | Corresponding Flag |
-|---------------------|-------------------|
-| `GITEE_TOKEN` | `--token` |
-| `GITEE_HOSTNAME` | `--hostname` |
-| `GITEE_OUTPUT` | `--output` |
-| `GITEE_API_URL` | `--api-url` |
-| `HTTPS_PROXY` / `HTTP_PROXY` | Proxy settings |
-| `NO_COLOR` | `--no-color` |
+**Environment variables (13; run `gitee help environment`):**
+
+| Variable | Mapping / meaning |
+|----------|-------------------|
+| `GITEE_TOKEN` | Access token, same as `--token` |
+| `GITEE_HOSTNAME` | Same as `--hostname` |
+| `GITEE_API_URL` | Same as `--api-url` |
+| `GITEE_OUTPUT` | Default output format, same as `--output`; values other than `table`/`json` are rejected |
+| `GITEE_VERBOSE` | Set to `1`/`true`/`yes`/`on` to enable HTTP details (stderr), same as `--verbose` |
+| `GITEE_TIMEOUT` | HTTP timeout in seconds, same as `--timeout`; non-integers error out |
+| `GITEE_LIMIT` | Default `--limit` value |
+| `GITEE_PAGINATE` | Set to `1`/`true`/`yes`/`on` to enable `--paginate` by default |
+| `GITEE_NO_EXTENSIONS` | Set to `1`/`true`/`yes`/`on` to skip extension loading |
+| `NO_COLOR` | Non-empty disables colors, same as `--no-color` |
+| `GITEE_ALIASES_FILE` | Override aliases file path |
+| `GITEE_EXT_DIR` | Override extension directory |
+| `BROWSER` | Browser binary used by `repo browse` |
+
+> Proxy support comes from Go `net/http` standard variables (`HTTPS_PROXY` / `HTTP_PROXY` / `NO_PROXY`);
+> the CLI does not parse them itself.
 
 ---
 
@@ -72,43 +96,36 @@ gitee completion bash|zsh|fish|powershell                  # Shell completion
 
 ### 3.1 `gitee auth` — Authentication Management
 
-**Corresponding Gitee API:** OAuth2 Device Flow (`/oauth/authorizations/device/*`)
+**Mechanism: personal access token (PAT).** gitee-cli has **no** OAuth2 device flow, no browser
+authorization and no `refresh_token` exchange. `auth login` reads an existing token and verifies
+it against `GET /user`.
 
-| Subcommand | Gitee API Endpoint | Description |
-|------------|-------------------|-------------|
-| `gitee auth login` | `POST /oauth/authorizations/device/code` + polling | Start OAuth2 device flow, get Access Token |
-| `gitee auth logout` | Local operation | Delete Token from `~/.gitee-cli/settings.json` |
-| `gitee auth status` | `GET /user` | Show current login status (username, token expiry) |
-| `gitee auth refresh` | `POST /oauth/token?grant_type=refresh_token` | Refresh expired Token |
-| `gitee auth token` | Local operation | Output current Access Token (for piping) |
+**Token resolution order:** `--token` flag > `GITEE_TOKEN` env var > `~/.gitee-cli/settings.json`.
 
-**`gitee auth login` Full Flow:**
+| Subcommand | Behavior |
+|------------|----------|
+| `gitee auth login [--token <PAT>]` | No flag: read the existing token and verify `/user`; with `--token`: verify then persist to `~/.gitee-cli/settings.json` (dir 0700 / file 0600) |
+| `gitee auth logout` | Remove the stored token |
+| `gitee auth status` | `GET /user`, show login state and username |
+| `gitee auth refresh` | Stub: prints "Token refresh is not yet supported. Please re-authenticate with 'gitee auth login'." and exits 0; it refreshes nothing and is **not** an OAuth `refresh_token` flow |
+| `gitee auth token` | Print the current access token (for piping) |
+
+**Real `gitee auth login` flow:**
 ```
-1. POST /oauth/authorizations/device/code
-   Body: { client_id, scope }
-   → device_code, user_code, verification_uri, expires_in, interval
-
-2. Display prompt:
-   ! First copy your one-time code: XXXX-XXXX
-   - Press Enter to open gitee.com/device in your browser
-
-3. Open browser / or in --no-interaction mode print URL
-
-4. Poll POST /oauth/authorizations/device/token
-   Body: { client_id, device_code, grant_type="urn:ietf:params:oauth:grant-type:device_code" }
-   → access_token, token_type, scope, refresh_token
-
-5. Write access_token to ~/.gitee-cli/settings.json (0600 permissions)
-
-6. GET /user → verify and display "✓ Logged in as <username>"
+1. Resolve the candidate token (--token > GITEE_TOKEN > settings.json)
+2. GET /user with header `Authorization: token <PAT>` → verify + fetch username
+3. Only when --token was passed, write it to ~/.gitee-cli/settings.json (0600)
 ```
+> ⚠️ A `--token` value is visible via `ps` and lands in shell history; prefer `GITEE_TOKEN`
+> outside one-off scripts.
 
-**`gitee auth login` Parameters:**
+**`gitee auth login` flags:**
 
-| Parameter | Description |
-|-----------|-------------|
-| `--scopes string` | Requested OAuth permission scopes (default: `user_info,projects,pull_requests,issues,notes,gists`) |
-| `--with-token` | Read existing Token from stdin and save (skip OAuth flow) |
+| Flag | Description |
+|------|-------------|
+| `-t, --token string` | Use a specific token; saved after successful verification |
+
+> The old draft's `--with-token` (stdin) and `--scopes` do **not** exist.
 
 ---
 
@@ -144,9 +161,12 @@ gitee completion bash|zsh|fish|powershell                  # Shell completion
 |----------|-------------|---------|
 | `--owner string` | Specify user/organization name | current logged-in user |
 | `--visibility string` | `public`\|`private`\|`internal`\|`all` | `all` |
-| `--sort string` | `created`\|`updated`\|`pushed`\|`full_name` | `updated` |
-| `--direction string` | `asc`\|`desc` | `desc` |
-| `--type string` | `owner`\|`member`\|`all` | `owner` |
+| `--sort string` | `created`\|`updated`\|`pushed`\|`full_name`\|`stars` | `full_name` |
+| `--direction string` | `asc`\|`desc` | `asc` |
+| `-L, --limit int` | Max repositories to return | `30` |
+
+> The old draft's `--type` does not exist; the command takes no positional argument (use `--repo`
+> or let it infer from the git remote).
 
 **`gitee repo create` Parameters:**
 
@@ -194,9 +214,10 @@ gitee completion bash|zsh|fish|powershell                  # Shell completion
 | `#` | `number` | Issue number |
 | `TITLE` | `title` | Title (truncated to 60 chars) |
 | `STATE` | `state` | open/closed |
-| `LABELS` | `labels[].name` | Labels (show max 3) |
-| `ASSIGNEE` | `assignee.login` | Assignee |
-| `UPDATED` | `updated_at` | Update date (relative) |
+| `LABELS` | `labels[].name` | Labels (comma-joined; `-` when none) |
+| `UPDATED` | `updated_at` | Update date (`YYYY-MM-DD`) |
+
+> The table has exactly these 5 columns; there is no `ASSIGNEE` column.
 
 **`gitee issue create` Parameters:**
 
@@ -231,21 +252,21 @@ gitee completion bash|zsh|fish|powershell                  # Shell completion
 
 | Parameter | API Field | Default |
 |-----------|-----------|---------|
-| `--state string` | `state` | `open` |
-| `--author string` | `author` | — |
+| `--state string` | `state` | `open` (`open`\|`closed`\|`merged`\|`all`) |
 | `--head string` | `head` | — |
 | `--base string` | `base` | — |
-| `--sort string` | `sort` | `created` |
-| `--direction string` | `direction` | `desc` |
+
+> The old draft's `--author` / `--sort` / `--direction` do not exist on `pr list`.
 
 **`gitee pr merge` Parameters:**
 
-| Parameter | API Field | Description |
-|-----------|-----------|-------------|
-| `--squash` | `merge_method=squash` | Squash merge |
-| `--rebase` | `merge_method=rebase` | Rebase merge |
-| `--merge-commit-message string` | `merge_commit_message` | Merge commit message |
-| `--delete-branch` | — | Delete source branch after merge |
+| Parameter | Description |
+|-----------|-------------|
+| `--squash` | Squash merge (body `squash=true`) |
+| `--squash-message string` | Commit message for the squash merge (body `squash_message`) |
+
+> The old draft's `--rebase` / `--merge-commit-message` / `--delete-branch` do **not** exist:
+> the CLI only implements the squash and squash-message merge options.
 
 ---
 
@@ -269,17 +290,20 @@ gitee completion bash|zsh|fish|powershell                  # Shell completion
 |-----------|-----------|-------------|
 | `--description string` | `description` | Gist description |
 | `--public` | `public=true` | Make public (default private) |
-| `--from-stdin` | — | Read content from stdin (with `--filename`) |
-| `--filename string` | — | Filename in stdin mode |
+| `--file stringArray` | `files` | `filename=content` or `filename=@path`, repeatable |
+| `--filename string` | — | Filename in stdin mode (content read from stdin) |
+| `-i, --interactive` | — | Interactive editing mode |
+
+> There is no `--from-stdin`; for stdin input use `--filename <name>` (optionally with `--file`).
 
 **`gitee gist list` Output Fields:**
 
 | Field | API Field | Description |
 |-------|-----------|-------------|
 | `ID` | `id` | Gist ID |
-| `DESCRIPTION` | `description` | Description (truncated to 50 chars) |
-| `FILES` | `files` count | Number of files |
+| `DESCRIPTION` | `description` | Description (truncated to 50 chars, `-` if empty) |
 | `PUBLIC` | `public` | Whether public |
+| `FILES` | `files` count | Number of files |
 | `UPDATED` | `updated_at` | Update time |
 
 ---
@@ -292,9 +316,9 @@ gitee completion bash|zsh|fish|powershell                  # Shell completion
 |------------|-----------|-------------|
 | `gitee org list` | `GET /user/orgs` | List user's organizations |
 | `gitee org view <org>` | `GET /orgs/{org}` | View org details |
-| `gitee org member list <org>` | `GET /orgs/{org}/members` | List org members |
-| `gitee org repo list <org>` | `GET /orgs/{org}/repos` | List org repos |
-| `gitee org issue list <org>` | `GET /orgs/{org}/issues` | List org issues |
+| `gitee org members <org>` | `GET /orgs/{org}/members` | List org members |
+| `gitee org repos <org>` | `GET /orgs/{org}/repos` | List org repos |
+| `gitee org issues <org>` | `GET /orgs/{org}/issues` | List org issues |
 
 ---
 
@@ -307,6 +331,12 @@ gitee completion bash|zsh|fish|powershell                  # Shell completion
 | `gitee search repos <query>` | `GET /search/repositories` | Search repos |
 | `gitee search issues <query>` | `GET /search/issues` | Search issues |
 | `gitee search users <query>` | `GET /search/users` | Search users |
+| `gitee search code <query>` | `GET /search/code` | Code search (404 on this Gitee instance; CLI explains and exits non-zero) |
+| `gitee search commits <query>` | `GET /search/commits` | Commit search (404 on this Gitee instance; CLI explains and exits non-zero) |
+
+> ⚠️ Current state (measured on v0.13.2): `search issues` / `search users` work; `search repos`
+> returns empty for every query (upstream API behavior change; CLI prints `(no results)`);
+> `search code` / `search commits` are unavailable on this instance.
 
 **`gitee search repos` Parameters:**
 
@@ -407,11 +437,11 @@ gitee completion fish > ~/.config/fish/completions/gitee.fish
 - `view` commands return single JSON object
 - Error messages output to stderr (doesn't affect pipe)
 
-### 4.3 CSV Format (`--output csv`)
+### 4.3 CSV (**not supported**)
 
-- First row is header (lowercase field names)
-- Values wrapped in double quotes, internal double quotes escaped as `""`
-- Suitable for import to Excel/database
+`-o/--output` accepts only `table` and `json`; any other value (including the `csv` claimed by
+early docs) errors out instead of silently falling back to table. Use `-o json` + `jq` when you
+need tabular data (see `gitee help formatting`).
 
 ### 4.4 Pagination Output
 
@@ -424,27 +454,26 @@ gitee completion fish > ~/.config/fish/completions/gitee.fish
 
 ## 5. Error Handling Specification
 
-| Scenario | Exit Code | stderr Output |
+| Scenario | Exit Code | stderr Output (`Error: <operation>: <detail>`) |
 |----------|-----------|---------------|
-| Not logged in | 1 | `Error: not authenticated. Run 'gitee auth login' first.` |
-| Network timeout | 1 | `Error: failed to connect to gitee.com: <detail>` |
-| API returns 401 | 1 | `Error: authentication failed. Token may be expired. Run 'gitee auth refresh'.` |
-| API returns 403 | 1 | `Error: insufficient permissions: <message>` |
-| API returns 404 | 1 | `Error: not found: <resource>` |
-| API returns 422 | 1 | `Error: validation failed: <field errors>` |
-| API returns 5xx | 1 | `Error: Gitee server error (HTTP <code>): <message>` |
-| Parameter error | 2 | `Error: <description>` + usage help |
-| Token expired | 1 | Prompt `gitee auth refresh` or `gitee auth login` |
-| Operation cancelled | 1 | `Aborted.` |
+| Not logged in (local check, no request) | 1 | `not authenticated. Set GITEE_TOKEN or run 'gitee auth login'` |
+| Network error / timeout | 1 | `<transport error>` (e.g. `context deadline exceeded`, `connection refused`) |
+| API returns 401 | 1 | `HTTP 401: <Gitee message>`; falls back to `HTTP 401: authentication failed: run 'gitee auth login' or set GITEE_TOKEN` when the body has no message |
+| API returns 403 | 1 | `HTTP 403: <Gitee message>`, or `HTTP 403: permission denied` |
+| API returns 404 | 1 | `HTTP 404: <Gitee message>`, or `HTTP 404: resource does not exist or you lack read access` |
+| API returns 422 | 1 | `HTTP 422: <Gitee message>`, or `HTTP 422: validation failed` |
+| API returns 5xx | 1 | `HTTP 5xx: <Gitee message>`, or `internal server error` / `service unavailable` |
+| Parameter error | 1 | `unknown flag: --x` / `unknown command "x" for "gitee ..."` (Cobra output, also prefixed with `Error: `) |
+| Operation cancelled (prompt declined) | 0 | Prints `Cancelled`; nothing is performed |
 
 ---
 
 ## 6. Internationalization (i18n)
 
-- Default language: Chinese (`zh-CN`)
-- Support `--lang en` to switch to English output (or `GITEE_LANG=en`)
-- Language packs in `internal/i18n/` directory (`zh_CN.go`, `en_US.go`)
-- Error messages, help text, command descriptions all support i18n
+- **Not implemented.** There is no `--lang`, no language-pack directory and no runtime language
+  switching; command help and output are fixed strings.
+- Multilingual support exists only at the documentation layer: `README.md` / `README_en.md` /
+  `README_ja.md` and `docs/{zh,en,ja}/`.
 
 ---
 
@@ -453,10 +482,10 @@ gitee completion fish > ~/.config/fish/completions/gitee.fish
 | Requirement | Value |
 |-------------|-------|
 | Startup time | < 100ms (`gitee --version` cold start) |
-| First compile time | < 15s (Go 1.23 incremental compile) |
+| First compile time | < 20s (Go 1.27 incremental compile; machine-dependent) |
 | Network timeout | Default 30s (`--timeout` can override) |
-| Retry strategy | 5xx auto-retry 3 times (exponential backoff, max 8s) |
-| Token cache | User info cached 5 minutes (avoid repeated `GET /user`) |
+| Retry strategy | **GET only**: 5xx/network errors retried 3 times (starting at 2s, max 8s); writes are never auto-retried |
+| Username source | Read cached username from `settings.json`, fall back to `GET /user` when missing (no TTL cache) |
 | Proxy | Respect `HTTPS_PROXY` / `HTTP_PROXY` / `NO_PROXY` environment variables |
 | Cross-platform | Linux amd64/arm64, macOS amd64/arm64 (M1), Windows amd64 |
 | Binary size | < 20MB (enable `-ldflags="-s -w"` compression) |
@@ -474,5 +503,5 @@ gitee completion fish > ~/.config/fish/completions/gitee.fish
 | Organization | 14 | 5 endpoints |
 | User | 18 | via auth/search |
 | Search | 3 | 3 endpoints (full coverage) |
-| Webhook | 6 | Not covered yet (v2.0 plan) |
-| Enterprise | 20+ | Not covered yet (v2.0 plan) |
+| Webhook | 6 | Implemented (create / list / view / edit / delete / ping) |
+| Enterprise | 20+ | Private deployments via `--hostname` / `GITEE_HOSTNAME` |

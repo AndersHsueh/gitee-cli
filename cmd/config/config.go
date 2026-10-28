@@ -13,10 +13,13 @@ import (
 var ConfigCmd = &cobra.Command{
 	Use:   "config <subcommand>",
 	Short: "Manage gitee-cli configuration",
+	// GroupRunE: unknown verbs exit non-zero with a suggestion; no args shows help.
+	RunE: cmd.GroupRunE,
 }
 
 var listCmd = &cobra.Command{
 	Use:     "list",
+	Args:    cobra.NoArgs,
 	Short:   "List configuration values",
 	PreRunE: cmd.AgentHelpNA("config list"),
 	RunE: func(c *cobra.Command, args []string) error {

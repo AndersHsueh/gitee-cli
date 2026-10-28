@@ -1,6 +1,13 @@
 # gitee-cli Developer Guide
 
-Version: 1.0.0 | Audience: Contributors / Team Developers
+> ⚠️ **Status notice (v0.13.2, 2026-10 maintenance round)**: This guide is an early design draft;
+> some examples are **no longer consistent with the code** (module path, `internal/printer`,
+> Viper/oauth2, Makefile/goreleaser, ...). The facts are the code, `gitee --help`,
+> `gitee <cmd> --agent-help` and `bash scripts/ci.sh`. The most misleading sections are corrected
+> inline.
+
+
+Version: 1.0.0 (design draft; see banner) | Audience: Contributors / Team Developers
 
 ---
 
@@ -9,21 +16,17 @@ Version: 1.0.0 | Audience: Contributors / Team Developers
 ### 1.1 Required Tools
 
 ```bash
-# Go 1.23+ (required)
-go version    # needs >= 1.23
+# Go 1.27+ (required; go.mod says `go 1.27.3`)
+go version    # needs >= 1.27
 
-# Cobra CLI (command template generator)
-go install github.com/spf13/cobra-cli@latest
+# golangci-lint (code quality check; CI uses v2.15.0, v2 config schema)
+go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0
 
-# golangci-lint (code quality check)
-curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh \
-  | sh -s -- -b $(go env GOPATH)/bin v1.59.0
-
-# goreleaser (release automation)
-go install github.com/goreleaser/goreleaser@latest
-
-# govulncheck (vulnerability scanning)
+# govulncheck (vulnerability scanning; version pinned as a go.mod tool dependency)
 go install golang.org/x/vuln/cmd/govulncheck@latest
+
+# Release and CI are in-repo scripts; no Makefile / goreleaser needed
+bash scripts/ci.sh --fast   # local quality gate
 ```
 
 ### 1.2 Recommended Tools
@@ -39,41 +42,30 @@ go install go.uber.org/mock/mockgen@latest
 ### 1.3 Clone and Initialize
 
 ```bash
-git clone https://gitee.com/<your-user>/gitee-cli.git
+git clone https://gitee.com/andershsueh/gitee-cli.git
 cd gitee-cli
 go mod download
-go build -o bin/gitee ./cmd/gitee
-./bin/gitee --version
+go install ./cmd/gitee      # installs to $GOPATH/bin; use this for daily work
+gitee version
 ```
 
 ---
 
-## 2. Project Initialization (New Projects)
+## 2. Repository Bootstrap (current state)
+
+This repository **already exists**; you do not need `go mod init` / `cobra-cli`. Key facts:
+
+- Module path is `gitee-cli` (not `gitee.com/<org>/gitee-cli`), so internal imports read
+  `gitee-cli/internal/api`, `gitee-cli/cmd`.
+- Dependencies are only Cobra, resty v2, fatih/color, testify (+ indirect);
+  **no Viper, no golang.org/x/oauth2**.
+- Config is hand-written JSON (`internal/config`), not Viper; auth is PAT, not OAuth.
 
 ```bash
-# Initialize Go module (module path follows gitee.com/<org>/gitee-cli)
-go mod init gitee.com/gitee/gitee-cli
-
-# Add dependencies
-go get github.com/spf13/cobra
-go get github.com/spf13/viper
-go get github.com/go-resty/resty/v2
-go get golang.org/x/oauth2
-go get github.com/fatih/color
-go get github.com/stretchr/testify
-
-# Use Cobra CLI to generate skeleton
-cobra-cli init --viper --author "Gitee Team" --license apache
-cobra-cli add auth
-cobra-cli add repo
-cobra-cli add issue
-cobra-cli add pr
-cobra-cli add gist
-cobra-cli add org
-cobra-cli add search
-cobra-cli add api
-cobra-cli add config
-cobra-cli add completion
+# Fetch dependencies + toolchain (per go.mod)
+go mod download
+go build ./...              # compile self-check
+bash scripts/ci.sh --fast   # gofmt + vet + build + test (fast local gate)
 ```
 
 ---
@@ -86,79 +78,85 @@ Example: Adding `gitee issue list`
 
 **Step 1: Create Command File**
 
+See the real `cmd/issue/list.go` (simplified here):
+
 ```go
 // cmd/issue/list.go
 package issue
 
 import (
-    "context"
-    "fmt"
+    "net/url"
+
+    "gitee-cli/cmd"
+    "gitee-cli/internal/api"
+    "gitee-cli/internal/cmdkit"
+    "gitee-cli/internal/utils"
+    "gitee-cli/pkg/types"
 
     "github.com/spf13/cobra"
-    "gitee.com/gitee/gitee-cli/internal/api"
-    "gitee.com/gitee/gitee-cli/internal/printer"
-    "gitee.com/gitee/gitee-cli/pkg/types"
 )
 
 var listFlags struct {
-    State    string
-    Labels   string
-    Assignee string
-    Repo     string
+    state    string
+    labels   string
+    assignee string
 }
 
 var listCmd = &cobra.Command{
     Use:   "list",
-    Short: "List Issues",
-    Long:  "List issues in current or specified repository, supports filtering by state, labels, assignee.",
-    RunE:  runList,
+    Short: "List issues in a repository",
+    Example: `  gitee issue list --repo owner/repo
+  gitee issue list --repo owner/repo --state closed --labels bug`,
+    PreRunE: func(c *cobra.Command, args []string) error {
+        if cmd.RuntimeFromCmd(c).AgentHelp {
+            cmd.PrintAgentHelp(issueListAgentHelp)   // optional: this command's agent-help text
+        }
+        return nil
+    },
+    RunE: runList,
 }
 
 func init() {
     f := listCmd.Flags()
-    f.StringVarP(&listFlags.State, "state", "s", "open", "Issue state: open/closed/all")
-    f.StringVarP(&listFlags.Labels, "labels", "l", "", "Label filter (comma-separated)")
-    f.StringVarP(&listFlags.Assignee, "assignee", "a", "", "Assignee filter")
-    f.StringVarP(&listFlags.Repo, "repo", "R", "", "Repository (owner/name format)")
-
+    f.StringVar(&listFlags.state, "state", "open", "Filter by state: open|closed|all")
+    f.StringVar(&listFlags.labels, "labels", "", "Filter by labels (comma-separated)")
+    f.StringVar(&listFlags.assignee, "assignee", "", "Filter by assignee username")
+    // --limit / --per-page / --paginate are root persistent flags; do not re-register them.
     IssueCmd.AddCommand(listCmd)
 }
 
-func runList(cmd *cobra.Command, args []string) error {
-    ctx := context.Background()
-    client, err := api.NewClientFromConfig()
+func runList(cobraCmd *cobra.Command, args []string) error {
+    rt := cmd.RuntimeFromCmd(cobraCmd)
+    client, err := cmd.NewAPIClientFrom(rt)
     if err != nil {
         return err
     }
 
-    owner, repo, err := resolveRepo(listFlags.Repo)
-    if err != nil {
-        return err
-    }
-
-    var issues []types.Issue
-    path := fmt.Sprintf("/repos/%s/%s/issues?state=%s", owner, repo, listFlags.State)
-    if listFlags.Labels != "" {
-        path += "&labels=" + listFlags.Labels
-    }
-    if err := client.List(ctx, path, nil, &issues); err != nil {
-        return err
-    }
-
-    outputFmt, _ := cmd.Flags().GetString("output")
-    p := printer.New(outputFmt, cmd.OutOrStdout())
-    p.PrintHeader("#", "TITLE", "STATE", "LABELS", "ASSIGNEE", "UPDATED")
-    for _, i := range issues {
-        p.PrintRow(
-            fmt.Sprintf("#%d", i.Number),
-            truncate(i.Title, 60),
-            i.State,
-            joinLabels(i.Labels, 3),
-            firstAssignee(i.Assignees),
-            humanTime(i.UpdatedAt),
-        )
-    }
-    return p.Flush()
+    // List commands go through the cmdkit.RunList skeleton: pagination, table, JSON,
+    // empty-result text handled once.
+    opts := cmd.NewCmdkitOptionsFrom(rt, client)
+    return cmdkit.RunList[types.Issue](opts, cmdkit.ListSpec[types.Issue]{
+        ResolveOwnerRepo: func() (string, string, error) {
+            return utils.ResolveRepo(rt.Repo, "", nil)
+        },
+        Path: func(owner, repoName string) string {
+            qv := url.Values{}
+            qv.Set("state", listFlags.state)
+            if listFlags.labels != "" {
+                qv.Set("labels", listFlags.labels)
+            }
+            if listFlags.assignee != "" {
+                qv.Set("assignee", listFlags.assignee)
+            }
+            return api.IssuesList(owner, repoName) + "?" + qv.Encode()
+        },
+        Columns: []string{"#", "TITLE", "STATE", "LABELS", "UPDATED"},
+        Row: func(i types.Issue) []string {
+            return []string{i.Number, utils.Truncate(i.Title, 60), i.State, "-", i.UpdatedAt.Format("2006-01-02")}
+        },
+        EmptyText: func(o, r string) string { return "No issues found in " + o + "/" + r },
+        ErrCtx:    "listing issues",
+    })
 }
 ```
 
@@ -179,13 +177,17 @@ func init() {
 
 **Step 3: Add API Endpoint (if needed)**
 
+Build endpoint paths only via `internal/api/endpoints.go` builders; **never `fmt.Sprintf` URLs in cmd/**:
+
 ```go
 // internal/api/endpoints.go
-const (
-    EndpointIssues = "/repos/%s/%s/issues"
-    EndpointIssue  = "/repos/%s/%s/issues/%d"
-    EndpointIssueComments = "/repos/%s/%s/issues/%d/comments"
-)
+func IssuesList(owner, repo string) string {
+    return "/repos/" + owner + "/" + repo + "/issues"
+}
+
+func IssueGet(owner, repo string, number int) string {
+    return IssuesList(owner, repo) + "/" + strconv.Itoa(number)
+}
 ```
 
 **Step 4: Add/Update Type Definitions**
@@ -200,41 +202,42 @@ const (
 
 ### 3.2 Adding New API Endpoint Calls
 
-```go
-// Add semantic methods in internal/api/client.go
-func (c *client) ListIssues(ctx context.Context, owner, repo, state string) ([]types.Issue, error) {
-    var issues []types.Issue
-    path := fmt.Sprintf("/repos/%s/%s/issues?state=%s", owner, repo, state)
-    err := c.List(ctx, path, &PageOptions{PerPage: 30}, &issues)
-    return issues, err
-}
+Reuse the generated Client methods (`Get/Post/Patch/PatchForm/Put/Delete/DeleteWithBody/UploadFile`)
+instead of adding business methods to `internal/api`:
 
-func (c *client) CreateIssue(ctx context.Context, owner, repo string, body types.IssueCreateRequest) (*types.Issue, error) {
-    var issue types.Issue
-    path := fmt.Sprintf("/repos/%s/%s/issues", owner, repo)
-    err := c.Post(ctx, path, body, &issue)
-    return &issue, err
-}
+```go
+// Read: pass a result pointer
+var issue types.Issue
+err := client.Get(ctx, api.IssueGet(owner, repo, number), &issue)
+
+// Write: JSON body
+err := client.Post(ctx, api.IssuesCreate(owner, repo), req, &created)
+
+// Write: some Gitee v5 write paths only accept formData (issue close/reopen/edit)
+err := client.PatchForm(ctx, api.IssuesEdit(owner, number), url.Values{
+    "repo":  {repo},
+    "state": {"closed"},
+})
+
+// Lists: prefer FetchListOrAll / cmdkit.RunList, never hand-roll paginate branches
+issues, err := api.FetchListOrAll[types.Issue](ctx, client, path, paginate, perPage, limit, page, "listing issues")
 ```
 
 ---
 
 ### 3.3 Repository Context Detection
 
-Many commands need to auto-detect current repository (similar to `gh`), parsed from git remote:
+Resolve repositories through `internal/utils`; do not parse git remotes inside commands:
 
 ```go
-// internal/git/remote.go
-func DetectRepo() (owner, repo string, err error) {
-    // 1. Check --repo flag
-    // 2. Parse git remote origin URL
-    //    - https://gitee.com/owner/repo.git
-    //    - git@gitee.com:owner/repo.git
-    // 3. Return owner, repo
-    remoteURL, err := exec.Command("git", "remote", "get-url", "origin").Output()
-    // ... parsing logic
-}
+// utils.ParseOwnerRepo("owner/repo") → owner, repo
+// utils.ResolveRepo(owner, repo, args) → resolves --repo / positional arg / git remote in order
+owner, repoName, err := utils.ResolveRepo(rt.Repo, "", args)
 ```
+
+- `--repo` / `-R` (some commands) wins when passed;
+- then positional args (e.g. `gitee repo view owner/repo`);
+- finally the current directory's git remote (`git remote get-url origin`).
 
 ---
 
@@ -262,10 +265,7 @@ func TestClient_ListIssues(t *testing.T) {
     }))
     defer ts.Close()
 
-    client := api.NewClient(
-        api.WithBaseURL(ts.URL),
-        api.WithToken("test-token"),
-    )
+    client := api.NewClient("test-token", ts.URL, false, 30)  // token, baseURL, verbose, timeout
 
     issues, err := client.ListIssues(context.Background(), "owner", "repo", "all")
     require.NoError(t, err)
@@ -312,13 +312,16 @@ go test ./... -count=1           # Disable cache (CI use)
 
 ### 4.4 Coverage Requirements
 
-| Module | Min Coverage |
-|--------|-------------|
-| `internal/api/` | 80% |
-| `internal/auth/` | 70% |
-| `internal/printer/` | 90% |
+| Module | Suggested coverage |
+|--------|--------------------|
+| `internal/api/` | High (HTTP client and error mapping) |
+| `internal/config/` | High (permissions, atomic write, precedence) |
+| `internal/domain/` | Medium (currently a weak spot; new write paths should ship httptest) |
 | `pkg/types/` | Not enforced |
-| `cmd/` | 60% |
+| `cmd/` | Medium (agent-help contract tests cover the text) |
+
+> Current state: roughly 30% repo-wide (historically low); CI has no coverage gate yet —
+> new features are expected to bring their own httptest cases.
 
 ---
 
@@ -326,22 +329,9 @@ go test ./... -count=1           # Disable cache (CI use)
 
 ### 5.1 Lint Configuration (`.golangci.yml`)
 
-```yaml
-linters:
-  enable:
-    - gofmt
-    - goimports
-    - govet
-    - errcheck
-    - staticcheck
-    - gosec
-    - revive
-    - exhaustive
-
-linters-settings:
-  goimports:
-    local-prefixes: gitee.com/gitee/gitee-cli
-```
+The repo's `.golangci.yml` uses the **v2 schema** (`version: "2"`) with the default linter set
+(errcheck / govet / ineffassign / staticcheck / unused) plus targeted exemptions for unchecked
+returns in test files. gofmt is enforced separately by `scripts/ci.sh`.
 
 Run:
 
@@ -435,12 +425,15 @@ gitee --api-url "https://your-enterprise.gitee.com/api/v5" repo list
 GITEE_API_URL="https://your-enterprise.gitee.com/api/v5" gitee repo list
 ```
 
-### 6.4 Use Token Directly (Skip OAuth)
+### 6.4 Use a Token Directly
 
 ```bash
-gitee auth login --with-token
-# Read token from stdin:
-echo "your_access_token" | gitee auth login --with-token
+# Recommended: environment variable (not written to disk, not in shell history)
+export GITEE_TOKEN=your_access_token
+gitee auth status
+
+# Or log in with an explicit token (written to ~/.gitee-cli/settings.json)
+gitee auth login --token your_access_token
 ```
 
 ---
@@ -450,67 +443,50 @@ echo "your_access_token" | gitee auth login --with-token
 ### 7.1 Local Build
 
 ```bash
-make build          # Compile to bin/gitee
-make install        # Install to $GOPATH/bin
+go install ./cmd/gitee           # installs to $GOPATH/bin (daily development)
+go build -o gitee ./cmd/gitee    # one-off local build (not on PATH)
 ```
 
 ### 7.2 Cross-Compilation
 
 ```bash
-make cross-build
-# Output:
-# dist/gitee-linux-amd64
-# dist/gitee-linux-arm64
-# dist/gitee-darwin-amd64
-# dist/gitee-darwin-arm64
-# dist/gitee-windows-amd64.exe
+# Manual cross-build (release script does the same)
+GOOS=linux   GOARCH=amd64 go build -o dist/gitee-linux-amd64 ./cmd/gitee
+GOOS=linux   GOARCH=arm64 go build -o dist/gitee-linux-arm64 ./cmd/gitee
+GOOS=darwin  GOARCH=amd64 go build -o dist/gitee-darwin-amd64 ./cmd/gitee
+GOOS=darwin  GOARCH=arm64 go build -o dist/gitee-darwin-arm64 ./cmd/gitee
+GOOS=windows GOARCH=amd64 go build -o dist/gitee-windows-amd64.exe ./cmd/gitee
 ```
 
 ### 7.3 Release
 
 ```bash
-# Tag first
-git tag v0.1.0
-git push origin v0.1.0
+# Tag and push first
+git tag -a v0.13.2 -m v0.13.2 && git push origin v0.13.2
 
-# goreleaser auto-build + upload
-make release
+# Build 5 platform artifacts + SHA256SUMS + create Gitee release + upload assets (idempotent)
+GITEE_TOKEN=... bash scripts/release.sh --publish
 ```
+
+> No Makefile, no goreleaser. Releases use `scripts/release.sh` (build/package/checksums) and
+> `scripts/publish-release.sh` (create release + upload assets via `gitee release create/upload`).
 
 ---
 
 ## 8. CI/CD Pipeline
 
-### 8.1 GitHub Actions / Gitee Go CI Example
+There are **two CI backends but one gate definition**:
 
-```yaml
-# .gitee/workflows/ci.yml
-name: CI
-on: [push, pull_request]
+- `.github/workflows/ci.yml` (GitHub Actions mirror)
+- `.workflow/ci.yml` (Gitee Go)
+- both call `scripts/ci.sh`: gofmt → go vet → golangci-lint (optional) → build →
+  `go test -race -count=1` → cross-compile → govulncheck
 
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version: '1.23'
-      - run: go mod download
-      - run: go vet ./...
-      - run: golangci-lint run ./...
-      - run: go test ./... -v -race -count=1
-      - run: govulncheck ./...
+Reproduce CI locally:
 
-  build:
-    runs-on: ubuntu-latest
-    needs: test
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version: '1.23'
-      - run: make cross-build
+```bash
+bash scripts/ci.sh          # full (cross-compile + govulncheck)
+bash scripts/ci.sh --fast   # skip cross-compile + govulncheck for a quick loop
 ```
 
 ---
@@ -519,12 +495,12 @@ jobs:
 
 | Phase | Target Commands | Description |
 |-------|----------------|-------------|
-| **M0** | `gitee auth` full suite | OAuth2 Device Flow, Token storage, `auth status/logout/token` |
+| **M0** | `gitee auth` full suite | PAT auth (no OAuth2 device flow), token storage, `auth status/logout/token` |
 | **M1** | `gitee repo` full suite + `gitee api` | Repo CRUD, raw API access, config module |
 | **M2** | `gitee issue` full suite | Issue CRUD, comments, label management |
 | **M3** | `gitee pr` full suite | PR CRUD, Merge, Review, diff/checks |
 | **M4** | `gitee gist` + `gitee search` | Gist management, three search types |
-| **M5** | `gitee org` + Shell completion + i18n | Org management, Bash/Zsh/Fish completion, zh/en switch |
+| **M5** | `gitee org` + shell completion | Org management, Bash/Zsh/Fish/PowerShell completion (i18n not implemented) |
 | **M6** | Enterprise deployment + multi-account + plugin system | `--hostname` extension, credentials multi-host, external command discovery |
 
 ---
@@ -534,9 +510,8 @@ jobs:
 | Resource | Link |
 |----------|------|
 | Gitee API v5 Swagger | https://gitee.com/api/v5/swagger |
-| Gitee OAuth2 Documentation | https://gitee.com/api/v5/oauth_doc |
+| Gitee personal access tokens | https://gitee.com/profile/personal_access_tokens |
 | Cobra Official Documentation | https://pkg.go.dev/github.com/spf13/cobra |
-| Viper Official Documentation | https://pkg.go.dev/github.com/spf13/viper |
 | Resty HTTP Client | https://github.com/go-resty/resty |
 | glab Project (best reference) | https://github.com/gitlab-org/cli |
 | gh CLI Project | https://github.com/cli/cli |

@@ -24,6 +24,7 @@ var listFlags struct {
 
 var listCmd = &cobra.Command{
 	Use:   "list",
+	Args:  cobra.NoArgs,
 	Short: "List pull requests",
 	Example: `  gitee pr list --repo owner/repo
   gitee pr list --repo owner/repo --state closed

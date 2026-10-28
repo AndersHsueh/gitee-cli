@@ -14,6 +14,7 @@ var listFlags struct {
 
 var listCmd = &cobra.Command{
 	Use:   "list",
+	Args:  cobra.NoArgs,
 	Short: "List milestones in a repository",
 	Example: `  gitee milestone list --repo owner/repo
   gitee milestone list -R owner/repo --state closed --limit 50`,

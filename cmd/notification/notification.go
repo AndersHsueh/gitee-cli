@@ -1,6 +1,8 @@
 package notification
 
 import (
+	"gitee-cli/cmd"
+
 	"github.com/spf13/cobra"
 )
 
@@ -23,6 +25,8 @@ Use these verbs to triage the inbox without opening the web UI.
 
 This is a top-level entry point (like ` + "`" + `gitee ssh-key` + "`" + `). The verbs are
 deliberately minimal: mark-as-unread is supported via ` + "`" + `--unread` + "`" + ` on read.`,
+	// GroupRunE: unknown verbs exit non-zero with a suggestion; no args shows help.
+	RunE: cmd.GroupRunE,
 }
 
 func init() {

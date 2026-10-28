@@ -192,6 +192,37 @@ func TestRunList_LimitTruncates(t *testing.T) {
 	}
 }
 
+// TestRunList_LimitCapsSinglePage locks the fix for --limit being ignored
+// without --paginate: `repo list --limit 1` used to return a full page
+// (30 rows) because the limit was only forwarded as the pagination cap.
+// The single-page request must ask for at most `limit` items and the
+// result must be truncated defensively.
+func TestRunList_LimitCapsSinglePage(t *testing.T) {
+	var gotPerPage string
+	client := withServer(t, func(w http.ResponseWriter, req *http.Request) {
+		gotPerPage = req.URL.Query().Get("per_page")
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`[{"number":1,"title":"a"},{"number":2,"title":"b"},{"number":3,"title":"c"}]`))
+	})
+	o := opts(client)
+	o.Paginate = false
+	o.PerPage = 30
+	o.Limit = 2
+
+	out := captureStdout(t, func() error {
+		return RunList[testItem](o, spec())
+	})
+	if out.err != nil {
+		t.Fatalf("RunList single-page limit: %v", out.err)
+	}
+	if gotPerPage != "2" {
+		t.Errorf("per_page sent to API = %q, want 2 (--limit must bound a single page)", gotPerPage)
+	}
+	if strings.Contains(out.stdout, "\t3\t") {
+		t.Errorf("single-page limit not applied, item 3 leaked:\n%s", out.stdout)
+	}
+}
+
 // TestRunList_EmptyText verifies the empty-result message is printed when
 // the API returns no items.
 func TestRunList_EmptyText(t *testing.T) {

@@ -23,6 +23,7 @@ var listFlags struct {
 
 var listCmd = &cobra.Command{
 	Use:   "list",
+	Args:  cobra.NoArgs,
 	Short: "List releases in a repository",
 	Example: `  gitee release list --repo owner/repo
   gitee release list --repo owner/repo --limit 50`,

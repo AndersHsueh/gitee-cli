@@ -1,6 +1,8 @@
 package gist
 
 import (
+	"gitee-cli/cmd"
+
 	"github.com/spf13/cobra"
 )
 
@@ -8,6 +10,8 @@ var GistCmd = &cobra.Command{
 	Use:   "gist <subcommand>",
 	Short: "Manage gists",
 	Long:  `Work with Gitee code snippets (gists).`,
+	// GroupRunE: unknown verbs exit non-zero with a suggestion; no args shows help.
+	RunE: cmd.GroupRunE,
 }
 
 func init() {

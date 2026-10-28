@@ -12,6 +12,7 @@ import (
 	"gitee-cli/internal/cmdkit"
 	"gitee-cli/internal/config"
 	"gitee-cli/internal/domain"
+	"gitee-cli/internal/envconfig"
 	"gitee-cli/pkg/types"
 
 	"github.com/fatih/color"
@@ -76,12 +77,10 @@ Quick start:
   gitee agent onboard                      # write .gitee/agent.md for the repo`,
 	SilenceUsage:  true,
 	SilenceErrors: true,
-	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		if NoColor {
-			color.NoColor = true
-		}
-		return nil
-	},
+	// PersistentPreRunE is installed in init(), not inline: it resolves the
+	// flag → env → config chain, which reads rootCmd's own flag bindings, so
+	// an inline closure would be a package initialization cycle. See
+	// rootPersistentPreRunE.
 	RunE: func(c *cobra.Command, args []string) error {
 		// Default behavior when no subcommand is given: show help.
 		// --agent-help on the root command shows an overview of agent help coverage.
@@ -112,7 +111,12 @@ func RegisterCommands(subCmds ...*cobra.Command) {
 // built-in `gitee extension` verb is unaffected — it still works, it
 // just doesn't see any dynamically loaded commands.
 func RegisterDynamicCommands(loaders ...func() ([]*cobra.Command, error)) {
-	if GlobalNoExtensions {
+	// This runs from main() BEFORE cobra parses argv, so GlobalNoExtensions
+	// is still false here no matter what the user typed: the flag cannot
+	// take effect on its own. Pre-scan argv (and the env var) so both
+	// `--no-extensions` and GITEE_NO_EXTENSIONS actually disable the
+	// loader. See extensionsDisabled.
+	if extensionsDisabled(os.Args[1:]) {
 		return
 	}
 	reserved := builtInCommandNames()
@@ -130,6 +134,56 @@ func RegisterDynamicCommands(loaders ...func() ([]*cobra.Command, error)) {
 			rootCmd.AddCommand(c)
 		}
 	}
+}
+
+// extensionsDisabled reports whether dynamic extension loading must be
+// skipped for this invocation.
+//
+// It exists because RegisterDynamicCommands runs from main() BEFORE cobra
+// parses argv, so the --no-extensions flag cannot affect the decision
+// there by itself (only GITEE_NO_EXTENSIONS could, before this helper).
+// We pre-scan argv for the flag instead.
+//
+// Recognized spellings:
+//
+//	--no-extensions            → disabled
+//	--no-extensions=true|1|yes → disabled
+//	--no-extensions=false|0|no → NOT disabled (explicit opt-in)
+//
+// The scan stops at the `--` terminator (everything after it is positional
+// and belongs to a command, not the root flag parser). It intentionally
+// does not try to understand other flags' values: a token equal to the
+// literal flag is treated as the flag, matching the "simple prefix" rule
+// that scoping with `--` covers the realistic ambiguity.
+func extensionsDisabled(args []string) bool {
+	if parseEnvBoolTrue(os.Getenv("GITEE_NO_EXTENSIONS")) {
+		return true
+	}
+	for _, a := range args {
+		if a == "--" {
+			break
+		}
+		if a == "--no-extensions" {
+			return true
+		}
+		if v, ok := strings.CutPrefix(a, "--no-extensions="); ok {
+			if b, err := parseEnvBool(v); err == nil {
+				return b
+			}
+			// Malformed value: cobra will reject the flag itself later;
+			// treat it as "requested" so we don't load extensions first.
+			return true
+		}
+	}
+	return false
+}
+
+// parseEnvBoolTrue reports whether raw is a true-ish boolean word. It is
+// the lenient env-var counterpart of parseEnvBool: invalid values are
+// treated as "not set" (the strict error is surfaced by applyEnvDefaults).
+func parseEnvBoolTrue(raw string) bool {
+	b, err := parseEnvBool(raw)
+	return err == nil && b
 }
 
 func Execute() {
@@ -162,22 +216,60 @@ func builtInCommandNames() map[string]bool {
 	return out
 }
 
+// rootPersistentPreRunE resolves the flag → env → config → default chain
+// once per invocation, validates cross-cutting flag values, and freezes the
+// result in the command context for RuntimeFromCmd consumers.
+//
+// It runs before every command's own PreRunE (where --agent-help is served)
+// and before RunE. Env vars only fill in flags the user did not pass
+// explicitly (see applyEnvDefaults); invalid values are hard errors, never
+// silent fallbacks.
+func rootPersistentPreRunE(cmd *cobra.Command, args []string) error {
+	if err := applyEnvDefaults(cmd); err != nil {
+		return err
+	}
+	normalizedOutput, err := validateOutputFormat(GlobalOutput)
+	if err != nil {
+		return err
+	}
+	GlobalOutput = normalizedOutput
+
+	if NoColor {
+		color.NoColor = true
+	}
+
+	// Freeze the resolved configuration for this invocation so
+	// RuntimeFromCmd callers (and their tests) cannot observe the values
+	// changing underneath them mid-command.
+	ctx := cmd.Context()
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	cmd.SetContext(SetContext(ctx, NewRuntime(ResolveHostname())))
+	return nil
+}
+
 func init() {
+	// Installed here rather than inline in the rootCmd literal to avoid an
+	// initialization cycle: rootPersistentPreRunE → ResolveHostname →
+	// rootCmd.PersistentFlags().
+	rootCmd.PersistentPreRunE = rootPersistentPreRunE
+
 	pf := rootCmd.PersistentFlags()
 	pf.StringVar(&GlobalToken, "token", "", "Gitee access token. Prefer GITEE_TOKEN: a --token value is visible to other local users via ps and lands in shell history")
-	pf.StringVar(&GlobalHostname, "hostname", "gitee.com", "Gitee hostname (for enterprise deployments)")
-	pf.StringVarP(&GlobalOutput, "output", "o", "table", "Output format: table|json|csv")
-	pf.BoolVarP(&GlobalVerbose, "verbose", "v", false, "Show HTTP request/response details")
-	pf.StringVar(&GlobalAPIURL, "api-url", "", "API base URL (defaults to https://{hostname}/api/v5)")
-	pf.IntVar(&GlobalTimeout, "timeout", 30, "HTTP timeout in seconds")
-	pf.StringVar(&GlobalRepo, "repo", "", "Target repository in owner/repo format")
-	pf.BoolVar(&NoColor, "no-color", false, "Disable color output")
+	pf.StringVar(&GlobalHostname, "hostname", envconfig.StringDefault("GITEE_HOSTNAME", "gitee.com"), "Gitee hostname (for enterprise deployments)")
+	pf.StringVarP(&GlobalOutput, "output", "o", envconfig.StringDefault("GITEE_OUTPUT", "table"), "Output format: table|json")
+	pf.BoolVarP(&GlobalVerbose, "verbose", "v", envconfig.BoolDefault("GITEE_VERBOSE", false), "Show HTTP request/response details")
+	pf.StringVar(&GlobalAPIURL, "api-url", envconfig.StringDefault("GITEE_API_URL", ""), "API base URL (defaults to https://{hostname}/api/v5)")
+	pf.IntVar(&GlobalTimeout, "timeout", envconfig.IntDefault("GITEE_TIMEOUT", 30), "HTTP timeout in seconds")
+	pf.StringVarP(&GlobalRepo, "repo", "R", "", "Target repository in owner/repo format")
+	pf.BoolVar(&NoColor, "no-color", envconfig.PresenceDefault("NO_COLOR"), "Disable color output")
 	pf.BoolVar(&GlobalAgentHelp, "agent-help", false, "Show agent-targeted help (long, structured, includes orchestration hints and pre/post-conditions). Available on selected commands. Add -o json for machine-readable output.")
-	pf.BoolVarP(&GlobalPaginate, "paginate", "P", false, "Paginate through all results (combines with --limit for total cap)")
+	pf.BoolVarP(&GlobalPaginate, "paginate", "P", envconfig.BoolDefault("GITEE_PAGINATE", false), "Paginate through all results (combines with --limit for total cap)")
 	pf.IntVar(&GlobalPage, "page", 1, "Page number to fetch when --paginate is not set")
 	pf.IntVar(&GlobalPerPage, "per-page", 30, "Results per page (max 100)")
-	pf.IntVar(&GlobalLimit, "limit", 30, "Maximum number of results to return (0 = no limit). With --paginate, this is a TOTAL cap across pages.")
-	pf.BoolVar(&GlobalNoExtensions, "no-extensions", false, "Skip loading external extensions (the built-in 'gitee extension' verb is unaffected)")
+	pf.IntVar(&GlobalLimit, "limit", envconfig.IntDefault("GITEE_LIMIT", 30), "Maximum number of results to return (0 = no limit). With --paginate, this is a TOTAL cap across pages.")
+	pf.BoolVar(&GlobalNoExtensions, "no-extensions", envconfig.BoolDefault("GITEE_NO_EXTENSIONS", false), "Skip loading external extensions (the built-in 'gitee extension' verb is unaffected)")
 }
 
 // ResolveHostname returns the effective Gitee hostname.
@@ -194,6 +286,13 @@ func init() {
 func ResolveHostname() string {
 	if rootCmd.PersistentFlags().Changed("hostname") {
 		return GlobalHostname
+	}
+	// GITEE_HOSTNAME sits between the flag and the config file so CI jobs
+	// and agent runners can target an enterprise host without editing
+	// settings.json (and without the "did the user explicitly pass
+	// --hostname gitee.com?" ambiguity that Changed() solves for flags).
+	if envHost := strings.TrimSpace(os.Getenv("GITEE_HOSTNAME")); envHost != "" {
+		return envHost
 	}
 	if active := config.GetActiveHost(); active != "" {
 		return active

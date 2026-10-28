@@ -1,6 +1,8 @@
 package release
 
 import (
+	"gitee-cli/cmd"
+
 	"github.com/spf13/cobra"
 )
 
@@ -13,6 +15,8 @@ var ReleaseCmd = &cobra.Command{
 A release is a first-class Gitee object that wraps a git tag with a
 changelog body and downloadable assets. Use this command to ship
 versions of your software without leaving the terminal.`,
+	// GroupRunE: unknown verbs exit non-zero with a suggestion; no args shows help.
+	RunE: cmd.GroupRunE,
 }
 
 func init() {
