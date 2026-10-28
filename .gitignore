@@ -1,6 +1,9 @@
 # Build artifacts
-gitee
-gitee.exe
+# Root-level binary only (go build -o gitee ./cmd/gitee); cmd/gitee/ is source
+# and must stay tracked — a bare "gitee" pattern would silently ignore it.
+/gitee
+/gitee.exe
+/gitee-*
 dist/
 bin/
 .cache/
@@ -57,6 +60,10 @@ gh-command-list.md
 v*-修复指引.md
 需要补充的内容指引.md
 
+# Local audit / design scratch (not part of the released artifacts)
+notes/
+outputs/
+
 # MCP / editor artifacts
 .playwright-mcp/
 **/.obsidian/
@@ -78,8 +85,6 @@ test/API-ALIGNMENT-REPORT.md
 test/FULL-TEST-REPORT.md
 test/*.tmp
 
-# Release binaries (prevent stray commits)
-gitee-*
-gitee-*
+# Release binaries (prevent stray commits at repo root)
 .psacowork/
 migrate-runtime.*

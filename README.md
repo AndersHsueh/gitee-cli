@@ -8,12 +8,13 @@
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey.svg)]()
 [![Version](https://img.shields.io/badge/version-v0.13.1-orange.svg)](https://gitee.com/andershsueh/gitee-cli/releases/latest)
 [![Agent Help](https://img.shields.io/badge/--agent--help-129%20verbs-8A2BE2.svg)](docs/philosophy.md)
+[![CI](https://github.com/AndersHsueh/gitee-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/AndersHsueh/gitee-cli/actions/workflows/ci.yml)
 
 ```bash
 gitee repo clone owner/repo && cd repo
 gitee issue create --title "发现一个 Bug" --labels bug
 gitee pr create --title "fix: ..." --source fix/x --target main
-gitee pr merge 18 --squash --delete-branch
+gitee pr merge 18 --squash
 ```
 
 如果你用过 `gh`，你已经会用 `gitee`。如果你的代码是 AI Agent 写的——**这个工具是为它准备的**。
@@ -108,18 +109,27 @@ sha256sum -c SHA256SUMS.txt   # 校验完整性（Windows: certutil -hashfile <f
 
 ```bash
 git clone https://gitee.com/andershsueh/gitee-cli.git
-cd gitee-cli && go install ./cmd/gitee
+cd gitee-cli && go install ./cmd/gitee    # 需要 Go 1.27.3+
 ```
+
+> release 二进制由 `scripts/release.sh` 用 ldflags 注入版本号；`go install`
+> 使用源码里的默认版本号，两者在发版时由测试 `TestReadmeVersionMatchesVersionVar`
+> 与 README 徽章对齐。
 
 ## 🔑 认证
 
+推荐用环境变量（Token 不落盘、也不会出现在 `ps` / shell history 里）：
+
 ```bash
-gitee auth login          # 按提示完成授权，Token 保存到 ~/.gitee-cli/settings.json
+export GITEE_TOKEN=your_access_token
+gitee auth status
 ```
 
-也支持 `echo "your_token" | gitee auth login --with-token`、
-环境变量 `export GITEE_TOKEN=...`，或手动编辑 `~/.gitee-cli/settings.json`
-（参考 `settings.json.sample`）。
+也可以用 `gitee auth login --token <token>` 把 Token 写入 `~/.gitee-cli/settings.json`
+（文件权限 0600，目录 0700；若已有文件权限过宽，读取时会自动收紧并告警）。
+手动编辑格式参考 `settings.json.sample`。
+
+> ⚠️ `--token <token>` 写在命令行上对同机其他用户可见，仅建议在一次性脚本里使用。
 
 ---
 
@@ -159,7 +169,7 @@ gitee pr create --title "feat: 新增搜索" --source feature/search --target ma
 gitee pr diff 18 && gitee pr checks 18
 gitee pr review 18 --approve
 gitee pr review 18 --request-changes --body "请补充单元测试"
-gitee pr merge 18 --squash --delete-branch
+gitee pr merge 18 --squash
 gitee pr status                             # 我名下所有仓库的 PR 看板
 ```
 
@@ -181,13 +191,14 @@ gitee api POST /user/repos --field name=test --field private=true
 | `--repo string` | 目标仓库（owner/repo），缺省从 git remote 推断 | 自动 |
 | `-o, --output string` | 输出格式：`table` \| `json` \| `csv` | `table` |
 | `-P, --paginate` | 自动分页取全部结果 | `false` |
-| `--limit int` | 结果总数上限 | `0`（不限） |
-| `--token string` | Access Token（覆盖配置文件） | 读配置 |
+| `--limit int` | 结果总数上限 | `30`（`--paginate` 时为跨页总数上限；`0` 表示不限） |
+| `--token string` | Access Token（覆盖配置文件）；建议改用 `GITEE_TOKEN` | 读配置 |
 | `--hostname string` | Gitee 实例地址（企业私有部署） | `gitee.com` |
 | `--verbose` | 打印 HTTP 请求/响应详情 | `false` |
 | `--no-color` | 关闭颜色输出 | `false` |
 
-环境变量：`GITEE_TOKEN` / `GITEE_HOSTNAME` / `GITEE_OUTPUT` / `GITEE_API_URL` / `NO_COLOR`。
+环境变量：`GITEE_TOKEN` / `GITEE_ALIASES_FILE` / `GITEE_EXT_DIR` / `BROWSER`；
+其余配置请用 flag 或 `~/.gitee-cli/settings.json`。
 更多请看 `gitee help environment`、`gitee help formatting`、`gitee help exit-codes`。
 
 ## Shell 补全 / 企业部署
@@ -203,9 +214,20 @@ gitee auth login --hostname your-company.gitee.com       # 企业私有实例
 
 ```bash
 go install ./cmd/gitee            # 构建并安装
-go test ./... -race -count=1      # 测试：29 个包 · 97 个测试文件 · 363 个测试函数
-golangci-lint run ./...           # Lint
+bash scripts/ci.sh                # 与 CI 完全一致的门禁：gofmt/vet/lint/build/test -race/交叉编译/govulncheck
+go test ./... -race -count=1      # 测试：34 个包 · 112 个测试文件 · 451 个测试函数
+golangci-lint run ./...           # Lint（CI 使用 v2.15.0）
 ```
+
+发版（需先打 tag，`GITEE_TOKEN` 需有写权限）：
+
+```bash
+git tag -a v0.13.1 -m v0.13.1 && git push origin v0.13.1
+GITEE_TOKEN=... bash scripts/release.sh --publish   # 构建 5 平台 + 打包 + SHA256SUMS + 建 release + 上传
+```
+
+CI 由 `.github/workflows/ci.yml`（GitHub Actions）与 `.workflow/ci.yml`（Gitee Go）
+共同驱动，两者都调用 `scripts/ci.sh`，门禁只有一份定义。
 
 | 文档 | 说明 |
 |------|------|
@@ -220,6 +242,36 @@ golangci-lint run ./...           # Lint
 ---
 
 ## 更新日志
+
+### v0.13.1 (2026-10-28) — 维护修复：发布链路、CI、Go 1.27 工具链、token 权限
+
+> 项目停更两个月后的 P0 维护批次。代码本身健康（build/vet/race/staticcheck 全绿），
+> 问题集中在"发不出版"和"文档/命令面与实现脱节"。
+
+**🚀 发布链路**
+- 补齐 v0.12.4–v0.13.1 缺失的 release：`scripts/release.sh` 重写 + 新增
+  `scripts/publish-release.sh`，可一键构建 5 平台、打包、生成 SHA256SUMS 并创建
+  Gitee release、上传资产（幂等，跳过已上传资产）
+- 修复 `gitee release upload` / `release delete-asset` 一直 404 的根因：Gitee v5 附件
+  路径是 `/attach_files` 而不是 GitHub 风格的 `/assets`
+- 修复 `scripts/release.sh` 在自定义 `OUT_DIR`、macOS bash 3.2 下崩溃的问题
+
+**🧰 CI 与质量门禁**
+- 从零补 CI：`.github/workflows/ci.yml` + `.workflow/ci.yml` + `scripts/ci.sh`
+  （gofmt / vet / golangci-lint / build / test -race / 交叉编译 / govulncheck）
+- 全仓库 `gofmt -w`（140 个文件此前不符合格式）
+- `govulncheck` 以 `go.mod` 的 tool 依赖固定版本，修复 `@latest` 触发工具链降级
+
+**🔐 安全与版本**
+- Go 1.25.0（已 EOL）→ 1.27.3：发布二进制消除 37 个标准库漏洞；x/net、x/sys、testify 等升级
+- `config.Load` 读取时自动把过宽的 `settings.json` 权限收紧到 0600（失败只告警不阻断）
+- 版本号收敛为单一来源：源码默认 0.13.1，新增测试锁定所有 README 徽章；移除
+  agent-help / exit-codes 里的硬编码版本号
+- `--token` flag 帮助提示改用 `GITEE_TOKEN`（命令行 token 会出现在 `ps` / shell history）
+
+**📖 文档**
+- README 修正失效示例（`pr merge --delete-branch`、`auth login --with-token`）、
+  `--limit` 默认值、真实环境变量清单与测试统计数字
 
 ### v0.13.0 (2026-08-19) — Runtime 上下文重构 + 架构收敛
 
