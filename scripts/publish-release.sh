@@ -112,17 +112,15 @@ if [ "$ready" -ne 1 ]; then
   exit 1
 fi
 
-# One parse gives us both the already-attached asset names and the URL.
-python3 - "$WORK/release.json" "$WORK/assets.txt" "$WORK/url.txt" <<'PY'
+# Already-attached asset names, so re-runs don't re-upload everything.
+python3 - "$WORK/release.json" "$WORK/assets.txt" <<'PY'
 import json, sys
-src, assets_path, url_path = sys.argv[1], sys.argv[2], sys.argv[3]
+src, assets_path = sys.argv[1], sys.argv[2]
 with open(src, encoding="utf-8") as fh:
     release = json.load(fh)
 with open(assets_path, "w", encoding="utf-8") as fh:
     for asset in release.get("assets") or []:
         fh.write(asset.get("name", "") + "\n")
-with open(url_path, "w", encoding="utf-8") as fh:
-    fh.write(release.get("html_url", ""))
 PY
 existing="$(cat "$WORK/assets.txt")"
 
@@ -161,4 +159,4 @@ done
 
 echo
 echo "==> Release ${TAG} published"
-echo "    $(cat "$WORK/url.txt")"
+echo "    https://gitee.com/${SLUG}/releases/tag/${TAG}"
