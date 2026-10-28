@@ -44,7 +44,7 @@ API response.`,
 	Aliases: []string{"co"},
 	// PreRunE fires BEFORE ValidateRequiredFlags so --agent-help works.
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(prCheckoutAgentHelp)
 		}

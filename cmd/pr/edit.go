@@ -42,7 +42,7 @@ var editCmd = &cobra.Command{
   # Mark ready (use 'gitee pr ready' for this — same effect)
   gitee pr edit 42 -R owner/repo --no-draft`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(prEditAgentHelp)
 		}

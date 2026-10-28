@@ -27,7 +27,7 @@ var commentsCmd = &cobra.Command{
 	// PreRunE fires BEFORE the cobra arg check, so an agent can request
 	// --agent-help even when <number> is missing.
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(prCommentsAgentHelp)
 		}

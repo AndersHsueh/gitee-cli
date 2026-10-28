@@ -28,7 +28,7 @@ var addCmd = &cobra.Command{
 	// PreRunE fires BEFORE ValidateRequiredFlags so --agent-help works
 	// even when --title or --key is missing.
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(sshKeyAddAgentHelp)
 		}

@@ -53,6 +53,13 @@ func Load() (*Settings, error) {
 		}
 		return nil, fmt.Errorf("reading settings: %w", err)
 	}
+	// A settings file written by an older build (or copied/restored by hand)
+	// may be group/world-readable even though it holds an access token.
+	// Tighten it on read rather than waiting for the next Save.
+	if err := tightenPermissions(path); err != nil {
+		return nil, err
+	}
+
 	var s Settings
 	if err := json.Unmarshal(data, &s); err != nil {
 		return nil, fmt.Errorf("parsing settings: %w", err)
@@ -61,6 +68,25 @@ func Load() (*Settings, error) {
 		s.Hosts = map[string]HostConfig{}
 	}
 	return &s, nil
+}
+
+// tightenPermissions enforces the 0600 invariant on an existing settings file.
+// Files can be group/world-readable because they predate the atomic-write
+// behaviour, were restored from a backup, or were created by another tool —
+// and the file contains an access token, so this is not cosmetic.
+func tightenPermissions(path string) error {
+	info, err := os.Stat(path)
+	if err != nil {
+		return fmt.Errorf("stat settings: %w", err)
+	}
+	perm := info.Mode().Perm()
+	if perm&0o077 == 0 {
+		return nil
+	}
+	if err := os.Chmod(path, 0o600); err != nil {
+		return fmt.Errorf("settings file %s has permissions %04o (accessible by other users) and could not be tightened to 0600: %w", path, perm, err)
+	}
+	return nil
 }
 
 func Save(s *Settings) error {

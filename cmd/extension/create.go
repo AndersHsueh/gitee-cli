@@ -23,7 +23,7 @@ var createCmd = &cobra.Command{
   ./myext foo                            # try it locally
   gitee extension install .              # install it for the current user`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(extensionCreateAgentHelp)
 		}

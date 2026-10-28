@@ -24,7 +24,7 @@ var listCmd = &cobra.Command{
 	Example: `  gitee gist list
   gitee gist list --limit 20`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(gistListAgentHelp)
 		}

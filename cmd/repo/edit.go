@@ -31,7 +31,7 @@ var editCmd = &cobra.Command{
   gitee repo edit --repo owner/repo --private
   gitee repo edit --repo owner/repo --public`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoEditAgentHelp)
 		}

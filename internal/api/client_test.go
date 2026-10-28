@@ -245,15 +245,15 @@ func TestCheckStatus_Error(t *testing.T) {
 // TestClient_PatchForm locks in the wire shape that Gitee v5 requires for
 // the issue update endpoint. The bug that prompted this test was:
 //
-//   PATCH /repos/{owner}/{repo}/issues/{number}
-//   Content-Type: application/json
-//   {"state":"closed"}            <-- rejected with 400 / 404
+//	PATCH /repos/{owner}/{repo}/issues/{number}
+//	Content-Type: application/json
+//	{"state":"closed"}            <-- rejected with 400 / 404
 //
 // The correct request shape is:
 //
-//   PATCH /repos/{owner}/issues/{number}         (no {repo} segment)
-//   Content-Type: application/x-www-form-urlencoded
-//   repo=<repo>&state=closed                     (formData, with `repo` field)
+//	PATCH /repos/{owner}/issues/{number}         (no {repo} segment)
+//	Content-Type: application/x-www-form-urlencoded
+//	repo=<repo>&state=closed                     (formData, with `repo` field)
 //
 // Without this, the close / reopen / edit commands all 400. The regression
 // test asserts every dimension — path, method, content-type, and form

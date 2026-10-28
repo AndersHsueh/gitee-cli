@@ -30,7 +30,7 @@ var issueCmd = &cobra.Command{
 	Example: `  gitee org issues my-org
   gitee org issues my-org --state closed --labels bug`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(orgIssueAgentHelp)
 		}

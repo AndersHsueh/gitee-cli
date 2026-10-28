@@ -18,14 +18,14 @@ var listCmd = &cobra.Command{
   gitee webhook list -R owner/repo --limit 50
   gitee webhook list -R owner/repo --output json`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(webhookListAgentHelp)
 		}
 		return nil
 	},
 	RunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		dc, err := cmd.NewDomainClientFrom(rt)
 		if err != nil {
 			return err

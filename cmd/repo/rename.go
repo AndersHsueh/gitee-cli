@@ -29,7 +29,7 @@ existing clones — you must update your local remotes after a rename.`,
 	Example: `  gitee repo rename owner/old-name new-name
   gitee repo rename --repo owner/old-name --new-name new-name`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoRenameAgentHelp)
 		}

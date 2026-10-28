@@ -101,8 +101,8 @@ checks unless a specific code is documented here.`,
 		}
 		_ = w.Flush()
 		_, _ = fmt.Fprintln(os.Stdout)
-		_, _ = fmt.Fprintln(os.Stdout, "Note: gitee-cli is currently in the v0.12.x series; some subcommands may emit")
-		_, _ = fmt.Fprintln(os.Stdout, "additional domain-specific codes. When scripting, prefer 0/non-zero checks")
+		_, _ = fmt.Fprintln(os.Stdout, "Note: some subcommands may emit additional domain-specific codes.")
+		_, _ = fmt.Fprintln(os.Stdout, "When scripting, prefer 0/non-zero checks")
 		_, _ = fmt.Fprintln(os.Stdout, "unless you have a documented reason to depend on a specific code.")
 		return nil
 	},

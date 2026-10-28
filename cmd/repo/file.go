@@ -62,7 +62,7 @@ the target branch.
   gitee repo file push ./README.md README.md --repo owner/repo -m "update readme"
   gitee repo file delete --repo owner/repo docs/old.md -m "remove obsolete"`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoFileAgentHelp)
 		}
@@ -81,7 +81,7 @@ var fileViewCmd = &cobra.Command{
   gitee repo file view -R owner/repo src/main.go
   gitee repo file view --repo owner/repo docs/`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoFileViewAgentHelp)
 		}
@@ -96,7 +96,7 @@ var filePushCmd = &cobra.Command{
 	Example: `  gitee repo file push ./README.md README.md --repo owner/repo -m "update"
   gitee repo file push ./docs/api.md docs/api.md -R owner/repo -m "doc fix"`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoFilePushAgentHelp)
 		}
@@ -111,7 +111,7 @@ var fileDeleteCmd = &cobra.Command{
 	Example: `  gitee repo file delete --repo owner/repo docs/old.md -m "remove"
   gitee repo file delete README.md -R owner/repo -m "wipe" --force`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoFileDeleteAgentHelp)
 		}

@@ -18,7 +18,7 @@ var viewCmd = &cobra.Command{
 	Example: `  gitee webhook view 1234 --repo owner/repo
   gitee webhook view -R owner/repo 1234 --output json`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(webhookViewAgentHelp)
 		}

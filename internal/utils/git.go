@@ -134,10 +134,10 @@ func GitConfigSet(key, value string) error {
 // ParseGiteeRemoteURL extracts (owner, repo) from a git remote URL of
 // the forms:
 //
-//   https://gitee.com/owner/repo[.git]
-//   https://gitee.example.com/owner/repo[.git]
-//   git@gitee.com:owner/repo[.git]
-//   git@<enterprise>:owner/repo[.git]
+//	https://gitee.com/owner/repo[.git]
+//	https://gitee.example.com/owner/repo[.git]
+//	git@gitee.com:owner/repo[.git]
+//	git@<enterprise>:owner/repo[.git]
 //
 // Returns ("", "", error) if the URL is empty, doesn't match a known
 // shape, or points to a non-Gitee host (e.g. github.com).

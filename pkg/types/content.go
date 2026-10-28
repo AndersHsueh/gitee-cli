@@ -10,20 +10,20 @@ package types
 type ContentEntry struct {
 	Name        string `json:"name"`
 	Path        string `json:"path"`
-	SHA         string `json:"sha"`           // blob SHA (empty for submodules)
-	Size        int    `json:"size"`          // file size in bytes
-	Type        string `json:"type"`          // "file" | "dir" | "symlink" | "submodule"
-	Encoding    string `json:"encoding"`      // for files: "base64" (Gitee always base64-encodes)
-	Content     string `json:"content"`       // base64-encoded file body; empty for dirs
-	Target      string `json:"target"`        // symlink target (when type=symlink)
-	URL         string `json:"url"`           // API URL
-	HTMLURL     string `json:"html_url"`      // web URL
-	DownloadURL string `json:"download_url"`  // raw file URL
+	SHA         string `json:"sha"`          // blob SHA (empty for submodules)
+	Size        int    `json:"size"`         // file size in bytes
+	Type        string `json:"type"`         // "file" | "dir" | "symlink" | "submodule"
+	Encoding    string `json:"encoding"`     // for files: "base64" (Gitee always base64-encodes)
+	Content     string `json:"content"`      // base64-encoded file body; empty for dirs
+	Target      string `json:"target"`       // symlink target (when type=symlink)
+	URL         string `json:"url"`          // API URL
+	HTMLURL     string `json:"html_url"`     // web URL
+	DownloadURL string `json:"download_url"` // raw file URL
 	Links       struct {
-		Self    string `json:"self"`
-		Git     string `json:"git"`
-		HTML    string `json:"html"`
-		Raw     string `json:"raw,omitempty"`
+		Self string `json:"self"`
+		Git  string `json:"git"`
+		HTML string `json:"html"`
+		Raw  string `json:"raw,omitempty"`
 	} `json:"_links"`
 }
 
@@ -32,12 +32,12 @@ type ContentEntry struct {
 // optional `Branch` field targets a non-default branch. SHA is NOT used
 // on create (a new file has no prior blob SHA).
 type ContentCreateRequest struct {
-	Content    string `json:"content"`               // base64-encoded
-	Message    string `json:"message"`               // commit message (required)
-	Branch     string `json:"branch,omitempty"`      // target branch
-	Author     string `json:"author,omitempty"`      // author name (uses token owner if blank)
-	AuthorEmail string `json:"author_email,omitempty"`
-	Committer   string `json:"committer,omitempty"`
+	Content        string `json:"content"`          // base64-encoded
+	Message        string `json:"message"`          // commit message (required)
+	Branch         string `json:"branch,omitempty"` // target branch
+	Author         string `json:"author,omitempty"` // author name (uses token owner if blank)
+	AuthorEmail    string `json:"author_email,omitempty"`
+	Committer      string `json:"committer,omitempty"`
 	CommitterEmail string `json:"committer_email,omitempty"`
 }
 
@@ -45,13 +45,13 @@ type ContentCreateRequest struct {
 // from the create request only by the required `SHA` field (the blob SHA
 // of the file being replaced — used for optimistic concurrency).
 type ContentUpdateRequest struct {
-	Content    string `json:"content"`
-	Message    string `json:"message"`
-	SHA        string `json:"sha"`                   // blob SHA of existing file
-	Branch     string `json:"branch,omitempty"`
-	Author     string `json:"author,omitempty"`
-	AuthorEmail string `json:"author_email,omitempty"`
-	Committer   string `json:"committer,omitempty"`
+	Content        string `json:"content"`
+	Message        string `json:"message"`
+	SHA            string `json:"sha"` // blob SHA of existing file
+	Branch         string `json:"branch,omitempty"`
+	Author         string `json:"author,omitempty"`
+	AuthorEmail    string `json:"author_email,omitempty"`
+	Committer      string `json:"committer,omitempty"`
 	CommitterEmail string `json:"committer_email,omitempty"`
 }
 
@@ -64,8 +64,8 @@ type ContentDeleteRequest struct {
 	Branch         string `json:"branch,omitempty"`
 	Author         string `json:"author,omitempty"`
 	AuthorEmail    string `json:"author_email,omitempty"`
-	Committer       string `json:"committer,omitempty"`
-	CommitterEmail  string `json:"committer_email,omitempty"`
+	Committer      string `json:"committer,omitempty"`
+	CommitterEmail string `json:"committer_email,omitempty"`
 }
 
 // ContentCommit is the nested "commit" object Gitee returns alongside the
@@ -96,6 +96,6 @@ type ContentCommit struct {
 // with a ContentCommit describing the commit that was created. We use a
 // single struct so the caller gets both fields without parsing twice.
 type ContentResponse struct {
-	Content ContentEntry `json:"content"`
+	Content ContentEntry  `json:"content"`
 	Commit  ContentCommit `json:"commit"`
 }

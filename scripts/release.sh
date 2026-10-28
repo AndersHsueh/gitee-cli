@@ -1,112 +1,135 @@
 #!/usr/bin/env bash
 #
-# scripts/release.sh — full release workflow: build + package + checksums.
-#
-# This is the one-shot script you run when cutting a new release.
-# It calls build-release.sh to compile, then wraps each binary in a
-# platform-appropriate archive (tar.gz for Linux/macOS, zip for Windows),
-# and finally generates a SHA256SUMS.txt file.
+# scripts/release.sh — build + package + checksum, and (optionally) publish
+# a gitee-cli release to Gitee.
 #
 # Usage:
-#   bash scripts/release.sh                          # version from git describe
-#   VERSION=v0.4.2 bash scripts/release.sh          # explicit version
-#   OUT_DIR=/tmp/release bash scripts/release.sh    # custom output
+#   bash scripts/release.sh                     # build/package the current tag
+#   VERSION=0.13.1 bash scripts/release.sh      # explicit version
+#   OUT_DIR=/tmp/release bash scripts/release.sh
+#   GITEE_TOKEN=xxx bash scripts/release.sh --publish   # also create release + upload assets
 #
-# After this script finishes:
-#   1. Go to https://gitee.com/<owner>/<repo>/releases
-#   2. Click "新建发布" / Create Release for the matching tag
-#   3. Drag every file in $OUT_DIR/ into the upload area
-#   4. Paste release notes (CHANGELOG-style)
-#   5. Publish
+# Output in $OUT_DIR (default: dist/):
+#   gitee-<goos>-<goarch>[.exe]              raw binaries
+#   gitee-<goos>-<goarch>[.exe].tar.gz/.zip  archives incl. LICENSE
+#   SHA256SUMS.txt
 #
-# For the complete agent-targeted workflow, see release-guide.md
-# (which is gitignored — local-only documentation for the agent fleet).
-
+# Publishing is the only networked step and is opt-in (--publish); it is
+# implemented in scripts/publish-release.sh so packaging stays offline-safe.
 set -euo pipefail
 
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT_DIR"
+
 OUT_DIR="${OUT_DIR:-dist}"
-BIN_NAME="gitee"
-
-echo "=========================================="
-echo " gitee-cli release workflow"
-echo "=========================================="
-echo
-
-# Step 1: build all platform binaries
-echo "[1/3] Building binaries..."
-bash scripts/build-release.sh
-echo
-
-# Step 2: package each binary
-echo "[2/3] Packaging archives..."
-cd "$OUT_DIR"
-
-# Stale archives from a previous run would be re-packaged (gitee-linux-amd64.tar.gz
-# -> gitee-linux-amd64.tar.gz.tar.gz). Skip anything that already has an archive
-# extension, so re-running the script is idempotent.
-shopt -s nullglob
-binaries=( ${BIN_NAME}-* )
-shopt -u nullglob
-
-if [ ${#binaries[@]} -eq 0 ]; then
-  echo "  (no binaries to package — dist/ was already packaged?)" >&2
-  exit 1
-fi
-
-# Include LICENSE in every archive so the binary is self-contained.
-# Copy LICENSE into dist/ with a clean name (avoids ".." in the archive
-# path, which breaks some tar implementations and is a small security smell).
-LICENSE_ARGS=()
-if [ -f ../LICENSE ]; then
-  cp ../LICENSE ./LICENSE
-  LICENSE_ARGS=(./LICENSE)
-fi
-
-for bin in "${binaries[@]}"; do
-  case "$bin" in
-    *.tar.gz|*.zip)
-      # Skip — already an archive from a prior run.
-      continue
-      ;;
-    *windows*)
-      # zip: just the .exe
-      zip -q "${bin}.zip" "$bin" "${LICENSE_ARGS[@]}"
-      rm "$bin"
-      echo "  ✓ ${bin}.zip"
-      ;;
-    *)
-      # tar.gz: binary + LICENSE
-      tar -czf "${bin}.tar.gz" "$bin" "${LICENSE_ARGS[@]}"
-      rm "$bin"
-      echo "  ✓ ${bin}.tar.gz"
-      ;;
+PUBLISH=0
+for arg in "$@"; do
+  case "$arg" in
+    --publish) PUBLISH=1 ;;
+    *) echo "ERROR: unknown argument: $arg" >&2; exit 1 ;;
   esac
 done
 
-# Clean up the LICENSE copy (it's not part of the release, just a packaging helper)
-[ -f ./LICENSE ] && rm ./LICENSE
+# Prefer the exact tag we are standing on; fall back to describe for local builds.
+if [ -z "${VERSION:-}" ]; then
+  VERSION="$(git describe --tags --exact-match 2>/dev/null || git describe --tags --always --dirty 2>/dev/null || true)"
+  VERSION="${VERSION#v}"
+fi
 
-cd - >/dev/null
+if [ -z "${VERSION:-}" ]; then
+  echo "ERROR: cannot determine version. Set VERSION=0.13.1 or run from a tagged commit." >&2
+  exit 1
+fi
+
+if [ "$PUBLISH" -eq 1 ] && [ -z "${GITEE_TOKEN:-}" ]; then
+  echo "ERROR: --publish needs GITEE_TOKEN (a Gitee personal access token with repo write access)." >&2
+  exit 1
+fi
+
+echo "=========================================="
+echo " gitee-cli release ${VERSION}"
+echo "=========================================="
+
+# 1. Clean previous artifacts so re-runs cannot package stale binaries.
+mkdir -p "$OUT_DIR"
+rm -f "$OUT_DIR"/gitee-* "$OUT_DIR"/SHA256SUMS.txt "$OUT_DIR"/LICENSE
+
+# 2. Build all platform binaries (VERSION is forwarded so ldflags stamp it).
 echo
+echo "[1/3] Building binaries..."
+VERSION="$VERSION" OUT_DIR="$OUT_DIR" bash scripts/build-release.sh
 
-# Step 3: checksums
+# 3. Package archives. LICENSE is copied in (clean name) so every archive is
+#    self-contained; it is removed again before checksums.
+echo
+echo "[2/3] Packaging archives..."
+cd "$OUT_DIR"
+cp "$ROOT_DIR/LICENSE" ./LICENSE
+
+shopt -s nullglob
+binaries=( gitee-* )
+shopt -u nullglob
+
+packaged=0
+for bin in "${binaries[@]}"; do
+  case "$bin" in
+    *.tar.gz|*.zip) continue ;;
+  esac
+  case "$bin" in
+    *windows*)
+      zip -q "${bin}.zip" "$bin" LICENSE
+      rm -f "$bin"
+      echo "  ✓ ${bin}.zip"
+      ;;
+    *)
+      tar -czf "${bin}.tar.gz" "$bin" LICENSE
+      rm -f "$bin"
+      echo "  ✓ ${bin}.tar.gz"
+      ;;
+  esac
+  packaged=$((packaged + 1))
+done
+rm -f ./LICENSE
+cd "$ROOT_DIR"
+
+if [ "$packaged" -eq 0 ]; then
+  echo "ERROR: no binaries were packaged — build step produced nothing in ${OUT_DIR}/." >&2
+  exit 1
+fi
+
+# 4. Checksums (portable: sha256sum on Linux, shasum on macOS).
+echo
 echo "[3/3] Generating checksums..."
 cd "$OUT_DIR"
+shopt -s nullglob
+archives=( *.tar.gz *.zip )
+shopt -u nullglob
+if [ "${#archives[@]}" -eq 0 ]; then
+  echo "ERROR: no archives found for checksums." >&2
+  exit 1
+fi
 if command -v sha256sum >/dev/null 2>&1; then
-  sha256sum *.tar.gz *.zip 2>/dev/null > SHA256SUMS.txt
+  sha256sum "${archives[@]}" > SHA256SUMS.txt
 elif command -v shasum >/dev/null 2>&1; then
-  shasum -a 256 *.tar.gz *.zip 2>/dev/null > SHA256SUMS.txt
+  shasum -a 256 "${archives[@]}" > SHA256SUMS.txt
 else
   echo "ERROR: neither sha256sum nor shasum found." >&2
   exit 1
 fi
-cd - >/dev/null
+cd "$ROOT_DIR"
 
 echo
 echo "=========================================="
-echo " Release artifacts ready in ${OUT_DIR}/"
+echo " Artifacts ready in ${OUT_DIR}/"
 echo "=========================================="
-ls -lh "$OUT_DIR/"
-echo
-echo "Next: upload these to https://gitee.com/<owner>/<repo>/releases"
-echo "      See release-guide.md for the full workflow."
+ls -lh "$OUT_DIR"/
+
+# 5. Optional publish.
+if [ "$PUBLISH" -eq 1 ]; then
+  echo
+  VERSION="$VERSION" OUT_DIR="$OUT_DIR" bash scripts/publish-release.sh
+else
+  echo
+  echo "Next: publish with"
+  echo "  GITEE_TOKEN=<token> VERSION=${VERSION} bash scripts/release.sh --publish"
+fi

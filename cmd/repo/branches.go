@@ -23,7 +23,7 @@ var branchesCmd = &cobra.Command{
 	Short:   "List branches in a repository",
 	Example: `  gitee repo branches --repo owner/repo`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoBranchesAgentHelp)
 		}

@@ -21,7 +21,7 @@ var deleteCmd = &cobra.Command{
 	Example: `  gitee webhook delete 1234 --repo owner/repo
   gitee webhook delete -R owner/repo 1234 --force`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(webhookDeleteAgentHelp)
 		}

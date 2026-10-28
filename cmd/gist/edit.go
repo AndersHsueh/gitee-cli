@@ -26,9 +26,9 @@ var editCmd = &cobra.Command{
   gitee gist edit abc123 --file readme.md="New README content"
   gitee gist edit abc123 --file file1.txt="Content 1" --file file2.txt="@/path/to/file2.txt"
   gitee gist edit abc123 --file readme.md="Updated" --file newfile.md="New file"`,
-	Args:    cmd.AgentHelpAwareArgs(cobra.ExactArgs(1)),
+	Args: cmd.AgentHelpAwareArgs(cobra.ExactArgs(1)),
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(gistEditAgentHelp)
 		}

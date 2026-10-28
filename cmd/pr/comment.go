@@ -27,7 +27,7 @@ var commentCmd = &cobra.Command{
 	Example: `  gitee pr comment 42 --repo owner/repo --body "LGTM, merging"
   gitee pr comment 42 -R owner/repo -b "Thanks for the fix!"`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(prCommentAgentHelp)
 		}

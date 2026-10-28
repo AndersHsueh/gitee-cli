@@ -30,7 +30,7 @@ var checksCmd = &cobra.Command{
 	Example: `  gitee pr checks 42 --repo owner/repo
   gitee pr checks 42 -R owner/repo --output json`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(prChecksAgentHelp)
 		}

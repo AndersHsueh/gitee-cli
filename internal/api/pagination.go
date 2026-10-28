@@ -161,4 +161,3 @@ func WithPageParams(basePath string, page, perPage int) (string, error) {
 	u.RawQuery = q.Encode()
 	return u.String(), nil
 }
-

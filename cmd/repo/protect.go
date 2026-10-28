@@ -46,7 +46,7 @@ break it, and to unlock it again when you intentionally need to.
 	Example: `  gitee repo protect main --repo owner/repo
   gitee repo unprotect main --repo owner/repo`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoProtectAgentHelp)
 		}
@@ -64,7 +64,7 @@ var protectProtectCmd = &cobra.Command{
 	Example: `  gitee repo protect main --repo owner/repo
   gitee repo protect release/v1 --repo owner/repo`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoProtectProtectAgentHelp)
 		}
@@ -79,7 +79,7 @@ var protectUnprotectCmd = &cobra.Command{
 	Example: `  gitee repo unprotect main --repo owner/repo
   gitee repo unprotect release/v1 --repo owner/repo`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoProtectUnprotectAgentHelp)
 		}
@@ -98,7 +98,7 @@ var repoUnprotectCmd = &cobra.Command{
 	Example: `  gitee repo unprotect main --repo owner/repo
   gitee repo unprotect release/v1 --repo owner/repo`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoProtectUnprotectAgentHelp)
 		}

@@ -24,9 +24,9 @@ var viewCmd = &cobra.Command{
 	Short: "View a gist",
 	Example: `  gitee gist view abc123def
   gitee gist view abc123def --raw`,
-	Args:    cmd.AgentHelpAwareArgs(cobra.ExactArgs(1)),
+	Args: cmd.AgentHelpAwareArgs(cobra.ExactArgs(1)),
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(gistViewAgentHelp)
 		}

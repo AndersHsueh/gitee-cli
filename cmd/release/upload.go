@@ -32,7 +32,7 @@ can be set for the asset's display name.`,
 	Example: `  gitee release upload v1.0.0 --repo owner/repo --file ./dist/app.tar.gz
   gitee release upload v1.0.0 -R owner/repo --file ./dist/app.tar.gz --label "Linux binary"`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(releaseUploadAgentHelp)
 		}

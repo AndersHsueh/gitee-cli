@@ -56,7 +56,7 @@ type GistEditFile struct {
 
 // GistEditRequest is used when editing a gist.
 type GistEditRequest struct {
-	Description string `json:"description,omitempty"`
+	Description string                  `json:"description,omitempty"`
 	Files       map[string]GistEditFile `json:"files,omitempty"`
 }
 
@@ -64,11 +64,11 @@ type GistEditRequest struct {
 // GET /gists/{gist_id}/comments and by the response of POST. The id is a
 // numeric comment id used as the path segment for DELETE.
 type GistComment struct {
-	ID        int64     `json:"id"`
-	Body      string    `json:"body"`
-	CreatedAt string    `json:"created_at"`
-	UpdatedAt string    `json:"updated_at"`
-	User      User      `json:"user"`
+	ID        int64  `json:"id"`
+	Body      string `json:"body"`
+	CreatedAt string `json:"created_at"`
+	UpdatedAt string `json:"updated_at"`
+	User      User   `json:"user"`
 	// Parsed time mirrors of the timestamp strings; populated when the
 	// timestamp parses successfully, otherwise zero. Kept optional so a
 	// malformed response from the API does not break unmarshal.

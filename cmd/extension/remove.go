@@ -25,7 +25,7 @@ var removeCmd = &cobra.Command{
   gitee extension rm myext --force
   gitee extension remove myext                       # prompts y/N`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(extensionRemoveAgentHelp)
 		}

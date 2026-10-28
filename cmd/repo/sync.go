@@ -31,7 +31,7 @@ Use this after the upstream has new commits you want to integrate.`,
   gitee repo sync --repo owner/my-fork
   gitee repo sync my-fork --branch develop`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoSyncAgentHelp)
 		}

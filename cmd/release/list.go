@@ -27,7 +27,7 @@ var listCmd = &cobra.Command{
 	Example: `  gitee release list --repo owner/repo
   gitee release list --repo owner/repo --limit 50`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(releaseListAgentHelp)
 		}

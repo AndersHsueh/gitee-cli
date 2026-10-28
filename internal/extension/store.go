@@ -32,9 +32,9 @@ var ExtDirOverride string
 // ExtDir returns the root directory where extensions are installed.
 // Priority:
 //
-//	1. ExtDirOverride (test hook)
-//	2. $GITEE_EXT_DIR (user override)
-//	3. ~/.gitee-cli/extensions (default)
+//  1. ExtDirOverride (test hook)
+//  2. $GITEE_EXT_DIR (user override)
+//  3. ~/.gitee-cli/extensions (default)
 //
 // The directory is *not* created here — callers that need it to exist
 // (e.g. Install) should MkdirAll explicitly. Read-only callers
@@ -169,7 +169,7 @@ func Remove(name string) error {
 //   - "foo"            -> "foo"
 //   - "gitee-foo"      -> "foo"   (strip our canonical prefix)
 //   - "gh-foo"         -> "foo"   (tolerate the gh-style prefix too, in
-//                                 case the user copy-pastes from gh docs)
+//     case the user copy-pastes from gh docs)
 //
 // The result is what the user types as `gitee <name>`.
 //

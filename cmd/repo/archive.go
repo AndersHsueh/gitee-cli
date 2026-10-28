@@ -33,7 +33,7 @@ just hidden from the main repo list and protected from new pushes.`,
   gitee repo archive --repo owner/repo
   gitee repo archive owner/repo --unarchive`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoArchiveAgentHelp)
 		}

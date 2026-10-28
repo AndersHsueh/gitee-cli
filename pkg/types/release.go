@@ -60,7 +60,7 @@ type Tag struct {
 		Author    *User  `json:"author,omitempty"`
 		Committer *User  `json:"committer,omitempty"`
 	} `json:"commit"`
-	Tagger *User  `json:"tagger,omitempty"`
+	Tagger *User `json:"tagger,omitempty"`
 }
 
 // TagCreateRequest is used when creating a new lightweight or annotated

@@ -164,7 +164,7 @@ func builtInCommandNames() map[string]bool {
 
 func init() {
 	pf := rootCmd.PersistentFlags()
-	pf.StringVar(&GlobalToken, "token", "", "Gitee access token (overrides config and GITEE_TOKEN)")
+	pf.StringVar(&GlobalToken, "token", "", "Gitee access token. Prefer GITEE_TOKEN env var: a token passed on the command line is visible to other users via ps and lands in shell history")
 	pf.StringVar(&GlobalHostname, "hostname", "gitee.com", "Gitee hostname (for enterprise deployments)")
 	pf.StringVarP(&GlobalOutput, "output", "o", "table", "Output format: table|json|csv")
 	pf.BoolVarP(&GlobalVerbose, "verbose", "v", false, "Show HTTP request/response details")

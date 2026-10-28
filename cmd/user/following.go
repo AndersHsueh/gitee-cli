@@ -26,7 +26,7 @@ var followingCmd = &cobra.Command{
   gitee user following --user bob
   gitee user following --limit 100 --output json`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(userFollowingAgentHelp)
 		}

@@ -32,7 +32,7 @@ var createCmd = &cobra.Command{
 	// --agent-help even when required flags (e.g. --title, --source, --target)
 	// are missing.
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(prCreateAgentHelp)
 		}

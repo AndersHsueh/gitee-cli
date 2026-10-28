@@ -28,7 +28,7 @@ var editCmd = &cobra.Command{
 	Example: `  gitee release edit v1.0.0 --repo owner/repo --name "1.0.0 Stable"
   gitee release edit v1.0.0 -R owner/repo --body "Updated release notes"`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(releaseEditAgentHelp)
 		}

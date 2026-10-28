@@ -23,7 +23,7 @@ var viewCmd = &cobra.Command{
 	Short:   "View organization details",
 	Example: `  gitee org view my-org`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(orgViewAgentHelp)
 		}

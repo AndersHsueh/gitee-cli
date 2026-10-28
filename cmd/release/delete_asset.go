@@ -33,7 +33,7 @@ the confirmation prompt.`,
 	Example: `  gitee release delete-asset v1.0.0 --repo owner/repo --asset-name app.tar.gz
   gitee release delete-asset v1.0.0 -R owner/repo --asset-id 12345 --force`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(releaseDeleteAssetAgentHelp)
 		}

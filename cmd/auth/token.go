@@ -11,11 +11,11 @@ import (
 )
 
 var tokenCmd = &cobra.Command{
-	Use:      "token",
-	Short:    "Print the auth token",
-	PreRunE:  cmd.AgentHelpNA("auth token"),
+	Use:     "token",
+	Short:   "Print the auth token",
+	PreRunE: cmd.AgentHelpNA("auth token"),
 	RunE: func(cobraCmd *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(cobraCmd)
+		rt := cmd.RuntimeFromCmd(cobraCmd)
 		token := rt.Token
 		if token == "" {
 			token = config.GetToken(rt.Hostname)

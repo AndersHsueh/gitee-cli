@@ -52,7 +52,7 @@ them for you.`,
   gitee repo compare --repo owner/repo v1.0.0...v2.0.0
   gitee repo compare --repo owner/repo a1b2c3d...main`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoCompareAgentHelp)
 		}

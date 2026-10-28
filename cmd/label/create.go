@@ -18,14 +18,14 @@ var createCmd = &cobra.Command{
 	Example: `  gitee label create --repo owner/repo --name bug --color ff0000
   gitee label create -R owner/repo -n enhancement -c 00ff00`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(labelCreateAgentHelp)
 		}
 		return nil
 	},
 	RunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		dc, err := cmd.NewDomainClientFrom(rt)
 		if err != nil {
 			return err

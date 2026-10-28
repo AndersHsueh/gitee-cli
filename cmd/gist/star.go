@@ -17,7 +17,7 @@ var starCmd = &cobra.Command{
 	Example: `  gitee gist star abc123`,
 	Args:    cmd.AgentHelpAwareArgs(cobra.ExactArgs(1)),
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(gistStarAgentHelp)
 		}

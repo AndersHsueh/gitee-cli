@@ -22,9 +22,9 @@ var commentCmd = &cobra.Command{
 	Short: "Add a comment to a gist",
 	Example: `  gitee gist comment abc123def --body "Nice trick with the slice here."
   gitee gist comment abc123def -b "Thanks for the fix!"`,
-	Args:    cmd.AgentHelpAwareArgs(cobra.ExactArgs(1)),
+	Args: cmd.AgentHelpAwareArgs(cobra.ExactArgs(1)),
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(gistCommentAgentHelp)
 		}

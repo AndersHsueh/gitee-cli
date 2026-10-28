@@ -267,11 +267,11 @@ func TestResolveCollaboratorUsername(t *testing.T) {
 	reset := func() { collaboratorFlags.username = "" }
 
 	cases := []struct {
-		name      string
-		flagVal   string
-		args      []string
-		wantUser  string
-		wantErr   bool
+		name     string
+		flagVal  string
+		args     []string
+		wantUser string
+		wantErr  bool
 	}{
 		{"positional arg only", "", []string{"alice"}, "alice", false},
 		{"flag only", "bob", nil, "bob", false},

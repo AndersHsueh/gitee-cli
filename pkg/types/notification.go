@@ -5,20 +5,20 @@ import "time"
 // NotificationThread is a single notification thread returned by
 // GET /notifications/threads. Gitee's payload is GitHub-compatible:
 //
-//   {
-//     "id": "1234",
-//     "unread": true,
-//     "reason": "subscribed",
-//     "updated_at": "...",
-//     "last_read_at": "...",
-//     "subject": {
-//       "title": "...",
-//       "url": "...",
-//       "latest_comment_url": "..."
-//       "type": "Issue"   // or "PullRequest", "Commit", "Release"
-//     },
-//     "repository": { ... full repo object ... }
-//   }
+//	{
+//	  "id": "1234",
+//	  "unread": true,
+//	  "reason": "subscribed",
+//	  "updated_at": "...",
+//	  "last_read_at": "...",
+//	  "subject": {
+//	    "title": "...",
+//	    "url": "...",
+//	    "latest_comment_url": "..."
+//	    "type": "Issue"   // or "PullRequest", "Commit", "Release"
+//	  },
+//	  "repository": { ... full repo object ... }
+//	}
 type NotificationThread struct {
 	ID         string                    `json:"id"`
 	Unread     bool                      `json:"unread"`

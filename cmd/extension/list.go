@@ -16,14 +16,14 @@ var listCmd = &cobra.Command{
 	Example: `  gitee extension list
   gitee extension list --output json`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(extensionListAgentHelp)
 		}
 		return nil
 	},
 	RunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		manifests, err := extension.ListInstalled()
 		if err != nil {
 			return fmt.Errorf("listing extensions: %w", err)

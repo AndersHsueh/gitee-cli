@@ -50,7 +50,7 @@ The watch verb accepts a --type flag with three values:
   gitee repo watch myorg/myrepo --type releases_only
   gitee repo unwatch myorg/myrepo`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoWatchAgentHelp)
 		}
@@ -68,7 +68,7 @@ var watchWatchCmd = &cobra.Command{
 	Example: `  gitee repo watch myorg/myrepo
   gitee repo watch myorg/myrepo --type releases_only`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoWatchWatchAgentHelp)
 		}
@@ -78,11 +78,11 @@ var watchWatchCmd = &cobra.Command{
 }
 
 var watchUnwatchCmd = &cobra.Command{
-	Use:   "unwatch [owner/repo]",
-	Short: "Unsubscribe from a repository (no notifications)",
+	Use:     "unwatch [owner/repo]",
+	Short:   "Unsubscribe from a repository (no notifications)",
 	Example: `  gitee repo unwatch myorg/myrepo`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoWatchUnwatchAgentHelp)
 		}

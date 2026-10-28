@@ -1,0 +1,42 @@
+name: CI
+
+# Authoritative quality gate for gitee-cli (the GitHub mirror is the CI
+# target; Gitee Go runs the same scripts/ci.sh via .workflow/ci.yml).
+on:
+  push:
+    branches: [master]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    name: gofmt + vet + test + vuln
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: v2.15.0
+          args: --timeout=5m
+
+      - name: Quality gate (gofmt, vet, build, test -race, govulncheck)
+        run: bash scripts/ci.sh
+
+      - name: Cross-compile (linux/windows/darwin)
+        run: |
+          GOOS=linux   GOARCH=amd64 go build -o /tmp/gitee-linux-amd64 ./cmd/gitee
+          GOOS=windows GOARCH=amd64 go build -o /tmp/gitee-windows-amd64.exe ./cmd/gitee
+          GOOS=darwin  GOARCH=arm64 go build -o /tmp/gitee-darwin-arm64 ./cmd/gitee

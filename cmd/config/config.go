@@ -16,8 +16,8 @@ var ConfigCmd = &cobra.Command{
 }
 
 var listCmd = &cobra.Command{
-	Use:    "list",
-	Short:  "List configuration values",
+	Use:     "list",
+	Short:   "List configuration values",
 	PreRunE: cmd.AgentHelpNA("config list"),
 	RunE: func(c *cobra.Command, args []string) error {
 		s, err := giteeconfig.Load()
@@ -33,9 +33,9 @@ var listCmd = &cobra.Command{
 }
 
 var getCmd = &cobra.Command{
-	Use:    "get <key>",
-	Short:  "Get a configuration value",
-	Args:   cmd.AgentHelpAwareArgs(cobra.ExactArgs(1)),
+	Use:     "get <key>",
+	Short:   "Get a configuration value",
+	Args:    cmd.AgentHelpAwareArgs(cobra.ExactArgs(1)),
 	PreRunE: cmd.AgentHelpNA("config get"),
 	RunE: func(c *cobra.Command, args []string) error {
 		s, err := giteeconfig.Load()
@@ -62,9 +62,9 @@ var getCmd = &cobra.Command{
 }
 
 var setCmd = &cobra.Command{
-	Use:    "set <key> <value>",
-	Short:  "Set a configuration value",
-	Args:   cmd.AgentHelpAwareArgs(cobra.ExactArgs(2)),
+	Use:     "set <key> <value>",
+	Short:   "Set a configuration value",
+	Args:    cmd.AgentHelpAwareArgs(cobra.ExactArgs(2)),
 	PreRunE: cmd.AgentHelpNA("config set"),
 	RunE: func(c *cobra.Command, args []string) error {
 		s, err := giteeconfig.Load()
@@ -98,9 +98,9 @@ var setCmd = &cobra.Command{
 }
 
 var unsetCmd = &cobra.Command{
-	Use:    "unset <key>",
-	Short:  "Unset a configuration value",
-	Args:   cmd.AgentHelpAwareArgs(cobra.ExactArgs(1)),
+	Use:     "unset <key>",
+	Short:   "Unset a configuration value",
+	Args:    cmd.AgentHelpAwareArgs(cobra.ExactArgs(1)),
 	PreRunE: cmd.AgentHelpNA("config unset"),
 	RunE: func(c *cobra.Command, args []string) error {
 		s, err := giteeconfig.Load()

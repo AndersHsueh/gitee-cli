@@ -19,7 +19,7 @@ var cloneCmd = &cobra.Command{
   gitee repo clone owner/repo --depth 1`,
 	Args: cmd.AgentHelpAwareArgs(cobra.MinimumNArgs(1)),
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoCloneAgentHelp)
 		}

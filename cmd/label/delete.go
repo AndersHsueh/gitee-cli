@@ -18,14 +18,14 @@ var deleteCmd = &cobra.Command{
 	Example: `  gitee label delete --repo owner/repo --name bug
   gitee label delete -R owner/repo -n wontfix --force`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(labelDeleteAgentHelp)
 		}
 		return nil
 	},
 	RunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		confirm := ""
 		if deleteFlags.force {
 			confirm = "y"

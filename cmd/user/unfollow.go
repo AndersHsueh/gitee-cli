@@ -22,7 +22,7 @@ var unfollowCmd = &cobra.Command{
 	Example: `  gitee user unfollow alice
   gitee user unfollow --user bob`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(userUnfollowAgentHelp)
 		}

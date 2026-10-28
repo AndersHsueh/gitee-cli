@@ -328,11 +328,11 @@ func TestReposCompareEndpoint(t *testing.T) {
 // leaves shorter inputs (short-SHA queries, branch names) untouched.
 func TestShortSHA(t *testing.T) {
 	cases := map[string]string{
-		"":                             "",
-		"abc":                          "abc",
-		"abcdefg":                      "abcdefg",
-		"abcdefgh":                     "abcdefg", // first 7 chars
-		"a1b2c3d4e5f6a7b8c9d0":         "a1b2c3d",
+		"":                     "",
+		"abc":                  "abc",
+		"abcdefg":              "abcdefg",
+		"abcdefgh":             "abcdefg", // first 7 chars
+		"a1b2c3d4e5f6a7b8c9d0": "a1b2c3d",
 	}
 	for in, want := range cases {
 		if got := shortSHA(in); got != want {
@@ -344,11 +344,11 @@ func TestShortSHA(t *testing.T) {
 // TestFirstLine trims the message to its first line for the list table.
 func TestFirstLine(t *testing.T) {
 	cases := map[string]string{
-		"single line":                       "single line",
-		"first\nsecond":                     "first",
-		"first\r\nsecond":                   "first",
-		"first\nsecond\nthird":              "first",
-		"":                                  "",
+		"single line":          "single line",
+		"first\nsecond":        "first",
+		"first\r\nsecond":      "first",
+		"first\nsecond\nthird": "first",
+		"":                     "",
 	}
 	for in, want := range cases {
 		if got := firstLine(in); got != want {
@@ -446,11 +446,11 @@ func TestCommitMessagePrefersTopLevel(t *testing.T) {
 // form and the two-argument form, plus the rejection cases.
 func TestSplitCompareArgs(t *testing.T) {
 	cases := []struct {
-		name      string
-		args      []string
-		wantBase  string
-		wantHead  string
-		wantErr   bool
+		name     string
+		args     []string
+		wantBase string
+		wantHead string
+		wantErr  bool
 	}{
 		{"single arg with dots", []string{"main...feature/x"}, "main", "feature/x", false},
 		{"single arg with spaces around dots", []string{"main ... feature/x"}, "main", "feature/x", false},

@@ -105,9 +105,9 @@ Not idempotent: re-running creates a second resource.
 // that agents rely on to look up sections.
 func TestAgentHelpToMapNormalizesKeys(t *testing.T) {
 	cases := map[string]string{
-		"Pre-conditions":         "pre_conditions",
-		"Side effects":           "side_effects",
-		"OAuth scope required":   "oauth_scope_required",
+		"Pre-conditions":               "pre_conditions",
+		"Side effects":                 "side_effects",
+		"OAuth scope required":         "oauth_scope_required",
 		"Post-conditions (on success)": "post_conditions",
 		"Output (stdout, json mode)":   "output_(stdout,_json_mode)",
 	}
@@ -173,16 +173,16 @@ func TestCoverageMatrixWellFormed(t *testing.T) {
 // leaf commands are exempt from the --agent-help contract check below.
 //
 //   - "help"                  — the cobra help dispatcher itself; users
-//                              should run `gitee help <topic>` instead.
+//     should run `gitee help <topic>` instead.
 //   - "help environment"      — `gitee help <topic>` IS the documentation
 //   - "help exit-codes"         for those topics. Their --agent-help can
 //   - "help formatting"         legitimately return the topic content
 //   - "help reference"          itself (matrix marks them "n/a").
 //   - "co"                    — hidden alias of `gitee pr checkout`;
-//                              agent-help coverage is provided by
-//                              `gitee pr checkout --agent-help` so
-//                              adding it here would duplicate work
-//                              and confuse the matrix.
+//     agent-help coverage is provided by
+//     `gitee pr checkout --agent-help` so
+//     adding it here would duplicate work
+//     and confuse the matrix.
 //
 // New exemptions should be added deliberately and called out in the
 // commit message — the whole point of this test is that any new

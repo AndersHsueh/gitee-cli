@@ -63,7 +63,7 @@ ISO-8601 timestamps (e.g. ` + "`" + `2026-01-01T00:00:00Z` + "`" + `).`,
   gitee repo commits view --repo owner/repo a1b2c3d4
   gitee repo commits view --repo owner/repo main`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoCommitsAgentHelp)
 		}
@@ -82,7 +82,7 @@ var commitsListCmd = &cobra.Command{
   gitee repo commits list -R owner/repo --author alice
   gitee repo commits list --repo owner/repo --path src/main.go --since 2026-01-01`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoCommitsListAgentHelp)
 		}
@@ -98,7 +98,7 @@ var commitsViewCmd = &cobra.Command{
   gitee repo commits view --repo owner/repo main
   gitee repo commits view -R owner/repo v1.0.0`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoCommitsViewAgentHelp)
 		}

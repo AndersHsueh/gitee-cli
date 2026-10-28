@@ -22,7 +22,7 @@ var followCmd = &cobra.Command{
 	Example: `  gitee user follow alice
   gitee user follow --user bob`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(userFollowAgentHelp)
 		}

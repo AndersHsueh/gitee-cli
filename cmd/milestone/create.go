@@ -21,14 +21,14 @@ var createCmd = &cobra.Command{
 	Example: `  gitee milestone create --repo owner/repo --title v1.0
   gitee milestone create -R owner/repo -t v1.1 --due-on 2026-12-15 --description "Q4 release"`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(milestoneCreateAgentHelp)
 		}
 		return nil
 	},
 	RunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		req := types.MilestoneCreateRequest{
 			Title:       createFlags.title,
 			Description: createFlags.description,

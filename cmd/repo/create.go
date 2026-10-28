@@ -30,7 +30,7 @@ var createCmd = &cobra.Command{
   gitee repo create --name my-repo --private --org my-org
   gitee repo create --name my-repo --gitignore Go --license MIT`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoCreateAgentHelp)
 		}

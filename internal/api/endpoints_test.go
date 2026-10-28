@@ -80,7 +80,6 @@ func TestSSHKeyEndpoints(t *testing.T) {
 	}
 }
 
-
 func TestWebhookEndpoints(t *testing.T) {
 	cases := []struct {
 		name string

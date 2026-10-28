@@ -25,7 +25,7 @@ var deleteCmd = &cobra.Command{
 	Example: `  gitee release delete v0.1.0 --repo owner/repo
   gitee release delete v0.1.0 -R owner/repo --force`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(releaseDeleteAgentHelp)
 		}

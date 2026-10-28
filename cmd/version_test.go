@@ -1,15 +1,17 @@
 package cmd
 
 import (
+	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
 
 // TestVersionAgentHelpIsNA verifies `gitee version --agent-help` prints
 // the operational/config n/a notice to stderr and exits 0, instead of
-// dumping the real version string (`gitee version 0.12.6`) into stdout.
+// dumping the real version string (`gitee version <semver>`) into stdout.
 // The version verb is operational: agents that probe for documentation
 // have no use for a literal version number, and the dump is a trap
 // (token-wasting, plus inconsistent with how every other operational
@@ -44,8 +46,8 @@ func TestVersionAgentHelpIsNA(t *testing.T) {
 // bypassed and we're back to the version-leak trap.
 //
 // We assert the absence of the literal "gitee version " prefix (the real
-// Run prints it) — this is intentionally substring-based, not
-// "0.12.6"-specific, so the test stays correct across future releases.
+// Run prints it) — this is intentionally substring-based and not tied to
+// a specific version, so the test stays correct across future releases.
 func TestVersionAgentHelpDoesNotDumpVersion(t *testing.T) {
 	bin := buildThrowawayBinary(t)
 
@@ -87,6 +89,25 @@ func TestVersionCmdWiring(t *testing.T) {
 	}
 	if !found {
 		t.Error("version not registered on root command")
+	}
+}
+
+// TestReadmeVersionMatchesVersionVar guards the release-version pairing.
+// Bumping cmd.Version without refreshing README.md's badge (or the reverse)
+// is a silent drift that shipped before (source said 0.12.6 while the tag
+// was v0.13.0), so the two values are now locked together by this test.
+func TestReadmeVersionMatchesVersionVar(t *testing.T) {
+	data, err := os.ReadFile("../README.md")
+	if err != nil {
+		t.Fatalf("read README.md: %v", err)
+	}
+	re := regexp.MustCompile(`badge/version-v(\d+\.\d+\.\d+)-`)
+	m := re.FindSubmatch(data)
+	if m == nil {
+		t.Fatal("README.md has no version badge matching badge/version-vX.Y.Z-...")
+	}
+	if got := string(m[1]); got != Version {
+		t.Errorf("README version badge is v%s but cmd.Version is %s — bump both together", got, Version)
 	}
 }
 

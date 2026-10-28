@@ -35,7 +35,7 @@ var listCmd = &cobra.Command{
   gitee repo list --owner gitee --visibility public
   gitee repo list --sort stars --direction desc`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoListAgentHelp)
 		}

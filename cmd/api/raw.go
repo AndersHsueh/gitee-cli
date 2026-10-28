@@ -26,7 +26,7 @@ var rawCmd = &cobra.Command{
 	Short: "Make raw API request",
 	Args:  cmd.AgentHelpAwareArgs(cobra.ExactArgs(2)),
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(apiRawAgentHelp)
 		}
@@ -47,7 +47,7 @@ Useful for testing or accessing endpoints not yet covered by dedicated commands.
   gitee api GET /search/repositories?q=gitee --paginate`,
 	Args: cmd.AgentHelpAwareArgs(cobra.ExactArgs(2)),
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(apiRawAgentHelp)
 		}

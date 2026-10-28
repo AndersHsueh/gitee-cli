@@ -39,7 +39,7 @@ var editCmd = &cobra.Command{
   # Subscribe to a new event
   gitee webhook edit 1234 -R owner/repo --merge-request-events`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(webhookEditAgentHelp)
 		}

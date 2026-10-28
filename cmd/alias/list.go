@@ -17,7 +17,7 @@ var listCmd = &cobra.Command{
   gitee alias list --output json`,
 	PreRunE: preRunAgentHelp(aliasListAgentHelp),
 	RunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		keys, m, err := alias.Sorted()
 		if err != nil {
 			return fmt.Errorf("listing aliases: %w", err)

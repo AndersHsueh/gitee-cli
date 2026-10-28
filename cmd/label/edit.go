@@ -19,14 +19,14 @@ var editCmd = &cobra.Command{
 	Example: `  gitee label edit --repo owner/repo --name bug --color 00ff00
   gitee label edit -R owner/repo -n bug --new-name fixed-bug`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(labelEditAgentHelp)
 		}
 		return nil
 	},
 	RunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		dc, err := cmd.NewDomainClientFrom(rt)
 		if err != nil {
 			return err

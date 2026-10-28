@@ -25,7 +25,7 @@ var memberCmd = &cobra.Command{
 	Short:   "List organization members",
 	Example: `  gitee org members my-org`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(orgMemberAgentHelp)
 		}

@@ -342,9 +342,9 @@ func TestUserUnfollowEndpoint(t *testing.T) {
 // `user check <username>` doesn't need to re-introduce it).
 func TestUserFollowEdgeRoundTrip(t *testing.T) {
 	cases := []struct {
-		name    string
-		raw     string
-		want    bool
+		name string
+		raw  string
+		want bool
 	}{
 		{"following true", `{"following":true}`, true},
 		{"following false", `{"following":false}`, false},

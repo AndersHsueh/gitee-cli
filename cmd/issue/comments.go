@@ -30,7 +30,7 @@ var commentsCmd = &cobra.Command{
   gitee issue comments 42 -R owner/repo --output json`,
 	Args: cmd.AgentHelpAwareArgs(cobra.ExactArgs(1)),
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(issueCommentsAgentHelp)
 		}

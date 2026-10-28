@@ -26,7 +26,7 @@ var readyCmd = &cobra.Command{
 	Example: `  gitee pr ready 42 --repo owner/repo
   gitee pr ready 42 -R owner/repo`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(prReadyAgentHelp)
 		}

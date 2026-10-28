@@ -35,7 +35,7 @@ var createCmd = &cobra.Command{
   gitee gist create --file readme.md="README content" --file main.go="package main"
   gitee gist create --interactive`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(gistCreateAgentHelp)
 		}

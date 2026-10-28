@@ -32,7 +32,7 @@ var downloadCmd = &cobra.Command{
   gitee release download v1.0.0 -R owner/repo --list
   gitee release download v1.0.0 -R owner/repo --asset foo.tar.gz --dest ./build/`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(releaseDownloadAgentHelp)
 		}

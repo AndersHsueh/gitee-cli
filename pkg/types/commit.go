@@ -56,8 +56,8 @@ type Commit struct {
 	URL       string       `json:"url"`
 	HTMLURL   string       `json:"html_url"`
 	Commit    *CommitInner `json:"commit"`
-	Author    *User        `json:"author,omitempty"`     // Gitee user (may be null for unlinked emails)
-	Committer *User        `json:"committer,omitempty"`  // Gitee user (may be null)
+	Author    *User        `json:"author,omitempty"`    // Gitee user (may be null for unlinked emails)
+	Committer *User        `json:"committer,omitempty"` // Gitee user (may be null)
 	Parents   []CommitRef  `json:"parents,omitempty"`   // parent commit refs (typically 0..n)
 	Stats     *CommitStats `json:"stats,omitempty"`     // detail endpoint only
 	Files     []CommitFile `json:"files,omitempty"`     // detail endpoint only
@@ -68,11 +68,11 @@ type Commit struct {
 // commit payload. Carries the canonical message, author/committer git
 // identity (name+email+date), and the tree SHA.
 type CommitInner struct {
-	Author    CommitAuthor `json:"author"`
-	Committer CommitAuthor `json:"committer"`
-	Message   string       `json:"message"`
-	Tree      *CommitRef   `json:"tree,omitempty"`
-	CommentCount int       `json:"comment_count,omitempty"`
+	Author       CommitAuthor `json:"author"`
+	Committer    CommitAuthor `json:"committer"`
+	Message      string       `json:"message"`
+	Tree         *CommitRef   `json:"tree,omitempty"`
+	CommentCount int          `json:"comment_count,omitempty"`
 }
 
 // CommitRef is a minimal pointer used in parents[] and tree. The same
@@ -106,16 +106,16 @@ type CompareCommit struct {
 //   - commits:              the list of commits unique to `head`
 //   - files:                the aggregated file diff
 type CompareResult struct {
-	Status            string           `json:"status"`              // ahead | behind | identical | diverged
-	AheadBy           int              `json:"ahead_by"`
-	BehindBy          int              `json:"behind_by"`
-	TotalCommits      int              `json:"total_commits"`
-	BaseCommit        *Commit          `json:"base_commit,omitempty"`
-	MergeBaseCommit   *Commit          `json:"merge_base_commit,omitempty"`
-	Commits           []CompareCommit  `json:"commits,omitempty"`
-	Files             []CommitFile     `json:"files,omitempty"`
-	HTMLURL           string           `json:"html_url,omitempty"`
-	Permalink         string           `json:"permalink,omitempty"`
-	DiffURL           string           `json:"diff_url,omitempty"`
-	PatchURL          string           `json:"patch_url,omitempty"`
+	Status          string          `json:"status"` // ahead | behind | identical | diverged
+	AheadBy         int             `json:"ahead_by"`
+	BehindBy        int             `json:"behind_by"`
+	TotalCommits    int             `json:"total_commits"`
+	BaseCommit      *Commit         `json:"base_commit,omitempty"`
+	MergeBaseCommit *Commit         `json:"merge_base_commit,omitempty"`
+	Commits         []CompareCommit `json:"commits,omitempty"`
+	Files           []CommitFile    `json:"files,omitempty"`
+	HTMLURL         string          `json:"html_url,omitempty"`
+	Permalink       string          `json:"permalink,omitempty"`
+	DiffURL         string          `json:"diff_url,omitempty"`
+	PatchURL        string          `json:"patch_url,omitempty"`
 }

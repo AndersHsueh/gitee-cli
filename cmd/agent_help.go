@@ -92,7 +92,7 @@ gitee-cli ships TWO help systems side-by-side:
 ## How to invoke
   gitee <command> [subcommand] --agent-help
 
-## Coverage matrix (v0.12.6)
+## Coverage matrix
 
 ### repo — Repository management
   gitee repo list           --agent-help   ✅ available  🆕 v0.11.0

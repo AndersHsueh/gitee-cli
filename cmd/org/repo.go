@@ -25,7 +25,7 @@ var repoCmd = &cobra.Command{
 	Short:   "List organization repositories",
 	Example: `  gitee org repos my-org`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(orgRepoAgentHelp)
 		}

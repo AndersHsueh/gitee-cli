@@ -26,7 +26,7 @@ var viewCmd = &cobra.Command{
   gitee user view --user bob
   gitee user view alice --output json`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(userViewAgentHelp)
 		}

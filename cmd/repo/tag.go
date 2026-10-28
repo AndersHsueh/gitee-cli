@@ -16,10 +16,10 @@ import (
 )
 
 var tagFlags struct {
-	repo       string
-	name       string
-	refs       string
-	message    string
+	repo    string
+	name    string
+	refs    string
+	message string
 }
 
 var tagCmd = &cobra.Command{
@@ -37,7 +37,7 @@ remove a tag once it exists:
 	Example: `  gitee repo tag list --repo owner/repo
   gitee repo tag create --repo owner/repo --name v1.0.0 --refs main`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoTagAgentHelp)
 		}
@@ -54,7 +54,7 @@ var tagListCmd = &cobra.Command{
 	Short:   "List tags in a repository",
 	Example: `  gitee repo tag list --repo owner/repo`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoTagListAgentHelp)
 		}
@@ -69,7 +69,7 @@ var tagCreateCmd = &cobra.Command{
 	Example: `  gitee repo tag create --repo owner/repo --name v1.0.0 --refs main
   gitee repo tag create --repo owner/repo --name v1.0.0 --refs <sha> --message "release notes"`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoTagCreateAgentHelp)
 		}

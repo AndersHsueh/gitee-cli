@@ -55,10 +55,10 @@ func TestTruncateDate(t *testing.T) {
 
 func TestParseOwnerRepo(t *testing.T) {
 	tests := []struct {
-		name       string
-		input      string
-		wantOwner  string
-		wantRepo   string
+		name      string
+		input     string
+		wantOwner string
+		wantRepo  string
 	}{
 		{"standard format", "owner/repo", "owner", "repo"},
 		{"no slash", "repoonly", "", "repoonly"},

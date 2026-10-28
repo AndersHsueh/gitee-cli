@@ -26,7 +26,7 @@ var viewCmd = &cobra.Command{
 	Args:    cmd.AgentHelpAwareArgs(cobra.ExactArgs(1)),
 	Example: `  gitee issue view 42 --repo owner/repo`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(issueViewAgentHelp)
 		}

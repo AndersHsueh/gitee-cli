@@ -157,9 +157,10 @@ func GistUnstar(gistID string) string {
 // Gist comment endpoints (P2-11)
 //
 // Gitee v5 gist comment paths under /gists/{gist_id}/comments:
-//   GET    — list comments on a gist
-//   POST   — create a new comment on the gist (body: {body})
-//   DELETE — remove a comment by id
+//
+//	GET    — list comments on a gist
+//	POST   — create a new comment on the gist (body: {body})
+//	DELETE — remove a comment by id
 //
 // The same path is used for list (GET) and create (POST); the numeric
 // comment id is appended as a path segment for DELETE. Gist ids are
@@ -263,7 +264,6 @@ func SSHKeysList() string          { return "/user/keys" }
 func SSHKeyCreate() string         { return "/user/keys" }
 func SSHKeyDelete(id int64) string { return fmt.Sprintf("/user/keys/%d", id) }
 
-
 // Webhook endpoints (P1b)
 // Gitee v5 webhook paths under /repos/{owner}/{repo}/hooks. The id is an
 // integer so no URL escaping is required. "Test" is Gitee's equivalent of
@@ -356,10 +356,11 @@ func ReleaseDeleteAsset(owner, repo string, releaseID int64, assetID int64) stri
 // Notification endpoints (P0-4)
 //
 // Gitee v5 exposes a GitHub-compatible notification center:
-//   GET    /notifications/count          — unread count for the authenticated user
-//   GET    /notifications/threads        — list threads (optionally ?unread=true)
-//   PUT    /notifications/threads/{id}   — mark a single thread as read
-//   PUT    /notifications/threads        — mark ALL threads as read (body controls scope)
+//
+//	GET    /notifications/count          — unread count for the authenticated user
+//	GET    /notifications/threads        — list threads (optionally ?unread=true)
+//	PUT    /notifications/threads/{id}   — mark a single thread as read
+//	PUT    /notifications/threads        — mark ALL threads as read (body controls scope)
 //
 // These are user-scoped (no {owner}/{repo} in the path), so the endpoints
 // are constants rather than builders. The id in the mark-read-single path
@@ -408,9 +409,10 @@ func CollaboratorRemove(owner, repo, username string) string {
 // Gitee v5 stars and watches are user-scoped (no {owner}/{repo} in the
 // body — the path itself carries it). The watch endpoint additionally
 // accepts a `watch_type` body field with three values:
-//   watching       — full activity (issues, PRs, releases, comments)
-//   releases_only  — release-only notifications
-//   ignoring       — unsubscribe entirely (the user can still star)
+//
+//	watching       — full activity (issues, PRs, releases, comments)
+//	releases_only  — release-only notifications
+//	ignoring       — unsubscribe entirely (the user can still star)
 //
 // Star and watch live at different paths (starred vs subscriptions) so
 // they are independent: starring does not subscribe, and subscribing
@@ -445,10 +447,11 @@ func UserStarredList() string {
 //
 // Gitee v5 file/contents API lives at /repos/{owner}/{repo}/contents/{path}.
 // The same path is used for:
-//   GET    — read a file's metadata + base64 content, or list a directory
-//   POST   — create a new file (requires base64 content + commit message)
-//   PUT    — update an existing file (requires sha + base64 content + message)
-//   DELETE — remove a file (requires sha + commit message)
+//
+//	GET    — read a file's metadata + base64 content, or list a directory
+//	POST   — create a new file (requires base64 content + commit message)
+//	PUT    — update an existing file (requires sha + base64 content + message)
+//	DELETE — remove a file (requires sha + commit message)
 //
 // And /repos/{owner}/{repo}/raw/{path} serves the raw bytes for direct
 // download (no JSON envelope).
@@ -480,10 +483,10 @@ func RepoRawContent(owner, repo, path string) string {
 //
 // Gitee v5 exposes the commit history and diff comparison under:
 //
-//   GET  /repos/{owner}/{repo}/commits              — list commits
-//   GET  /repos/{owner}/{repo}/commits/{sha}        — single commit detail
-//   GET  /repos/{owner}/{repo}/compare/{base}...{head}
-//                                                  — diff two refs
+//	GET  /repos/{owner}/{repo}/commits              — list commits
+//	GET  /repos/{owner}/{repo}/commits/{sha}        — single commit detail
+//	GET  /repos/{owner}/{repo}/compare/{base}...{head}
+//	                                               — diff two refs
 //
 // The {sha} in the single-commit path is URL-escaped because Gitee
 // accepts both 40-char SHAs and short refs (branch/tag names) and the
@@ -552,9 +555,10 @@ func UserUnfollow(username string) string {
 // Branch protection endpoints (P2-12)
 //
 // Gitee v5 branch protection paths under /repos/{owner}/{repo}/branches:
-//   PUT    /repos/{owner}/{repo}/branches/{branch}/protection — enable protection
-//   DELETE /repos/{owner}/{repo}/branches/{branch}/protection — remove protection
-//   GET    /repos/{owner}/{repo}/branches/{branch}            — read `protected` field
+//
+//	PUT    /repos/{owner}/{repo}/branches/{branch}/protection — enable protection
+//	DELETE /repos/{owner}/{repo}/branches/{branch}/protection — remove protection
+//	GET    /repos/{owner}/{repo}/branches/{branch}            — read `protected` field
 //
 // The {branch} segment is URL-escaped because branch names may contain
 // slashes (e.g. `feature/foo`) or other ref-name characters that require

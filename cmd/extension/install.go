@@ -31,7 +31,7 @@ var installCmd = &cobra.Command{
   gitee extension install owner/repo --name custom-name  # override the name
   gitee extension install owner/repo --force             # overwrite existing`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(extensionInstallAgentHelp)
 		}

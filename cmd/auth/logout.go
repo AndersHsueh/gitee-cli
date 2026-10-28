@@ -10,11 +10,11 @@ import (
 )
 
 var logoutCmd = &cobra.Command{
-	Use:      "logout",
-	Short:    "Log out and remove stored token",
-	PreRunE:  cmd.AgentHelpNA("auth logout"),
+	Use:     "logout",
+	Short:   "Log out and remove stored token",
+	PreRunE: cmd.AgentHelpNA("auth logout"),
 	RunE: func(cobraCmd *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(cobraCmd)
+		rt := cmd.RuntimeFromCmd(cobraCmd)
 		s, err := config.Load()
 		if err != nil {
 			// If settings file doesn't exist, treat as already logged out

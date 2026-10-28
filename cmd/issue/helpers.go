@@ -52,7 +52,7 @@ var editCmd = &cobra.Command{
 	Short:   "Edit an issue",
 	Example: `  gitee issue edit 42 --repo owner/repo --title "New title"`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(issueEditAgentHelp)
 		}
@@ -66,7 +66,7 @@ var closeCmd = &cobra.Command{
 	Short:   "Close an issue",
 	Example: `  gitee issue close 42 --repo owner/repo`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(issueCloseAgentHelp)
 		}
@@ -80,7 +80,7 @@ var reopenCmd = &cobra.Command{
 	Short:   "Reopen an issue",
 	Example: `  gitee issue reopen 42 --repo owner/repo`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(issueReopenAgentHelp)
 		}
@@ -94,7 +94,7 @@ var commentCmd = &cobra.Command{
 	Short:   "Add a comment to an issue",
 	Example: `  gitee issue comment 42 --repo owner/repo --body "Comment text"`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(issueCommentAgentHelp)
 		}

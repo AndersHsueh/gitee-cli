@@ -25,19 +25,19 @@ import (
 // the same flag bindings, but new code SHOULD use RuntimeFrom(ctx).
 // Once all call sites are migrated, the globals will be removed.
 type Runtime struct {
-	Token       string
-	Hostname    string
-	Output      string
-	Verbose     bool
-	APIURL      string
-	Timeout     int
-	Repo        string
-	NoColor     bool
-	AgentHelp   bool
-	Paginate    bool
-	Page        int
-	PerPage     int
-	Limit       int
+	Token        string
+	Hostname     string
+	Output       string
+	Verbose      bool
+	APIURL       string
+	Timeout      int
+	Repo         string
+	NoColor      bool
+	AgentHelp    bool
+	Paginate     bool
+	Page         int
+	PerPage      int
+	Limit        int
 	NoExtensions bool
 }
 

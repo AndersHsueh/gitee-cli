@@ -26,7 +26,7 @@ var viewCmd = &cobra.Command{
 	Example: `  gitee repo view owner/repo
   gitee repo view --repo owner/repo`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoViewAgentHelp)
 		}

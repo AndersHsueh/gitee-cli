@@ -25,7 +25,7 @@ var viewCmd = &cobra.Command{
 	Example: `  gitee release view v1.0.0 --repo owner/repo
   gitee release view v1.0.0 -R owner/repo --output json`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(releaseViewAgentHelp)
 		}

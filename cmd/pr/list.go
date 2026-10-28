@@ -33,7 +33,7 @@ var listCmd = &cobra.Command{
 	// PreRunE fires BEFORE ValidateRequiredFlags, so an agent can request
 	// --agent-help even when --repo is missing.
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(prListAgentHelp)
 		}

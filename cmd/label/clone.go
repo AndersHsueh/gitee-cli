@@ -17,14 +17,14 @@ var cloneCmd = &cobra.Command{
 	Example: `  gitee label clone --source owner/template-repo --target owner/new-repo
   gitee label clone --source myorg/template --target myorg/new-app`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(labelCloneAgentHelp)
 		}
 		return nil
 	},
 	RunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		dc, err := cmd.NewDomainClientFrom(rt)
 		if err != nil {
 			return err

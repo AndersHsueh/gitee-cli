@@ -30,7 +30,7 @@ var listCmd = &cobra.Command{
   gitee issue list --repo owner/repo --paginate          # fetch ALL open issues
   gitee issue list --repo owner/repo --paginate --limit 0  # same, explicit`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(issueListAgentHelp)
 		}

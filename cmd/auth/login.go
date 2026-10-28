@@ -27,7 +27,7 @@ Pass --token to log in with a new token; on success the token is
 written to ~/.gitee-cli/settings.json so later commands can use it
 without re-authenticating.`,
 	PreRunE: cmd.AgentHelpNA("auth login"),
-	RunE:      runLogin,
+	RunE:    runLogin,
 }
 
 func init() {

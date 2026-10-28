@@ -30,7 +30,7 @@ var createCmd = &cobra.Command{
   gitee webhook create -R owner/repo -u https://x.example.com/hook \
       --password s3cret --encryption-type 0`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(webhookCreateAgentHelp)
 		}

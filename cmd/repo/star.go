@@ -55,7 +55,7 @@ use gitee repo watch to receive notifications about its activity.`,
   gitee repo star list
   gitee repo star list --limit 50`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoStarAgentHelp)
 		}
@@ -73,7 +73,7 @@ var starStarCmd = &cobra.Command{
 	Example: `  gitee repo star myorg/myrepo
   gitee repo star --repo myorg/myrepo`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoStarStarAgentHelp)
 		}
@@ -88,7 +88,7 @@ var starUnstarCmd = &cobra.Command{
 	Example: `  gitee repo unstar myorg/myrepo
   gitee repo unstar --repo myorg/myrepo`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoStarUnstarAgentHelp)
 		}
@@ -103,7 +103,7 @@ var starListCmd = &cobra.Command{
 	Example: `  gitee repo star list
   gitee repo star list --limit 50`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoStarListAgentHelp)
 		}

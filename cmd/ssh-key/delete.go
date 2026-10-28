@@ -24,7 +24,7 @@ var deleteCmd = &cobra.Command{
 	Example: `  gitee ssh-key delete 12345
   gitee ssh-key delete 12345 --force`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(sshKeyDeleteAgentHelp)
 		}

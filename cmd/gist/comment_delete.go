@@ -17,9 +17,9 @@ var commentDeleteCmd = &cobra.Command{
 	Short: "Delete a comment on a gist",
 	Example: `  gitee gist comment-delete abc123def 12345
   gitee gist comment-delete abc123def 12345 --yes`,
-	Args:    cmd.AgentHelpAwareArgs(cobra.ExactArgs(2)),
+	Args: cmd.AgentHelpAwareArgs(cobra.ExactArgs(2)),
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(gistCommentDeleteAgentHelp)
 		}

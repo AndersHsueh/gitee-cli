@@ -54,7 +54,7 @@ level, or remove an existing one.
   gitee repo collaborator add alice --repo owner/repo --permission push
   gitee repo collaborator remove alice --repo owner/repo`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoCollaboratorAgentHelp)
 		}
@@ -72,7 +72,7 @@ var collaboratorListCmd = &cobra.Command{
 	Example: `  gitee repo collaborator list --repo owner/repo
   gitee repo collaborator list -R owner/repo -o json`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoCollaboratorListAgentHelp)
 		}
@@ -87,7 +87,7 @@ var collaboratorAddCmd = &cobra.Command{
 	Example: `  gitee repo collaborator add alice --repo owner/repo --permission push
   gitee repo collaborator add bob -R owner/repo --permission admin`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoCollaboratorAddAgentHelp)
 		}
@@ -102,7 +102,7 @@ var collaboratorRemoveCmd = &cobra.Command{
 	Example: `  gitee repo collaborator remove alice --repo owner/repo
   gitee repo collaborator remove bob -R owner/repo`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoCollaboratorRemoveAgentHelp)
 		}

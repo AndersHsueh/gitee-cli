@@ -19,14 +19,14 @@ var deleteCmd = &cobra.Command{
 	Example: `  gitee milestone delete --repo owner/repo --number 1
   gitee milestone delete -R owner/repo 3 --force`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(milestoneDeleteAgentHelp)
 		}
 		return nil
 	},
 	RunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		parsed, err := utils.ParseInt64Arg(deleteFlags.number, args, "milestone")
 		if err != nil {
 			return err
