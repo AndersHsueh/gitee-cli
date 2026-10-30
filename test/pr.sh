@@ -167,7 +167,7 @@ section "gitee pr checks --help"
 # ---------------------------------------------------------------------------
 section "全局 Flag"
 for fmt in "json" "table"; do
-    "$BINARY" pr list --repo gitee/gitee --output "$fmt" --limit 1 > /dev/null 2>&1 && pass "--output $fmt 有效" || fail "--output $fmt 无效"
+    TEST_REPO="${GITEE_TEST_REPO:-andershsueh/gitee-cli}"; "$BINARY" pr list --repo "$TEST_REPO" --output "$fmt" --limit 1 > /dev/null 2>&1 && pass "--output $fmt 有效" || fail "--output $fmt 无效"
 done
 
 # ---------------------------------------------------------------------------

@@ -68,8 +68,11 @@ fi
 # label list --output json
 # ---------------------------------------------------------------------------
 section "gitee label list --output json"
-output=$("$BINARY" label list --repo gitee/gitee --output json --limit 5 2>&1 || true)
-if echo "$output" | grep -qE '"name"|"color"|\['; then
+TEST_REPO="${GITEE_TEST_REPO:-andershsueh/gitee-cli}"
+output=$("$BINARY" label list --repo "$TEST_REPO" --output json --limit 5 2>&1 || true)
+if echo "$output" | grep -qiE '404|403|not found|forbidden'; then
+    skip "无法读取 $TEST_REPO 的 label（设置 GITEE_TEST_REPO 指向自己的仓库）"
+elif echo "$output" | grep -qE '"name"|"color"|^\['; then
     pass "label list --output json 输出有效"
 else
     fail "label list --output json 格式不符: ${output:0:200}"
@@ -80,9 +83,9 @@ fi
 # ---------------------------------------------------------------------------
 section "gitee label create --help"
 help_output=$("$BINARY" label create --help 2>&1)
-expected_args=("name" "color" "description")
+expected_args=("--name" "--color")
 for arg in "${expected_args[@]}"; do
-    if echo "$help_output" | grep -q "$arg"; then
+    if echo "$help_output" | grep -q -- "$arg"; then
         pass "label create --help 包含 $arg 参数"
     else
         fail "label create --help 缺少 $arg 参数"

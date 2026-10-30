@@ -259,8 +259,8 @@ var agentMd = "# Agent Guide — gitee-cli Workflow Templates\n" +
 	"|------|---------|\n" +
 	"| `--repo owner/repo` | Target repository (or use `-R`) |\n" +
 	"| `--output json` | Machine-readable output (USE THIS) |\n" +
-	"| `--limit N` | Cap results to N items |\n" +
-	"| `--paginate` | Fetch ALL pages (combine with --limit for safety) |\n" +
+	"| `--limit N` | Result cap. On commands that honor `--paginate`, this is the total across pages (0 = no cap). On a single-request list, this is that request's page size. `repo list` defaults it to 30 even with `--paginate`. |\n" +
+	"| `--paginate` | Walk every page. Honored by `issue list`, `pr list`, `repo list`, `repo commits list`, `status`, and `api` / `api raw`. Other list commands ignore it. |\n" +
 	"| `-o table|json` | Output format |\n" +
 	"\n" +
 	"## Error Recovery\n" +
@@ -299,8 +299,13 @@ var agentMd = "# Agent Guide — gitee-cli Workflow Templates\n" +
 	"3. **Use --output json for parsing.** Never scrape the table output — it is\n" +
 	"   not stable across versions.\n" +
 	"\n" +
-	"4. **Use --paginate when you need all results.** Without it, list commands\n" +
-	"   return only the first page (default 30 items).\n" +
+	"4. **Check --agent-help before assuming a list is complete.** `issue list`,\n" +
+	"   `pr list`, `repo list`, `repo commits list`, and `status` honor\n" +
+	"   `--paginate` (`repo list`'s `--limit` defaults to 30 even then; pass\n" +
+	"   `--limit 0` for no cap). `release list`, `label list`, `milestone list`,\n" +
+	"   `webhook list`, `gist list`, `ssh-key list`, `notification list`,\n" +
+	"   org lists, and `user followers` / `following` issue one request and\n" +
+	"   ignore `--paginate`. Their `--limit` is that request's page size.\n" +
 	"\n" +
 	"5. **Check status before starting work.** `gitee pr status` and\n" +
 	"   `gitee issue status` give you a cross-repo overview of what needs\n" +

@@ -110,8 +110,7 @@ tool with a list of accounts interested in someone.
 YES. Read-only.
 
 ## Atomicity
-Atomic per request. The server returns one page (up to ` + "`" + `per_page` + "`" + `
-items); use ` + "`" + `--paginate` + "`" + ` (a root flag) to traverse all pages.
+Atomic. One GET. --limit is that request's page size (default 30, max 100).
 
 ## Side effects
 None. Pure GET.
@@ -150,9 +149,8 @@ unfollow ` + "`" + `<username>` + "`" + ` (and rename or delete themselves) cont
 This output is a snapshot at fetch time — a ` + "`" + `login` + "`" + ` you pick from
 it may have unfollowed or vanished by the time you act on it, so run
 ` + "`" + `gitee user view <login>` + "`" + ` immediately before acting if existence
-matters. With ` + "`" + `--paginate` + "`" + `, pages fetched seconds apart can overlap
-or skip entries when the list mutates mid-traversal — dedupe by
-` + "`" + `login` + "`" + `. Read-only and always safe to retry.
+matters. This command returns a single page, so a long follower list
+is truncated at --limit. Read-only and always safe to retry.
 
 ## Next steps (orchestration hints)
 After listing followers, an agent typically wants to:

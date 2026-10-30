@@ -111,10 +111,12 @@ done
 section "gitee auth login --help 参数检查"
 
 help_output=$("$BINARY" auth login --help 2>&1)
+# PAT login reads --token / GITEE_TOKEN. There is no --scopes flag and no
+# OAuth device flow.
 if echo "$help_output" | grep -q "scopes"; then
-    pass "auth login --help 显示 scopes 参数"
+    fail "auth login --help 不应再广告 OAuth --scopes"
 else
-    fail "auth login --help 未显示 scopes 参数"
+    pass "auth login --help 不包含已删除的 scopes 参数"
 fi
 
 if echo "$help_output" | grep -q "token"; then
@@ -126,16 +128,16 @@ fi
 # ---------------------------------------------------------------------------
 # 测试 logout --yes (无需确认)
 # ---------------------------------------------------------------------------
-section "gitee auth logout --yes"
+section "gitee auth logout"
 
-# 先创建一个空凭证文件避免目录不存在的问题
+# logout 没有 --yes；它直接删除当前 host 的 token，不需要二次确认。
 mkdir -p ~/.gitee-cli
 echo '{}' > ~/.gitee-cli/settings.json
 
-if "$BINARY" auth logout --yes 2>&1; then
-    pass "auth logout --yes 执行成功（凭证已被清除）"
+if "$BINARY" auth logout 2>&1; then
+    pass "auth logout 执行成功（凭证已被清除）"
 else
-    fail "auth logout --yes 执行失败"
+    fail "auth logout 执行失败"
 fi
 
 # ---------------------------------------------------------------------------

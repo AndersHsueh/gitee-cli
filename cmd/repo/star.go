@@ -96,6 +96,24 @@ var starUnstarCmd = &cobra.Command{
 	RunE: runRepoUnstar,
 }
 
+// repoUnstarCmd is the top-level alias `gitee repo unstar`. The nested
+// form `gitee repo star unstar` stays under the umbrella. Agent help for
+// the alias is retitled to the path the user invoked.
+var repoUnstarCmd = &cobra.Command{
+	Use:   "unstar [owner/repo]",
+	Short: "Remove a star from a repository (alias of `gitee repo star unstar`)",
+	Example: `  gitee repo unstar myorg/myrepo
+  gitee repo unstar --repo myorg/myrepo`,
+	PreRunE: func(c *cobra.Command, args []string) error {
+		rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
+			cmd.PrintAgentHelpForCommand(c, repoStarUnstarAgentHelp)
+		}
+		return nil
+	},
+	RunE: runRepoUnstar,
+}
+
 var starListCmd = &cobra.Command{
 	Use:   "list",
 	Args:  cobra.NoArgs,
@@ -117,9 +135,10 @@ func init() {
 	sf := starStarCmd.Flags()
 	sf.StringVarP(&starFlags.repo, "repo", "R", "", "Repository (owner/repo); falls back to global --repo, then to the positional arg")
 
-	// unstar flags
+	// unstar flags (nested and top-level alias share starFlags.repo)
 	uf := starUnstarCmd.Flags()
 	uf.StringVarP(&starFlags.repo, "repo", "R", "", "Repository (owner/repo); falls back to global --repo, then to the positional arg")
+	repoUnstarCmd.Flags().StringVarP(&starFlags.repo, "repo", "R", "", "Repository (owner/repo); falls back to global --repo, then to the positional arg")
 
 	// list flags
 	lf := starListCmd.Flags()

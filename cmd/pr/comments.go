@@ -111,25 +111,23 @@ review event with APPROVE / REQUEST_CHANGES / COMMENT state).
 ## Optional flags
   --owner            Repository owner
   --repo / -R        Repository name or owner/repo
-  --paginate         Walk all pages of comments
-  --limit N          Total cap across pages when --paginate is set
-  --page N           Page number for single-page mode (default 1)
-  --per-page N       Items per page (default 30, max 100)
   --output json      Emit a JSON array of comment objects instead of a list
+
+This command issues one GET and returns the comments in that response.
+It does not walk additional pages.
 
 ## Idempotency
 YES. Read-only. Calling it twice yields the same list (modulo
 concurrent comment activity). Safe to retry on transient errors.
 
 ## Atomicity
-A single GET (or paged sequence of GETs when --paginate is set).
-Each call either succeeds and returns the current snapshot or
-fails — no partial-success state.
+A single GET. Each call either succeeds and returns the current
+snapshot or fails — no partial-success state.
 
 ## Side effects
 - None on the Gitee repo. No notifications, no webhooks fire.
 - The token's read access is recorded in Gitee's access log.
-- Rate-limit counter advances by 1 (or N pages when --paginate is set).
+- Rate-limit counter advances by 1.
 
 ## Post-conditions (on success)
 - Stdout contains a human-readable list (default) or a JSON array

@@ -121,7 +121,7 @@ have been shipped, check the latest prerelease, or audit release history.
 
 ## Optional flags
   --limit / -L   Maximum number of releases (default 30, max 100)
-  --page         Page number (default 1; use --paginate to traverse all)
+  --page         Page number (default 1). This command fetches that one page only.
 
 ## Idempotency
 YES. Read-only. No side effects on the repository.

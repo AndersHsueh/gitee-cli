@@ -60,26 +60,36 @@ Useful for testing or accessing endpoints not yet covered by dedicated commands.
 }
 
 func init() {
-	// --field and --raw are registered on BOTH apiCmd and rawCmd.
-	// cobra does NOT inherit a parent's local flags (Flags()) to its
-	// subcommands — only PersistentFlags() propagate down. We want:
+	// --field, --raw, and the pagination flags are registered on BOTH
+	// apiCmd and rawCmd. cobra does NOT inherit a parent's local flags
+	// (Flags()) to its subcommands — only PersistentFlags() propagate
+	// down. We want:
 	//   gitee api POST /user/repos --field name=x   (apiCmd, canonical)
 	//   gitee api raw POST /user/repos --field name=x (rawCmd, legacy)
-	// to both work. Both bind to the same package-level rawFlags vars,
-	// so runAPI reads them regardless of which command was invoked.
-	apiCmd.Flags().StringArrayVar(&rawFlags.fields, "field", []string{}, "Form field (key=value)")
-	apiCmd.Flags().BoolVar(&rawFlags.raw, "raw", false, "Output raw response body")
-	rawCmd.Flags().StringArrayVar(&rawFlags.fields, "field", []string{}, "Form field (key=value)")
-	rawCmd.Flags().BoolVar(&rawFlags.raw, "raw", false, "Output raw response body")
+	//   gitee api raw GET /user/repos --paginate
+	// to both work. --field/--raw bind to the same package-level vars.
+	// Pagination flags are read off whichever command was invoked
+	// (see runRaw); registering them only on the parent made
+	// `gitee api raw --paginate` a silent no-op, because runRaw used
+	// to call runAPI on the parent.
+	bindAPIRequestFlags(apiCmd)
+	bindAPIRequestFlags(rawCmd)
 
 	// Add raw as a subcommand for backwards compatibility
 	apiCmd.AddCommand(rawCmd)
+}
 
-	// Register global flags for paginate support
-	apiCmd.Flags().BoolP("paginate", "P", false, "Paginate through all results")
-	apiCmd.Flags().Int("page", 1, "Page number")
-	apiCmd.Flags().Int("per-page", 30, "Results per page (max 100)")
-	apiCmd.Flags().Int("limit", 0, "Maximum number of results (0 = no limit)")
+// bindAPIRequestFlags registers the flags runAPI reads. Call it on every
+// command that delegates to runAPI — parent local flags are not visible
+// to a subcommand, and root's persistent --limit defaults to 30 while
+// this verb's --limit means "no cap" (0).
+func bindAPIRequestFlags(c *cobra.Command) {
+	c.Flags().StringArrayVar(&rawFlags.fields, "field", []string{}, "Form field (key=value)")
+	c.Flags().BoolVar(&rawFlags.raw, "raw", false, "Output raw response body")
+	c.Flags().BoolP("paginate", "P", false, "Paginate through all results")
+	c.Flags().Int("page", 1, "Page number")
+	c.Flags().Int("per-page", 30, "Results per page (max 100)")
+	c.Flags().Int("limit", 0, "Maximum number of results (0 = no limit)")
 }
 
 func runAPI(cobraCmd *cobra.Command, args []string) error {
@@ -235,8 +245,11 @@ func writeIndentedJSON(w io.Writer, data []byte) error {
 }
 
 func runRaw(cobraCmd *cobra.Command, args []string) error {
-	// For backwards compatibility, delegate to runAPI
-	return runAPI(cobraCmd.Parent(), args)
+	// Delegate to runAPI, but keep the command the user actually invoked.
+	// Passing Parent() made runAPI read apiCmd's local pagination flags,
+	// which stay at their defaults when the user set --paginate / --page /
+	// --per-page / --limit on `gitee api raw`.
+	return runAPI(cobraCmd, args)
 }
 
 // apiRawAgentHelp is the agent-targeted help for `gitee api raw` and

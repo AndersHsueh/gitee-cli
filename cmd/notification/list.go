@@ -74,8 +74,8 @@ If neither ` + "`" + `--unread` + "`" + ` nor ` + "`" + `--read` + "`" + ` is gi
 YES. Read-only.
 
 ## Atomicity
-Atomic per request. The server returns one page (up to ` + "`" + `per_page` + "`" + ` items);
-use ` + "`" + `--paginate` + "`" + ` (a root flag) to traverse all pages.
+Atomic per request. One GET. --limit is that request's page size
+(default 30, max 100). Further pages are not fetched.
 
 ## Side effects
 None.

@@ -229,14 +229,14 @@ fi
 section "全局 Flag 验证"
 
 # --api-url
-if output=$("$BINARY" repo list --api-url "https://api.gitee.com/api/v5" --limit 1 2>&1); then
+if output=$("$BINARY" repo list --api-url "https://gitee.com/api/v5" --per-page 1 2>&1); then
     pass "--api-url flag 接受"
 else
     fail "--api-url flag 不被接受"
 fi
 
 # --output
-for fmt in "json" "table" "csv"; do
+for fmt in "json" "table"; do
     if output=$("$BINARY" repo list --output "$fmt" --limit 1 2>&1); then
         pass "--output $fmt 有效"
     else

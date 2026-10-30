@@ -151,7 +151,7 @@ fi
 # 全局 flag 验证
 # ---------------------------------------------------------------------------
 section "全局 Flag 验证 (gist)"
-for fmt in "json" "table" "csv"; do
+for fmt in "json" "table"; do
     if output=$("$BINARY" gist list --output "$fmt" --limit 1 2>&1); then
         pass "--output $fmt 有效"
     else

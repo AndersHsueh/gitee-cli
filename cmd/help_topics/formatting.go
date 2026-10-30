@@ -54,8 +54,9 @@ gitee-cli never silently substitutes a different format.`,
 		_, _ = fmt.Fprintln(os.Stdout, "Count open issues assigned to you:")
 		_, _ = fmt.Fprintln(os.Stdout, "  gitee issue list --output json --assignee @me --state open | jq 'length'")
 		_, _ = fmt.Fprintln(os.Stdout)
-		_, _ = fmt.Fprintln(os.Stdout, "Get just the URLs of the last 5 releases:")
-		_, _ = fmt.Fprintln(os.Stdout, "  gitee release list --output json --limit 5 | jq -r '.[].url'")
+		_, _ = fmt.Fprintln(os.Stdout, "Get html_url for the first page of releases (up to 5).")
+		_, _ = fmt.Fprintln(os.Stdout, "A release URL on the JSON object is html_url:")
+		_, _ = fmt.Fprintln(os.Stdout, "  gitee release list --repo owner/repo --output json --limit 5 | jq -r '.[].html_url'")
 		_, _ = fmt.Fprintln(os.Stdout)
 		_, _ = fmt.Fprintln(os.Stdout, "## Stable columns")
 		_, _ = fmt.Fprintln(os.Stdout)
@@ -65,8 +66,13 @@ gitee-cli never silently substitutes a different format.`,
 		_, _ = fmt.Fprintln(os.Stdout)
 		_, _ = fmt.Fprintln(os.Stdout, "## When the API is paginated")
 		_, _ = fmt.Fprintln(os.Stdout)
-		_, _ = fmt.Fprintln(os.Stdout, "Most list commands accept --paginate / -P to walk every page. Combine with")
-		_, _ = fmt.Fprintln(os.Stdout, "--limit N for a total cap (N is across all pages, not per page).")
+		_, _ = fmt.Fprintln(os.Stdout, "issue list, pr list, repo list, repo commits list, status, and api")
+		_, _ = fmt.Fprintln(os.Stdout, "honor --paginate / -P and walk every page. On those, --limit is a")
+		_, _ = fmt.Fprintln(os.Stdout, "total cap across pages (0 means no cap; repo list defaults that")
+		_, _ = fmt.Fprintln(os.Stdout, "cap to 30). release list, label list, milestone list, webhook list,")
+		_, _ = fmt.Fprintln(os.Stdout, "gist list, ssh-key list, notification list, org lists, and user")
+		_, _ = fmt.Fprintln(os.Stdout, "followers / following issue one request. For those, --limit is the")
+		_, _ = fmt.Fprintln(os.Stdout, "page size of that single request.")
 		return nil
 	},
 }

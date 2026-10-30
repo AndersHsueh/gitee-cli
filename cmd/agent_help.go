@@ -115,7 +115,9 @@ gitee-cli ships TWO help systems side-by-side:
   - Atomicity (are there partial-success states?)
   - Side effects (emails, webhooks, notifications)
   - Common error codes + how to recover
-  - OAuth scope required
+  - OAuth scope required — section heading only. Authentication is a
+    personal access token (Authorization: token <PAT>), not an OAuth
+    device or browser login. The heading uses Gitee's PAT scope names.
   - Rate limit
   - Race conditions and how to avoid them
   - Next-step orchestration hints (what command should you run after this?)
@@ -153,9 +155,11 @@ gitee-cli ships TWO help systems side-by-side:
   gitee repo star star           --agent-help   ✅ available  🆕 v0.12.0
   gitee repo star unstar         --agent-help   ✅ available  🆕 v0.12.0
   gitee repo star list           --agent-help   ✅ available  🆕 v0.12.0
+  gitee repo unstar              --agent-help   ✅ available
   gitee repo watch               --agent-help   ✅ available  🆕 v0.12.0
   gitee repo watch watch         --agent-help   ✅ available  🆕 v0.12.0
   gitee repo watch unwatch       --agent-help   ✅ available  🆕 v0.12.0
+  gitee repo unwatch             --agent-help   ✅ available
   gitee repo file                --agent-help   ✅ available  🆕 v0.12.0
   gitee repo file view           --agent-help   ✅ available  🆕 v0.12.0
   gitee repo file push           --agent-help   ✅ available  🆕 v0.12.0

@@ -930,11 +930,11 @@ if [ "${P1_SKIP_NUMBERS:-0}" != "1" ]; then
         # Test counts (packages/files/funcs) are deliberately NOT hardcoded:
         # they move whenever tests are added.
         for pair in \
-            "reference_unique_rows:177" \
-            "command_paths:177" \
-            "leaf_commands:149" \
-            "matrix_rows:157" \
-            "agent_help_full_docs:137"; do
+            "reference_unique_rows:179" \
+            "command_paths:179" \
+            "leaf_commands:151" \
+            "matrix_rows:159" \
+            "agent_help_full_docs:139"; do
             key=${pair%%:*}
             want=${pair#*:}
             got=$(awk -v k="$key" '$1 == k { print $3; exit }' "$NUMBERS_OUT")

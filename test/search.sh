@@ -84,21 +84,27 @@ fi
 # search repos --language 过滤
 # ---------------------------------------------------------------------------
 section "gitee search repos --language 过滤"
+# language=go is invalid on the wire; the CLI rewrites it to Go.
 if output=$("$BINARY" search repos "web" --language go --limit 3 2>&1); then
-    pass "search repos --language 参数接受"
+    pass "search repos --language go 被改写为 Go 后接受"
 else
-    fail "search repos --language 参数不被接受"
+    fail "search repos --language go 未被接受: ${output:0:200}"
+fi
+if output=$("$BINARY" search repos "web" --language Go --limit 3 2>&1); then
+    pass "search repos --language Go 接受"
+else
+    fail "search repos --language Go 不被接受: ${output:0:200}"
 fi
 
 # ---------------------------------------------------------------------------
 # search repos --sort 排序
 # ---------------------------------------------------------------------------
 section "gitee search repos --sort 排序"
-for sort_val in "stars" "forks" "updated"; do
+for sort_val in "stars" "forks" "updated" "stars_count" "last_push_at"; do
     if output=$("$BINARY" search repos "test" --sort "$sort_val" --limit 3 2>&1); then
         pass "search repos --sort $sort_val 接受"
     else
-        fail "search repos --sort $sort_val 不被接受"
+        fail "search repos --sort $sort_val 不被接受: ${output:0:200}"
     fi
 done
 

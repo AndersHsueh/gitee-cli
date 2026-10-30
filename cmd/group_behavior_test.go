@@ -9,7 +9,7 @@ import (
 // fail loudly (non-zero) with an actionable suggestion when it receives a
 // positional argument that is not a subcommand. Before this, cobra treated a
 // non-runnable parent as "help requested": printing help and exiting 0, so
-// `gitee pr creat 1` or `gitee repo unstar owner/repo` looked successful.
+// `gitee pr creat 1` or `gitee repo push a.txt b.txt` looked successful.
 //
 // The suggestions come from cmd.GroupRunE: exact reparented verb, edit
 // distance <= 2, or (for the old flat syntax) `<group> <group> <arg>`.
@@ -22,7 +22,9 @@ func TestGroupCommandsRejectUnknownVerbs(t *testing.T) {
 		args []string
 		want string // substring that must appear in stderr (the suggestion)
 	}{
-		{"reparented verb", []string{"repo", "unstar", "owner/repo"}, "gitee repo star unstar owner/repo"},
+		// unstar/unwatch are real top-level aliases now. `repo push` is still
+		// only nested (`repo file push`), so it keeps the descendant suggestion.
+		{"reparented verb", []string{"repo", "push", "a.txt", "b.txt"}, "gitee repo file push a.txt b.txt"},
 		{"typo in pr", []string{"pr", "creat", "1"}, "gitee pr create 1"},
 		{"reparented org verb", []string{"org", "member", "alice"}, "gitee org members alice"},
 		{"typo in issue", []string{"issue", "labl", "list"}, "gitee issue label list"},

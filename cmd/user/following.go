@@ -110,8 +110,7 @@ follow plan ("follow everyone alice follows").
 YES. Read-only.
 
 ## Atomicity
-Atomic per request. The server returns one page (up to ` + "`" + `per_page` + "`" + `
-items); use ` + "`" + `--paginate` + "`" + ` (a root flag) to traverse all pages.
+Atomic. One GET. --limit is that request's page size (default 30, max 100).
 
 ## Side effects
 None. Pure GET.
@@ -151,9 +150,9 @@ removed continuously, by the user themselves or by other sessions.
 This output is a snapshot — between listing and acting (e.g. piping
 logins into ` + "`" + `gitee user unfollow` + "`" + `), an edge may already be gone,
 and unfollow then returns 404 (see its Idempotency note); treat that
-as "already unfollowed". With ` + "`" + `--paginate` + "`" + `, mutations
-mid-traversal can make pages overlap or skip entries — dedupe by
-` + "`" + `login` + "`" + `. Read-only and always safe to retry.
+as "already unfollowed". This command returns a single page, so a
+long following list is truncated at --limit. Read-only and always
+safe to retry.
 
 ## Next steps (orchestration hints)
 After listing who someone follows, an agent typically wants to:

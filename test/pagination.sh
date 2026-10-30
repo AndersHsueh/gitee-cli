@@ -72,12 +72,12 @@ fi
 # ---------------------------------------------------------------------------
 section "gitee issue list --paginate"
 
-TEST_REPO="andershsueh/gitee-cli"
+TEST_REPO="${GITEE_TEST_REPO:-andershsueh/gitee-cli}"
 output=$("$BINARY" issue list --repo "$TEST_REPO" --paginate --limit 10 --output json 2>&1 || true)
-if echo "$output" | grep -qE '"number"|"title"|"state"'; then
-    pass "issue list --paginate 返回结果"
+if echo "$output" | grep -qE '"number"|"title"|"state"|^\[\]'; then
+    pass "issue list --paginate 返回结果或空数组"
 else
-    fail "issue list --paginate 无有效输出"
+    fail "issue list --paginate 无有效输出: ${output:0:200}"
 fi
 
 # ---------------------------------------------------------------------------
@@ -85,7 +85,7 @@ fi
 # ---------------------------------------------------------------------------
 section "gitee pr list --paginate"
 
-TEST_REPO="andershsueh/gitee-cli"
+TEST_REPO="${GITEE_TEST_REPO:-andershsueh/gitee-cli}"
 output=$("$BINARY" pr list --repo "$TEST_REPO" --paginate --limit 10 --output json 2>&1 || true)
 # 空数组 [] 也是有效输出（仓库可能没有 PR）
 if echo "$output" | grep -qE '^\[\]|"number"|"title"|"state"'; then

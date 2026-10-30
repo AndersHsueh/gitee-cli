@@ -68,8 +68,11 @@ fi
 # milestone list --output json
 # ---------------------------------------------------------------------------
 section "gitee milestone list --output json"
-output=$("$BINARY" milestone list --repo gitee/gitee --output json --limit 5 2>&1 || true)
-if echo "$output" | grep -qE '"title"|"number"|state|\['; then
+TEST_REPO="${GITEE_TEST_REPO:-andershsueh/gitee-cli}"
+output=$("$BINARY" milestone list --repo "$TEST_REPO" --output json --limit 5 2>&1 || true)
+if echo "$output" | grep -qiE '404|403|not found|forbidden'; then
+    skip "无法读取 $TEST_REPO 的 milestone（设置 GITEE_TEST_REPO 指向自己的仓库）"
+elif echo "$output" | grep -qE '"title"|"number"|state|^\['; then
     pass "milestone list --output json 输出有效"
 else
     fail "milestone list --output json 格式不符: ${output:0:200}"

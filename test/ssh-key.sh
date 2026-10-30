@@ -80,9 +80,9 @@ fi
 # ---------------------------------------------------------------------------
 section "gitee ssh-key add --help"
 help_output=$("$BINARY" ssh-key add --help 2>&1)
-expected_args=("title" "key-file")
+expected_args=("--title" "--key")
 for arg in "${expected_args[@]}"; do
-    if echo "$help_output" | grep -q "$arg"; then
+    if echo "$help_output" | grep -q -- "$arg"; then
         pass "ssh-key add --help 包含 $arg 参数"
     else
         fail "ssh-key add --help 缺少 $arg 参数"

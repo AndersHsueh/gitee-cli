@@ -2,7 +2,9 @@ package auth
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"time"
@@ -20,7 +22,8 @@ var statusCmd = &cobra.Command{
 	Args:  cobra.NoArgs,
 	Short: "Show authentication status",
 	Example: `  gitee auth status
-  gitee auth status --hostname enterprise.gitee.com`,
+  gitee auth status --hostname enterprise.gitee.com
+  gitee auth status -o json`,
 	PreRunE: cmd.AgentHelpNA("auth status"),
 	RunE:    runStatus,
 }
@@ -39,6 +42,13 @@ func runStatus(cobraCmd *cobra.Command, args []string) error {
 		token = config.GetToken(hostname)
 	}
 	if token == "" {
+		if rt.Output == "json" {
+			_ = writeStatusJSON(cobraCmd.OutOrStdout(), statusPayload{
+				Authenticated: false,
+				Hostname:      hostname,
+				Message:       "not authenticated. Run 'gitee auth login' to authenticate",
+			})
+		}
 		return fmt.Errorf("not authenticated. Run 'gitee auth login' to authenticate")
 	}
 
@@ -53,6 +63,33 @@ func runStatus(cobraCmd *cobra.Command, args []string) error {
 	var user types.User
 	if err := apiClient.Get(ctx, "/user", &user); err != nil {
 		return fmt.Errorf("verifying token: %w", err)
+	}
+
+	tokenSource := statusTokenSource(rt)
+	if rt.Output == "json" {
+		tok := &statusToken{
+			Masked: maskToken(token),
+			Source: tokenSource,
+		}
+		if showToken {
+			tok.Value = token
+		}
+		return writeStatusJSON(cobraCmd.OutOrStdout(), statusPayload{
+			Authenticated: true,
+			Hostname:      hostname,
+			User: &statusUser{
+				Login:       user.Login,
+				Name:        user.Name,
+				Email:       user.Email,
+				HTMLURL:     user.HTMLURL,
+				ID:          user.ID,
+				PublicRepos: user.PublicRepos,
+				PublicGists: user.PublicGists,
+				Followers:   user.Followers,
+				Following:   user.Following,
+			},
+			Token: tok,
+		})
 	}
 
 	green := color.New(color.FgGreen).SprintFunc()
@@ -98,18 +135,56 @@ func runStatus(cobraCmd *cobra.Command, args []string) error {
 		fmt.Printf("  Hint:     Use --show-token to display full token\n")
 	}
 
-	// Token source: GlobalToken is bound only to the --token flag, never to
-	// os.Getenv. Check the flag first (flag > env > config precedence), then
-	// the env var; config file is the fallback.
-	tokenSource := "config file"
-	if rt.Token != "" {
-		tokenSource = "--token flag"
-	} else if os.Getenv("GITEE_TOKEN") != "" {
-		tokenSource = "GITEE_TOKEN environment variable"
-	}
 	fmt.Printf("  Source:   %s\n", tokenSource)
 
 	fmt.Printf("\n")
+	return nil
+}
+
+type statusPayload struct {
+	Authenticated bool         `json:"authenticated"`
+	Hostname      string       `json:"hostname"`
+	Message       string       `json:"message,omitempty"`
+	User          *statusUser  `json:"user,omitempty"`
+	Token         *statusToken `json:"token,omitempty"`
+}
+
+type statusUser struct {
+	Login       string `json:"login"`
+	Name        string `json:"name,omitempty"`
+	Email       string `json:"email,omitempty"`
+	HTMLURL     string `json:"html_url,omitempty"`
+	ID          int64  `json:"id"`
+	PublicRepos int    `json:"public_repos"`
+	PublicGists int    `json:"public_gists"`
+	Followers   int    `json:"followers"`
+	Following   int    `json:"following"`
+}
+
+type statusToken struct {
+	Masked string `json:"masked"`
+	Source string `json:"source"`
+	Value  string `json:"value,omitempty"`
+}
+
+func statusTokenSource(rt *cmd.Runtime) string {
+	// rt.Token is bound only to the --token flag, never to os.Getenv.
+	// Flag > env > config file.
+	if rt != nil && rt.Token != "" {
+		return "--token flag"
+	}
+	if os.Getenv("GITEE_TOKEN") != "" {
+		return "GITEE_TOKEN environment variable"
+	}
+	return "config file"
+}
+
+func writeStatusJSON(w io.Writer, payload statusPayload) error {
+	enc := json.NewEncoder(w)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(payload); err != nil {
+		return fmt.Errorf("writing auth status json: %w", err)
+	}
 	return nil
 }
 

@@ -45,7 +45,7 @@ fi
 # 子命令列表
 # ---------------------------------------------------------------------------
 section "gitee org 子命令验证"
-expected_commands=("list" "view" "member" "repo")
+expected_commands=("list" "view" "members" "repos" "issues")
 for cmd in "${expected_commands[@]}"; do
     if "$BINARY" org "$cmd" --help > /dev/null 2>&1; then
         pass "org $cmd 子命令存在"
@@ -94,23 +94,21 @@ fi
 # ---------------------------------------------------------------------------
 # org member list --help 参数检查
 # ---------------------------------------------------------------------------
-section "gitee org member list --help"
-help_output=$("$BINARY" org member --help 2>&1 || "$BINARY" org member list --help 2>&1 || true)
-if [[ -n "$help_output" ]]; then
-    pass "org member --help 有输出"
+section "gitee org members --help"
+if "$BINARY" org members --help > /dev/null 2>&1; then
+    pass "org members --help 正常"
 else
-    fail "org member --help 无输出"
+    fail "org members --help 失败"
 fi
 
 # ---------------------------------------------------------------------------
 # org repo list --help
 # ---------------------------------------------------------------------------
-section "gitee org repo list --help"
-help_output=$("$BINARY" org repo --help 2>&1 || "$BINARY" org repo list --help 2>&1 || true)
-if [[ -n "$help_output" ]]; then
-    pass "org repo --help 有输出"
+section "gitee org repos --help"
+if "$BINARY" org repos --help > /dev/null 2>&1; then
+    pass "org repos --help 正常"
 else
-    fail "org repo --help 无输出"
+    fail "org repos --help 失败"
 fi
 
 # ---------------------------------------------------------------------------
@@ -127,7 +125,7 @@ fi
 # 全局 flag 验证
 # ---------------------------------------------------------------------------
 section "全局 Flag 验证 (org)"
-for fmt in "json" "table" "csv"; do
+for fmt in "json" "table"; do
     if output=$("$BINARY" org list --output "$fmt" --limit 1 2>&1); then
         pass "--output $fmt 有效"
     else

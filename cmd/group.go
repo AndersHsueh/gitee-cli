@@ -20,14 +20,14 @@ import (
 //     and exiting 0.
 //
 // The second case used to be a silent trap: cobra prints help and exits 0
-// for a non-runnable parent command, so `gitee repo unstar owner/repo`,
+// for a non-runnable parent command, so `gitee repo push a.txt b.txt`,
 // `gitee pr creat 1` or `gitee issue labl list` looked like successes
 // while doing nothing. The error now names the best correction:
 //
 //  1. the group's own name is also a verb under it (`repo protect master`
 //     → `repo protect protect master`);
-//  2. a same-named verb lives deeper in the tree (`repo unstar x` →
-//     `repo star unstar x`);
+//  2. a same-named verb lives deeper in the tree (`repo push x` →
+//     `repo file push x`);
 //  3. a sibling verb is within a small edit distance (`pr creat` →
 //     `pr create`, `issue labl` → `issue label`);
 //  4. otherwise it lists the available subcommands.
@@ -54,8 +54,9 @@ func GroupRunE(c *cobra.Command, args []string) error {
 		// 1. Exact subcommand name used as an argument.
 		suggestion = joinCommand(child.CommandPath(), remaining)
 	} else if target := findDescendant(c, args[0]); target != nil {
-		// 2. Same-named verb somewhere deeper (e.g. repo unstar lives at
-		// repo star unstar).
+		// 2. Same-named verb somewhere deeper (e.g. repo push lives at
+		// repo file push). unstar/unwatch are direct children, so cobra
+		// dispatches those before GroupRunE.
 		suggestion = joinCommand(target.CommandPath(), remaining)
 	} else if target := closestChild(c, args[0]); target != "" {
 		// 3. Typo of a direct child (Levenshtein distance <= 2).
@@ -112,9 +113,10 @@ func findChild(c *cobra.Command, name string) *cobra.Command {
 
 // findDescendant does a depth-first search below c (excluding c itself) for
 // a non-hidden command named name. This is what resolves reparented verbs
-// that moved into a sub-group, e.g. the old `gitee repo unstar` now lives
-// at `gitee repo star unstar`, and the old `gitee org member` now lives at
-// `gitee org members`.
+// that moved into a sub-group, e.g. `gitee repo push` lives at
+// `gitee repo file push`, and the old `gitee org member` now lives at
+// `gitee org members`. `gitee repo unstar` and `gitee repo unwatch` are
+// direct aliases and are not handled here.
 func findDescendant(c *cobra.Command, name string) *cobra.Command {
 	for _, sub := range c.Commands() {
 		if sub.Hidden {

@@ -130,19 +130,30 @@ batch pre-flight checks before invoking other repo commands.
 ## Optional flags
   --owner               Filter by owner username (user or org). Omit for "me".
   --visibility          Filter: public | private | internal | all (default: all)
-  --limit / -L          Maximum number of repositories to return (default: 30)
   --sort                Sort key: created | updated | pushed | full_name | stars
   --direction           Sort direction: asc | desc
+  --per-page            Page size (global flag, default 30, clamped to 1-100).
+  --page                Page number for a single-page fetch (global flag, default 1).
+                        Ignored when --paginate is set; that walk always starts at page 1.
+  --paginate / -P       Walk every page (global flag). Off by default.
+  --limit / -L          Result cap (local flag, default 30; 0 = no cap).
+                        Without --paginate this is one page: when --limit is
+                        between 1 and --per-page, the request uses that smaller
+                        page size and the response is truncated to --limit.
+                        A --limit larger than --per-page does not fetch more
+                        pages. With --paginate, --limit is the total across
+                        pages. Pass --limit 0 to collect every page.
 
 ## Idempotency
 YES. This command only reads; running it twice returns the same data
 (assuming no upstream repo changes between calls). Safe to retry.
 
 ## Atomicity
-Atomic per request. A single API call returns one page of results.
-The full set is NOT returned in one call if --limit exceeds per_page (100)
-— pagination is NOT implemented in this verb, so requests beyond 100 are
-truncated server-side. For more than 100 repos, narrow --owner.
+Without --paginate: one GET of --page / --per-page, shrunk by --limit when
+that cap is smaller than the page size.
+With --paginate: one GET per page of --per-page, stopped at --limit items
+(0 = no cap). The walk starts at page 1 even if --page is set. A failure
+on a later page returns an error; nothing is printed.
 
 ## Side effects
 None. Read-only.
@@ -214,14 +225,18 @@ projects (read)
 
 ## Rate limit
 Gitee API v5: 1000 requests/hour for authenticated users.
-Each call to this command counts as 1 request.
+One request without --paginate. With --paginate, one request per page.
 
 ## Example
-  # List my own repos, sorted by most-starred first
-  gitee repo list --sort stars --direction desc --limit 50 -o json
+  # One page, most-starred first. Page size is --per-page. --limit 50
+  # does not fetch a second page; use --paginate for that.
+  gitee repo list --sort stars --direction desc --per-page 50 -o json
 
-  # List an org's public repos
-  gitee repo list --owner gitee --visibility public --limit 20
+  # List an org's public repos (first page)
+  gitee repo list --owner gitee --visibility public --per-page 20
+
+  # Every repo the token can see (no total cap)
+  gitee repo list --paginate --limit 0 -o json
 
   # Pipe the JSON to jq and drill into one
   gitee repo list --owner myorg -o json | jq -r '.[0].full_name' \\

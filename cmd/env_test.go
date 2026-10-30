@@ -394,6 +394,8 @@ func TestEnvLimitCapsListResults(t *testing.T) {
 // TestEnvLimitCapsStatus covers the remaining shared path: `gitee status`
 // calls api.FetchListOrAll directly (not through cmdkit), so it must honor
 // GITEE_LIMIT too — this is the case that exposed the duplicated cap.
+// -R is passed explicitly so the test does not depend on the checkout's
+// git origin being a Gitee URL (GitHub checkouts exit 0 before any API call).
 func TestEnvLimitCapsStatus(t *testing.T) {
 	bin := buildThrowawayBinary(t)
 	srv, perPages := newStubAPIServer(t)
@@ -402,7 +404,7 @@ func TestEnvLimitCapsStatus(t *testing.T) {
 		"GITEE_TOKEN=stub",
 		"GITEE_API_URL=" + srv.URL,
 		"GITEE_LIMIT=1",
-	}, "status", "-o", "json")
+	}, "status", "-R", "owner/repo", "-o", "json")
 	if err != nil {
 		t.Fatalf("status with GITEE_LIMIT=1 failed: %v\n%s", err, out)
 	}

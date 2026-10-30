@@ -155,9 +155,8 @@ None. Pure GET on /orgs/{org}/members.
 The org's member roster is live server-side state: admins invite and
 remove members continuously. This output is a snapshot — a ` + "`" + `login` + "`" + `
 picked for issue assignment or notification may no longer be a member
-by the time you act on it. With ` + "`" + `--paginate` + "`" + `, mutations
-mid-traversal can make pages overlap or skip entries — dedupe by
-` + "`" + `login` + "`" + `. Also note the ` + "`" + `state` + "`" + ` field: only ` + "`" + `active` + "`" + `
+by the time you act on it. This command returns a single page
+(truncated at --limit). Also note the ` + "`" + `state` + "`" + ` field: only ` + "`" + `active` + "`" + `
 members can actually receive assignments. Read-only and always safe
 to retry.
 

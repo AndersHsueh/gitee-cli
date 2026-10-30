@@ -21,12 +21,10 @@ fail()    { failed=$((failed+1)); echo -e "  ${RED}✗${NC} $*" >&2; }
 skip()    { skipped=$((skipped+1)); echo -e "  ${YELLOW}⊘${NC} $* (跳过)"; }
 section() { echo ""; echo -e "${BLUE}▶${NC} $*"; }
 
-# 获取当前用户名和测试仓库（使用 raw 子命令，v0.3.0 需要完整 URL）
+# 当前用户与一个自己的仓库。GITEE_TEST_REPO 优先；否则取
+# GET /user/repos 的第一条。路径是 API path，不是完整 URL。
 get_test_user() {
-    "$BINARY" api raw GET https://gitee.com/api/v5/user 2>/dev/null | grep '"login"' | head -1 | sed 's/.*"login": *"\([^"]*\)".*/\1/'
-}
-get_test_user() {
-    "$BINARY" api raw GET https://gitee.com/api/v5/user 2>/dev/null | grep '"login"' | head -1 | sed 's/.*"login": *"\([^"]*\)".*/\1/'
+    "$BINARY" api GET /user 2>/dev/null | sed -n 's/.*"login"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1
 }
 
 # ---------------------------------------------------------------------------
@@ -40,9 +38,11 @@ if [[ -z "$TEST_USER" ]]; then
 fi
 pass "认证状态正常 (用户: $TEST_USER)"
 
-# 使用用户自己的仓库进行测试（使用 raw 子命令，v0.3.0 需要完整 URL）
-TEST_REPO=$("$BINARY" api raw GET "https://gitee.com/api/v5/user/repos?type=owner&per_page=1" 2>/dev/null | grep '"full_name"' | head -1 | sed 's/.*"full_name": *"\([^"]*\)".*/\1/')
-TEST_REPO=$("$BINARY" api raw GET https://gitee.com/api/v5/user/repos?type=owner\&per_page=1 2>/dev/null | grep '"full_name"' | head -1 | sed 's/.*"full_name": *"\([^"]*\)".*/\1/')
+if [[ -n "${GITEE_TEST_REPO:-}" ]]; then
+    TEST_REPO="$GITEE_TEST_REPO"
+else
+    TEST_REPO=$("$BINARY" api GET "/user/repos?type=owner&per_page=1" 2>/dev/null | sed -n 's/.*"full_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
+fi
 if [[ -z "$TEST_REPO" ]] || [[ "$TEST_REPO" == *"["* ]]; then
     skip "无法获取测试仓库，跳过需要实际仓库的测试"
     TEST_REPO=""
@@ -63,10 +63,9 @@ fi
 # ---------------------------------------------------------------------------
 section "gitee repo view --owner --repo 参数"
 
-if [[ -n "$TEST_REPO" ]]; then
-    OWNER_REPO=($(echo "$TEST_REPO" | tr '/' ' '))
-    OWNER="${OWNER_REPO[0]}"
-    REPO="${OWNER_REPO[1]}"
+if [[ -n "$TEST_REPO" && "$TEST_REPO" == */* ]]; then
+    OWNER="${TEST_REPO%%/*}"
+    REPO="${TEST_REPO#*/}"
     if output=$("$BINARY" repo view --owner "$OWNER" --repo "$REPO" 2>&1); then
         if echo "$output" | grep -qiE "Name:|Description:|Visibility:|Language:|Stars:|Forks:|URL:"; then
             pass "repo view --owner --repo 输出包含详细信息字段"
@@ -172,24 +171,7 @@ else
     skip "无测试仓库，跳过 --output table 测试"
 fi
 
-# ---------------------------------------------------------------------------
-# repo view --output csv
-# ---------------------------------------------------------------------------
-section "gitee repo view --output csv"
-
-if [[ -n "$TEST_REPO" ]]; then
-    if output=$("$BINARY" repo view --repo "$TEST_REPO" --output csv 2>&1); then
-        if echo "$output" | grep -qE "Name:|$TEST_REPO"; then
-            pass "repo view --output csv 输出有效"
-        else
-            fail "repo view --output csv 格式不符: ${output:0:200}"
-        fi
-    else
-        fail "repo view --output csv 执行失败"
-    fi
-else
-    skip "无测试仓库，跳过 --output csv 测试"
-fi
+# csv is not a format. -o csv is rejected. json and table are covered above.
 
 # ---------------------------------------------------------------------------
 # repo view 缺少所有参数应报错

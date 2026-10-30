@@ -80,7 +80,8 @@ fi
 # ---------------------------------------------------------------------------
 section "gitee alias list --output json"
 output=$("$BINARY" alias list --output json 2>&1 || true)
-if echo "$output" | grep -qE '"alias"|"command"|\['; then
+# Empty alias file is {} (not the table notice). A non-empty file is an object.
+if echo "$output" | grep -qE '^\{\}|^\{'; then
     pass "alias list --output json 输出有效"
 else
     fail "alias list --output json 格式不符: ${output:0:200}"

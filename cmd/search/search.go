@@ -89,8 +89,8 @@ func init() {
 	// repos flags
 	{
 		f := searchReposCmd.Flags()
-		f.StringVar(&reposFlags.language, "language", "", "Filter by programming language")
-		f.StringVar(&reposFlags.sort, "sort", "", "Sort by: stars|forks|updated")
+		f.StringVar(&reposFlags.language, "language", "", "Gitee language name (Go, Python, JavaScript). Lowercase aliases such as go are accepted")
+		f.StringVar(&reposFlags.sort, "sort", "", "Sort by: stars_count|forks_count|watches_count|created_at|last_push_at (aliases: stars, forks, watches, created, updated)")
 		f.StringVar(&reposFlags.order, "order", "desc", "Sort order: asc|desc")
 		f.IntVarP(&reposFlags.limit, "limit", "L", 20, "Maximum number of results")
 	}
@@ -132,17 +132,21 @@ func runSearchRepos(c *cobra.Command, args []string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
 	defer cancel()
 
+	sort, err := canonicalRepoSearchSort(reposFlags.sort)
+	if err != nil {
+		return err
+	}
 	qv := url.Values{}
 	qv.Set("q", q)
 	qv.Set("per_page", fmt.Sprintf("%d", reposFlags.limit))
-	if reposFlags.sort != "" {
-		qv.Set("sort", reposFlags.sort)
+	if sort != "" {
+		qv.Set("sort", sort)
 	}
 	if reposFlags.order != "" {
 		qv.Set("order", reposFlags.order)
 	}
 	if reposFlags.language != "" {
-		qv.Set("language", reposFlags.language)
+		qv.Set("language", canonicalRepoSearchLanguage(reposFlags.language))
 	}
 	path := "/search/repositories?" + qv.Encode()
 
@@ -165,6 +169,67 @@ func runSearchRepos(c *cobra.Command, args []string) error {
 	}
 
 	return printSearchResults(result, "repos")
+}
+
+// repoSearchSorts maps CLI values onto GET /search/repositories sort.
+// The wire enum is stars_count, forks_count, watches_count, created_at,
+// last_push_at. stars/forks/updated return HTTP 400.
+var repoSearchSorts = map[string]string{
+	"stars_count":   "stars_count",
+	"forks_count":   "forks_count",
+	"watches_count": "watches_count",
+	"created_at":    "created_at",
+	"last_push_at":  "last_push_at",
+	"stars":         "stars_count",
+	"forks":         "forks_count",
+	"watches":       "watches_count",
+	"created":       "created_at",
+	"updated":       "last_push_at",
+}
+
+func canonicalRepoSearchSort(sort string) (string, error) {
+	if sort == "" {
+		return "", nil
+	}
+	wire, ok := repoSearchSorts[sort]
+	if !ok {
+		return "", fmt.Errorf("invalid --sort %q: use stars_count, forks_count, watches_count, created_at, or last_push_at (aliases: stars, forks, watches, created, updated)", sort)
+	}
+	return wire, nil
+}
+
+// repoSearchLanguages rewrites common lowercase names to the
+// case-sensitive values Gitee accepts. language=go is HTTP 400;
+// language=Go is accepted. Unknown names are sent unchanged.
+var repoSearchLanguages = map[string]string{
+	"go":         "Go",
+	"python":     "Python",
+	"java":       "Java",
+	"javascript": "JavaScript",
+	"typescript": "TypeScript",
+	"rust":       "Rust",
+	"php":        "PHP",
+	"ruby":       "Ruby",
+	"c":          "C",
+	"c++":        "C++",
+	"c#":         "C#",
+	"shell":      "Shell",
+	"html":       "HTML",
+	"css":        "CSS",
+	"vue":        "Vue",
+	"kotlin":     "Kotlin",
+	"swift":      "Swift",
+	"dart":       "Dart",
+	"lua":        "Lua",
+	"scala":      "Scala",
+	"perl":       "Perl",
+}
+
+func canonicalRepoSearchLanguage(language string) string {
+	if wire, ok := repoSearchLanguages[strings.ToLower(language)]; ok {
+		return wire
+	}
+	return language
 }
 
 // ----- issues -----
@@ -707,8 +772,14 @@ empty result as "the repo does not exist".
   <query> (positional)   Search keywords (e.g. "go cobra cli")
 
 ## Optional flags
-  --language             Filter by programming language (e.g. go, python, java)
-  --sort                 Sort by: stars|forks|updated (default: Gitee ranking)
+  --language             Gitee language name. Lowercase aliases such as go,
+                         python, and javascript are rewritten (go → Go). Unknown
+                         names are sent unchanged; the API rejects those it
+                         does not know.
+  --sort                 stars_count | forks_count | watches_count | created_at |
+                         last_push_at. Aliases stars, forks, watches, created,
+                         and updated are rewritten. Any other value is rejected
+                         locally (stars/forks/updated are HTTP 400 on the wire).
   --order                Sort order: asc|desc (default: desc)
   --limit / -L           Maximum number of results (default 20)
   --output / -o          table|json (default table)
@@ -778,6 +849,9 @@ After ` + "`" + `gitee search repos` + "`" + `, an agent typically wants to:
    ` + "`" + `gitee issue list --repo owner/repo` + "`" + ` (NOT another search call)
 
 ## OAuth scope required
+Authentication is a personal access token (Authorization: token <PAT>),
+not an OAuth device or browser login. Pass it via GITEE_TOKEN, --token,
+or ~/.gitee-cli/settings.json. This heading uses Gitee's PAT scope names.
 None for public repos. For searching private repos you need a token
 with at least ` + "`" + `projects` + "`" + ` (read).
 

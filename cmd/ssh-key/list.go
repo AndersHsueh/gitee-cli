@@ -107,7 +107,7 @@ have access, or produce an inventory for compliance.
 
 ## Optional flags
   --limit / -L   Maximum number of keys (default 30)
-  --page         Page number (default 1; use --paginate to traverse all)
+  --page         Page number (default 1). This command fetches that one page only.
 
 ## Idempotency
 YES. Read-only.
