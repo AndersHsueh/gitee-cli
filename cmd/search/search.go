@@ -52,7 +52,7 @@ var searchReposCmd = &cobra.Command{
 	Short: "Search repositories",
 	Args:  cmd.AgentHelpAwareArgs(cobra.MinimumNArgs(1)),
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(searchReposAgentHelp)
 		}
@@ -65,8 +65,8 @@ func init() {
 	// repos flags
 	{
 		f := searchReposCmd.Flags()
-		f.StringVar(&reposFlags.language, "language", "", "Filter by programming language")
-		f.StringVar(&reposFlags.sort, "sort", "", "Sort by: stars|forks|updated")
+		f.StringVar(&reposFlags.language, "language", "", "Gitee language name (Go, Python, JavaScript). Lowercase aliases such as go are accepted")
+		f.StringVar(&reposFlags.sort, "sort", "", "Sort field: stars_count|forks_count|watches_count|created_at|last_push_at (aliases: stars, forks, watches, created, updated)")
 		f.StringVar(&reposFlags.order, "order", "desc", "Sort order: asc|desc")
 		f.IntVarP(&reposFlags.limit, "limit", "L", 20, "Maximum number of results")
 	}
@@ -101,24 +101,28 @@ func init() {
 }
 
 func runSearchRepos(c *cobra.Command, args []string) error {
-		_ = cmd.RuntimeFromCmd(c)
+	_ = cmd.RuntimeFromCmd(c)
 	q := args[0]
 	client := newSearchClient()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cmd.GlobalTimeout)*time.Second)
 	defer cancel()
 
+	sort, err := canonicalRepoSearchSort(reposFlags.sort)
+	if err != nil {
+		return err
+	}
 	qv := url.Values{}
 	qv.Set("q", q)
 	qv.Set("per_page", fmt.Sprintf("%d", reposFlags.limit))
-	if reposFlags.sort != "" {
-		qv.Set("sort", reposFlags.sort)
+	if sort != "" {
+		qv.Set("sort", sort)
 	}
 	if reposFlags.order != "" {
 		qv.Set("order", reposFlags.order)
 	}
 	if reposFlags.language != "" {
-		qv.Set("language", reposFlags.language)
+		qv.Set("language", canonicalRepoSearchLanguage(reposFlags.language))
 	}
 	path := "/search/repositories?" + qv.Encode()
 
@@ -128,6 +132,67 @@ func runSearchRepos(c *cobra.Command, args []string) error {
 	}
 
 	return printSearchResults(result, "repos")
+}
+
+// repoSearchSorts maps CLI values onto GET /search/repositories sort.
+// The wire enum is stars_count, forks_count, watches_count, created_at,
+// last_push_at. stars/forks/updated return HTTP 400.
+var repoSearchSorts = map[string]string{
+	"stars_count":   "stars_count",
+	"forks_count":   "forks_count",
+	"watches_count": "watches_count",
+	"created_at":    "created_at",
+	"last_push_at":  "last_push_at",
+	"stars":         "stars_count",
+	"forks":         "forks_count",
+	"watches":       "watches_count",
+	"created":       "created_at",
+	"updated":       "last_push_at",
+}
+
+func canonicalRepoSearchSort(sort string) (string, error) {
+	if sort == "" {
+		return "", nil
+	}
+	wire, ok := repoSearchSorts[sort]
+	if !ok {
+		return "", fmt.Errorf("invalid --sort %q: use stars_count, forks_count, watches_count, created_at, or last_push_at (aliases: stars, forks, watches, created, updated)", sort)
+	}
+	return wire, nil
+}
+
+// repoSearchLanguages rewrites common lowercase names to the
+// case-sensitive values Gitee accepts. language=go is HTTP 400;
+// language=Go is accepted. Unknown names are sent unchanged.
+var repoSearchLanguages = map[string]string{
+	"go":         "Go",
+	"python":     "Python",
+	"java":       "Java",
+	"javascript": "JavaScript",
+	"typescript": "TypeScript",
+	"rust":       "Rust",
+	"php":        "PHP",
+	"ruby":       "Ruby",
+	"c":          "C",
+	"c++":        "C++",
+	"c#":         "C#",
+	"shell":      "Shell",
+	"html":       "HTML",
+	"css":        "CSS",
+	"vue":        "Vue",
+	"kotlin":     "Kotlin",
+	"swift":      "Swift",
+	"dart":       "Dart",
+	"lua":        "Lua",
+	"scala":      "Scala",
+	"perl":       "Perl",
+}
+
+func canonicalRepoSearchLanguage(language string) string {
+	if wire, ok := repoSearchLanguages[strings.ToLower(language)]; ok {
+		return wire
+	}
+	return language
 }
 
 // ----- issues -----
@@ -143,7 +208,7 @@ var searchIssuesCmd = &cobra.Command{
 	Short: "Search issues across repositories",
 	Args:  cmd.AgentHelpAwareArgs(cobra.MinimumNArgs(1)),
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(searchIssuesAgentHelp)
 		}
@@ -153,7 +218,7 @@ var searchIssuesCmd = &cobra.Command{
 }
 
 func runSearchIssues(c *cobra.Command, args []string) error {
-		_ = cmd.RuntimeFromCmd(c)
+	_ = cmd.RuntimeFromCmd(c)
 	q := args[0]
 	client := newSearchClient()
 
@@ -190,7 +255,7 @@ var searchUsersCmd = &cobra.Command{
 	Short: "Search users",
 	Args:  cmd.AgentHelpAwareArgs(cobra.MinimumNArgs(1)),
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(searchUsersAgentHelp)
 		}
@@ -200,7 +265,7 @@ var searchUsersCmd = &cobra.Command{
 }
 
 func runSearchUsers(c *cobra.Command, args []string) error {
-		_ = cmd.RuntimeFromCmd(c)
+	_ = cmd.RuntimeFromCmd(c)
 	q := args[0]
 	client := newSearchClient()
 
@@ -238,7 +303,7 @@ var searchCodeCmd = &cobra.Command{
 Note: Code search availability depends on your Gitee instance.
 If the API returns a 404, code search is not enabled for that instance.`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(searchCodeAgentHelp)
 		}
@@ -300,7 +365,7 @@ var searchCommitsCmd = &cobra.Command{
 Note: Commit search availability depends on your Gitee instance.
 If the API returns a 404, commit search is not enabled for that instance.`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(searchCommitsAgentHelp)
 		}
@@ -659,8 +724,18 @@ inside files; ` + "`" + `gitee search repos` + "`" + ` searches repo metadata.
   <query> (positional)   Search keywords (e.g. "go cobra cli")
 
 ## Optional flags
-  --language             Filter by programming language (e.g. go, python, java)
-  --sort                 Sort by: stars|forks|updated (default: Gitee ranking)
+  --language             Gitee language query value. The API rejects unknown
+                         names with HTTP 400 "language does not have a valid
+                         value". Canonical names are case-sensitive (Go,
+                         Python, JavaScript). Lowercase aliases go, python,
+                         javascript, typescript, java, rust, php, ruby, c,
+                         c++, c#, shell are rewritten before the request.
+                         Any other string is sent unchanged.
+  --sort                 Wire values: stars_count, forks_count, watches_count,
+                         created_at, last_push_at. Aliases: stars, forks,
+                         watches, created, updated. stars/forks/updated are
+                         NOT valid on the wire (HTTP 400). Default: Gitee
+                         ranking (omit the parameter).
   --order                Sort order: asc|desc (default: desc)
   --limit / -L           Maximum number of results (default 20)
   --output / -o          table|json (default table)
@@ -730,6 +805,7 @@ After ` + "`" + `gitee search repos` + "`" + `, an agent typically wants to:
    ` + "`" + `gitee issue list --repo owner/repo` + "`" + ` (NOT another search call)
 
 ## OAuth scope required
+Personal access token scope. This CLI does not perform an OAuth login.
 None for public repos. For searching private repos you need a token
 with at least ` + "`" + `projects` + "`" + ` (read).
 

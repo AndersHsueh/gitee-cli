@@ -54,7 +54,7 @@ level, or remove an existing one.
   gitee repo collaborator add alice --repo owner/repo --permission push
   gitee repo collaborator remove alice --repo owner/repo`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoCollaboratorAgentHelp)
 		}
@@ -72,7 +72,7 @@ var collaboratorListCmd = &cobra.Command{
 	Example: `  gitee repo collaborator list --repo owner/repo
   gitee repo collaborator list -R owner/repo -o json`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoCollaboratorListAgentHelp)
 		}
@@ -87,7 +87,7 @@ var collaboratorAddCmd = &cobra.Command{
 	Example: `  gitee repo collaborator add alice --repo owner/repo --permission push
   gitee repo collaborator add bob -R owner/repo --permission admin`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoCollaboratorAddAgentHelp)
 		}
@@ -102,7 +102,7 @@ var collaboratorRemoveCmd = &cobra.Command{
 	Example: `  gitee repo collaborator remove alice --repo owner/repo
   gitee repo collaborator remove bob -R owner/repo`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoCollaboratorRemoveAgentHelp)
 		}
@@ -608,14 +608,15 @@ Atomic. Either the user is removed after the call or nothing changed.
 Org-inherited access: if the removed user is also a member of an
 organization that has access to the repo, they may STILL be able to
 push via the org membership. This verb only revokes the EXPLICIT
-collaborator grant. Use gitee org member remove --org <org> <user>
-to revoke org-level access.
+collaborator grant. This CLI has no command to remove an
+organization member; revoke that membership on gitee.com.
 
 ## Next steps (orchestration hints)
 After removing a collaborator, an agent typically wants to:
 1. Verify: gitee repo collaborator list --repo owner/repo
-2. If the user should also lose org-level access, follow up with
-   gitee org member remove --org <org> <user>
+2. If the user should also lose org-level access, revoke the
+   organization membership on gitee.com. This CLI only lists members
+   (` + "`" + `gitee org members` + "`" + `); it cannot remove them.
 3. If you removed admin, consider rotating any credentials the user
    had access to (deploy keys, webhooks secrets, etc.)
 4. Audit recent commits by that user before deciding on
@@ -639,5 +640,5 @@ Gitee API v5: 1000 req/hour authenticated.
 ## See also
 - gitee repo collaborator list   — confirm removal
 - gitee repo collaborator add    — re-grant access if it was a mistake
-- gitee org member remove        — revoke org-level access too
+- gitee org members               — list org members (no remove verb)
 `

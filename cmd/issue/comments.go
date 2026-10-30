@@ -30,7 +30,7 @@ var commentsCmd = &cobra.Command{
   gitee issue comments 42 -R owner/repo --output json`,
 	Args: cmd.AgentHelpAwareArgs(cobra.ExactArgs(1)),
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(issueCommentsAgentHelp)
 		}
@@ -163,8 +163,10 @@ projects (read)
 Gitee API v5: 1000 req/hour authenticated.
 
 ## Example
-  # Get the most recent comment body
-  gitee issue comments 42 -R owner/repo --limit 1 --output json | jq -r '.[0].body'
+  # Comments are chronological (oldest first). --limit is per_page for
+  # this one request, so --limit 1 returns the oldest comment, not the
+  # newest. The newest comment on the returned page is the last element.
+  gitee issue comments 42 -R owner/repo --output json | jq -r '.[-1].body'
 
 ## See also
 - ` + "`" + `gitee issue view` + "`" + `   — issue body + metadata (without comments)

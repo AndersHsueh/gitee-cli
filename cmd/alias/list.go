@@ -17,12 +17,15 @@ var listCmd = &cobra.Command{
   gitee alias list --output json`,
 	PreRunE: preRunAgentHelp(aliasListAgentHelp),
 	RunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		keys, m, err := alias.Sorted()
 		if err != nil {
 			return fmt.Errorf("listing aliases: %w", err)
 		}
 		if len(keys) == 0 {
+			if rt.Output == "json" {
+				return output.PrintJSON(map[string]string{})
+			}
 			fmt.Println("No aliases defined. Use 'gitee alias set <name> <expansion>' to add one.")
 			return nil
 		}
@@ -63,6 +66,7 @@ None.
 ## Post-conditions (on success)
 - Stdout contains a table of aliases (NAME, EXPANSION)
 - or JSON object {"<name>": "<expansion>"}
+- An empty alias file prints {} in json mode (not the table notice)
 
 ## Output (stdout, table mode)
   NAME       EXPANSION
@@ -73,7 +77,7 @@ None.
   {"co":"pr checkout","issues":"issue list"}
 
 ## Common errors
-- (none — empty alias set returns "No aliases defined")
+- (none — empty alias set prints "No aliases defined" in table mode and {} in json mode)
 
 ## Race condition warning ⚠️
 None known for corruption — this command only reads

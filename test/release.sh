@@ -68,8 +68,11 @@ fi
 # release list --output json
 # ---------------------------------------------------------------------------
 section "gitee release list --output json"
-output=$("$BINARY" release list --repo gitee/gitee --output json --limit 5 2>&1 || true)
-if echo "$output" | grep -qE '"tag_name"|"name"|\['; then
+TEST_REPO="${GITEE_TEST_REPO:-andershsueh/gitee-cli}"
+output=$("$BINARY" release list --repo "$TEST_REPO" --output json --limit 5 2>&1 || true)
+if echo "$output" | grep -qiE '404|403|not found|forbidden'; then
+    skip "无法读取 $TEST_REPO 的 release（设置 GITEE_TEST_REPO 指向自己的仓库）"
+elif echo "$output" | grep -qE '"tag_name"|"name"|^\['; then
     pass "release list --output json 输出有效"
 else
     fail "release list --output json 格式不符: ${output:0:200}"
@@ -80,7 +83,7 @@ fi
 # ---------------------------------------------------------------------------
 section "gitee release create --help"
 help_output=$("$BINARY" release create --help 2>&1)
-expected_args=("tag" "title" "notes" "draft" "prerelease")
+expected_args=("--tag" "--name" "--body" "--prerelease")
 for arg in "${expected_args[@]}"; do
     if echo "$help_output" | grep -q "$arg"; then
         pass "release create --help 包含 $arg 参数"

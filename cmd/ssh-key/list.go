@@ -27,7 +27,7 @@ var listCmd = &cobra.Command{
   gitee ssh-key list --limit 50
   gitee ssh-key list --output json`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(sshKeyListAgentHelp)
 		}
@@ -105,14 +105,16 @@ have access, or produce an inventory for compliance.
 - Token has ` + "`" + `user_info` + "`" + ` or ` + "`" + `projects` + "`" + ` scope
 
 ## Optional flags
-  --limit / -L   Maximum number of keys (default 30)
-  --page         Page number (default 1; use --paginate to traverse all)
+  --limit / -L   Page size sent as per_page (default 30). The CLI clamps
+                 the value to 1-100 before the request.
+  --page         Page number (default 1). This verb returns that single page.
+                 It does not walk further pages.
 
 ## Idempotency
 YES. Read-only.
 
 ## Atomicity
-Atomic.
+One GET. Either that single page of keys is returned, or an error.
 
 ## Side effects
 None. Pure GET.

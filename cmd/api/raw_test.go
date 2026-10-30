@@ -245,6 +245,64 @@ func TestRunAPIRawFlagOnAPICmd(t *testing.T) {
 	}
 }
 
+// TestRunRawPaginateReadsInvokedFlags locks the legacy alias to the
+// same pagination behavior as `gitee api`. runRaw used to call
+// runAPI(parent), which read apiCmd's unset local flags and ignored
+// --paginate / --per-page passed to `gitee api raw`.
+func TestRunRawPaginateReadsInvokedFlags(t *testing.T) {
+	var gotPages []string
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.Query()
+		gotPages = append(gotPages, q.Get("page")+":"+q.Get("per_page"))
+		w.Header().Set("Content-Type", "application/json")
+		switch q.Get("page") {
+		case "1":
+			_, _ = w.Write([]byte(`[{"id":1},{"id":2}]`))
+		case "2":
+			_, _ = w.Write([]byte(`[{"id":3}]`))
+		default:
+			_, _ = w.Write([]byte(`[]`))
+		}
+	}))
+	defer ts.Close()
+
+	origFields := rawFlags.fields
+	origRaw := rawFlags.raw
+	defer func() {
+		rawFlags.fields = origFields
+		rawFlags.raw = origRaw
+		_ = rawCmd.Flags().Set("paginate", "false")
+		_ = rawCmd.Flags().Set("per-page", "30")
+		_ = rawCmd.Flags().Set("page", "1")
+		_ = rawCmd.Flags().Set("limit", "0")
+	}()
+	rawFlags.fields = nil
+	rawFlags.raw = false
+
+	if err := rawCmd.Flags().Parse([]string{"--paginate", "--per-page", "2", "--limit", "0"}); err != nil {
+		t.Fatalf("parse raw flags: %v", err)
+	}
+
+	var out strings.Builder
+	rawCmd.SetOut(&out)
+	rawCmd.SetContext(cmd.SetContext(context.Background(), &cmd.Runtime{
+		APIURL:  ts.URL,
+		Token:   "test-token",
+		Timeout: 30,
+	}))
+	if err := runRaw(rawCmd, []string{"GET", "/user/repos"}); err != nil {
+		t.Fatalf("runRaw --paginate: %v", err)
+	}
+	if strings.Join(gotPages, ",") != "1:2,2:2" {
+		t.Fatalf("pages requested = %v, want 1:2 then 2:2 (per-page from the raw command)", gotPages)
+	}
+	for _, id := range []string{`"id": 1`, `"id": 2`, `"id": 3`} {
+		if !strings.Contains(out.String(), id) {
+			t.Errorf("merged output missing %s:\n%s", id, out.String())
+		}
+	}
+}
+
 // firstLine returns the first line of s without trailing newline.
 // Used for clearer error messages.
 func firstLine(s string) string {

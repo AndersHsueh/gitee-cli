@@ -27,7 +27,7 @@ var commentsCmd = &cobra.Command{
 	// PreRunE fires BEFORE the cobra arg check, so an agent can request
 	// --agent-help even when <number> is missing.
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(prCommentsAgentHelp)
 		}
@@ -111,25 +111,24 @@ review event with APPROVE / REQUEST_CHANGES / COMMENT state).
 ## Optional flags
   --owner            Repository owner
   --repo / -R        Repository name or owner/repo
-  --paginate         Walk all pages of comments
-  --limit N          Total cap across pages when --paginate is set
-  --page N           Page number for single-page mode (default 1)
-  --per-page N       Items per page (default 30, max 100)
   --output json      Emit a JSON array of comment objects instead of a list
+
+This verb sends one GET to the PR comments endpoint and does not add
+page, per_page, or limit query parameters. The array is whatever that
+single response contains.
 
 ## Idempotency
 YES. Read-only. Calling it twice yields the same list (modulo
 concurrent comment activity). Safe to retry on transient errors.
 
 ## Atomicity
-A single GET (or paged sequence of GETs when --paginate is set).
-Each call either succeeds and returns the current snapshot or
-fails — no partial-success state.
+A single GET. The call either succeeds and returns the current
+snapshot or fails — no partial-success state.
 
 ## Side effects
 - None on the Gitee repo. No notifications, no webhooks fire.
 - The token's read access is recorded in Gitee's access log.
-- Rate-limit counter advances by 1 (or N pages when --paginate is set).
+- Rate-limit counter advances by 1.
 
 ## Post-conditions (on success)
 - Stdout contains a human-readable list (default) or a JSON array

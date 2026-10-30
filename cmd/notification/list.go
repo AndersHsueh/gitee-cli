@@ -20,14 +20,14 @@ var listCmd = &cobra.Command{
   gitee notification list --unread --output json
   gitee notification list --limit 50`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(notificationListAgentHelp)
 		}
 		return nil
 	},
 	RunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		filter := ""
 		if listFlags.unreadOnly {
 			filter = "true"
@@ -64,7 +64,9 @@ the inbox into another tool (e.g. summarize unread mentions).
 ## Optional flags
   --unread         Show only UNREAD threads (server-side filter)
   --read           Show only already-read threads (mutually exclusive with --unread)
-  --limit / -L     Maximum number of threads to fetch (default 30, max 100 per page)
+  --limit / -L     Page size sent as per_page (default 30). The CLI does not
+                   clamp it and does not request further pages. Gitee's
+                   maximum per_page is 100.
   --output         ` + "`" + `table` + "`" + ` (default) or ` + "`" + `json` + "`" + `
 
 If neither ` + "`" + `--unread` + "`" + ` nor ` + "`" + `--read` + "`" + ` is given, both are returned.
@@ -73,8 +75,8 @@ If neither ` + "`" + `--unread` + "`" + ` nor ` + "`" + `--read` + "`" + ` is gi
 YES. Read-only.
 
 ## Atomicity
-Atomic per request. The server returns one page (up to ` + "`" + `per_page` + "`" + ` items);
-use ` + "`" + `--paginate` + "`" + ` (a root flag) to traverse all pages.
+One GET. Either that single page of threads is returned, or the call fails.
+A thread count above --limit is not included.
 
 ## Side effects
 None.

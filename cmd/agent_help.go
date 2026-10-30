@@ -77,7 +77,9 @@ gitee-cli ships TWO help systems side-by-side:
   - Atomicity (are there partial-success states?)
   - Side effects (emails, webhooks, notifications)
   - Common error codes + how to recover
-  - OAuth scope required
+  - OAuth scope required — section heading only. Authentication is a
+    personal access token (Authorization: token <PAT>), not an OAuth
+    device or browser login. The heading uses Gitee's PAT scope names.
   - Rate limit
   - Race conditions and how to avoid them
   - Next-step orchestration hints (what command should you run after this?)
@@ -205,9 +207,9 @@ gitee-cli ships TWO help systems side-by-side:
 ### org — Organization management
   gitee org list            --agent-help   ✅ available  🆕 v0.11.0
   gitee org view            --agent-help   ✅ available  🆕 v0.11.0
-  gitee org member          --agent-help   ✅ available  🆕 v0.11.0
-  gitee org repo            --agent-help   ✅ available  🆕 v0.11.0
-  gitee org issue           --agent-help   ✅ available  🆕 v0.11.0
+  gitee org members         --agent-help   ✅ available  🆕 v0.11.0
+  gitee org repos           --agent-help   ✅ available  🆕 v0.11.0
+  gitee org issues          --agent-help   ✅ available  🆕 v0.11.0
 
 ### agent — Agent onboarding  🆕 v0.11.0
   gitee agent onboard       --agent-help   ✅ available  🆕 v0.11.0
@@ -243,7 +245,8 @@ gitee-cli ships TWO help systems side-by-side:
   gitee notification read   --agent-help   ✅ available
 
 ### api — Raw API access
-  gitee api raw             --agent-help   ✅ available  (escape hatch — see --help for usage)
+  gitee api                 --agent-help   ✅ available  (canonical; same doc as api raw)
+  gitee api raw             --agent-help   ✅ available  (legacy alias of gitee api)
 
 ### status — Cross-repo activity summary  🆕 v0.9.0
   gitee status              --agent-help   ✅ available  🆕 v0.9.0

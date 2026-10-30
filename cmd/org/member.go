@@ -25,7 +25,7 @@ var memberCmd = &cobra.Command{
 	Short:   "List organization members",
 	Example: `  gitee org members my-org`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(orgMemberAgentHelp)
 		}
@@ -155,9 +155,9 @@ None. Pure GET on /orgs/{org}/members.
 The org's member roster is live server-side state: admins invite and
 remove members continuously. This output is a snapshot — a ` + "`" + `login` + "`" + `
 picked for issue assignment or notification may no longer be a member
-by the time you act on it. With ` + "`" + `--paginate` + "`" + `, mutations
-mid-traversal can make pages overlap or skip entries — dedupe by
-` + "`" + `login` + "`" + `. Also note the ` + "`" + `state` + "`" + ` field: only ` + "`" + `active` + "`" + `
+by the time you act on it. This command returns one page
+(--limit is per_page, clamped to 1-100); members past that page
+are not included. Also note the ` + "`" + `state` + "`" + ` field: only ` + "`" + `active` + "`" + `
 members can actually receive assignments. Read-only and always safe
 to retry.
 

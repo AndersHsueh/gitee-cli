@@ -166,7 +166,7 @@ func init() {
 	pf := rootCmd.PersistentFlags()
 	pf.StringVar(&GlobalToken, "token", "", "Gitee access token (overrides config and GITEE_TOKEN)")
 	pf.StringVar(&GlobalHostname, "hostname", "gitee.com", "Gitee hostname (for enterprise deployments)")
-	pf.StringVarP(&GlobalOutput, "output", "o", "table", "Output format: table|json|csv")
+	pf.StringVarP(&GlobalOutput, "output", "o", "table", "Output format: table|json (csv is not implemented; any other value prints the table)")
 	pf.BoolVarP(&GlobalVerbose, "verbose", "v", false, "Show HTTP request/response details")
 	pf.StringVar(&GlobalAPIURL, "api-url", "", "API base URL (defaults to https://{hostname}/api/v5)")
 	pf.IntVar(&GlobalTimeout, "timeout", 30, "HTTP timeout in seconds")

@@ -1,5 +1,7 @@
 package types
 
+import "encoding/json"
+
 // Repository represents a Gitee repository.
 type Repository struct {
 	ID              int64  `json:"id"`
@@ -11,7 +13,7 @@ type Repository struct {
 	Description     string `json:"description"`
 	Fork            bool   `json:"fork"`
 	Language        string `json:"language"`
-	StarsCount      int    `json:"stars_count"`
+	StarsCount      int    `json:"stargazers_count"`
 	ForksCount      int    `json:"forks_count"`
 	WatchersCount   int    `json:"watchers_count"`
 	DefaultBranch   string `json:"default_branch"`
@@ -25,6 +27,24 @@ type Repository struct {
 		Push  bool `json:"push"`
 		Pull  bool `json:"pull"`
 	} `json:"permissions,omitempty"`
+}
+
+// UnmarshalJSON accepts the live Gitee v5 field stargazers_count and the
+// older stars_count name. A payload that sends both keeps stargazers_count.
+func (r *Repository) UnmarshalJSON(data []byte) error {
+	type alias Repository
+	aux := struct {
+		alias
+		LegacyStars *int `json:"stars_count"`
+	}{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	*r = Repository(aux.alias)
+	if aux.LegacyStars != nil && r.StarsCount == 0 {
+		r.StarsCount = *aux.LegacyStars
+	}
+	return nil
 }
 
 // RepositoryCreateRequest is used when creating a new repository.

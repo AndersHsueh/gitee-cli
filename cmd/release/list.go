@@ -27,7 +27,7 @@ var listCmd = &cobra.Command{
 	Example: `  gitee release list --repo owner/repo
   gitee release list --repo owner/repo --limit 50`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(releaseListAgentHelp)
 		}
@@ -119,14 +119,16 @@ have been shipped, check the latest prerelease, or audit release history.
   --repo / -R   owner/repo (falls back to global --repo)
 
 ## Optional flags
-  --limit / -L   Maximum number of releases (default 30, max 100)
-  --page         Page number (default 1; use --paginate to traverse all)
+  --limit / -L   Page size sent as per_page on this one request (default 30).
+                 The CLI does not clamp it; Gitee rejects values above 100.
+  --page         Page number (default 1). This verb returns that single page.
+                 It does not walk further pages.
 
 ## Idempotency
 YES. Read-only. No side effects on the repository.
 
 ## Atomicity
-Atomic. Either the full page of releases is returned, or an error.
+One GET. Either that single page of releases is returned, or an error.
 
 ## Side effects
 None. Pure GET.

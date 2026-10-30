@@ -219,6 +219,154 @@ func findLeafCommandPathsFromBinary(t *testing.T, bin string) []string {
 	return leaves
 }
 
+// TestAgentHelpMatrixPathsExist fails when a coverage-matrix row names
+// a command the binary does not ship. `gitee version` is exempt because
+// `gitee help reference` skips it on purpose (covered by --version).
+func TestAgentHelpMatrixPathsExist(t *testing.T) {
+	bin := buildThrowawayBinary(t)
+	known := map[string]bool{}
+	for _, p := range referenceCommandPaths(t, bin) {
+		known[p] = true
+	}
+	known["gitee version"] = true
+
+	seen := 0
+	for _, path := range matrixCommandPaths(rootAgentHelp) {
+		seen++
+		if !known[path] {
+			t.Errorf("coverage matrix lists %q but `gitee help reference` has no such command", path)
+		}
+	}
+	if seen == 0 {
+		t.Fatal("parsed zero matrix command paths")
+	}
+}
+
+// TestAgentHelpPaginateClaimsMatchBehavior checks the high-risk
+// pagination sentence agents act on. Commands that issue one GET must
+// not tell the agent to pass --paginate. Commands that call
+// FetchListOrAll (or api's own pager) must mention --paginate so the
+// agent can ask for the rest of the collection.
+func TestAgentHelpPaginateClaimsMatchBehavior(t *testing.T) {
+	bin := buildThrowawayBinary(t)
+
+	singlePage := []string{
+		"gitee release list",
+		"gitee ssh-key list",
+		"gitee notification list",
+		"gitee user followers",
+		"gitee user following",
+		"gitee org members",
+		"gitee org repos",
+		"gitee org issues",
+		"gitee org list",
+		"gitee pr comments",
+		"gitee issue comments",
+		"gitee gist list",
+		"gitee gist comments",
+		"gitee label list",
+		"gitee milestone list",
+		"gitee webhook list",
+		"gitee repo star list",
+	}
+	walksPages := []string{
+		"gitee issue list",
+		"gitee pr list",
+		"gitee repo list",
+		"gitee repo commits list",
+		"gitee status",
+		"gitee api",
+		"gitee api raw",
+	}
+
+	for _, path := range singlePage {
+		t.Run(path, func(t *testing.T) {
+			out := agentHelpOutput(t, bin, path)
+			if strings.Contains(out, "--paginate") {
+				t.Errorf("%s agent-help mentions --paginate, but the command issues one request and ignores that flag", path)
+			}
+		})
+	}
+	for _, path := range walksPages {
+		t.Run("honors/"+path, func(t *testing.T) {
+			out := agentHelpOutput(t, bin, path)
+			if !strings.Contains(out, "--paginate") {
+				t.Errorf("%s agent-help does not mention --paginate, but the command walks pages when that flag is set", path)
+			}
+		})
+	}
+}
+
+func matrixCommandPaths(doc string) []string {
+	var out []string
+	for _, line := range strings.Split(doc, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if !strings.HasPrefix(trimmed, "gitee ") || !strings.Contains(trimmed, "--agent-help") {
+			continue
+		}
+		if strings.Contains(trimmed, "<") {
+			continue
+		}
+		idx := strings.Index(trimmed, "--agent-help")
+		path := strings.Join(strings.Fields(trimmed[:idx]), " ")
+		if path != "" {
+			out = append(out, path)
+		}
+	}
+	return out
+}
+
+func referenceCommandPaths(t *testing.T, bin string) []string {
+	t.Helper()
+	run := exec.Command(bin, "help", "reference")
+	run.Env = []string{
+		"HOME=" + t.TempDir(),
+		"PATH=/usr/bin:/bin",
+		"GITEE_TOKEN=",
+		"GITEE_HOSTNAME=invalid.example.invalid",
+	}
+	out, err := run.CombinedOutput()
+	if err != nil {
+		t.Fatalf("gitee help reference failed: %v\noutput:\n%s", err, out)
+	}
+	var paths []string
+	for i, line := range strings.Split(string(out), "\n") {
+		if i == 0 || strings.TrimSpace(line) == "" {
+			continue
+		}
+		fields := strings.Fields(line)
+		var words []string
+		for _, f := range fields {
+			if f != strings.ToLower(f) {
+				break
+			}
+			words = append(words, f)
+		}
+		if len(words) > 0 {
+			paths = append(paths, strings.Join(words, " "))
+		}
+	}
+	return paths
+}
+
+func agentHelpOutput(t *testing.T, bin, path string) string {
+	t.Helper()
+	args := strings.Fields(path)[1:]
+	args = append(args, "--agent-help")
+	run := exec.Command(bin, args...)
+	run.Env = []string{
+		"HOME=" + t.TempDir(),
+		"PATH=/usr/bin:/bin",
+		"GITEE_TOKEN=",
+		"GITEE_HOSTNAME=invalid.example.invalid",
+	}
+	out, err := run.CombinedOutput()
+	if err != nil {
+		t.Fatalf("%s --agent-help failed: %v\noutput:\n%s", path, err, out)
+	}
+	return string(out)
+}
+
 // isExemptedPathFromAgentHelpCoverage is the path-string counterpart of
 // isExemptedFromAgentHelpCoverage (which takes a *cobra.Command we do
 // not have here — see the TestAgentHelpSchemaCompleteness doc comment

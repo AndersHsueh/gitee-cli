@@ -2,6 +2,12 @@ module gitee-cli
 
 go 1.25.0
 
+// Go 1.25.0's standard library is flagged by govulncheck (37 reachable
+// findings, fixed by 1.26.10). The language version stays 1.25 so the
+// module still builds with a 1.25-aware toolchain; the toolchain line
+// selects a patched compiler for test, lint, and govulncheck.
+toolchain go1.26.10
+
 require (
 	github.com/fatih/color v1.19.0
 	github.com/go-resty/resty/v2 v2.17.2

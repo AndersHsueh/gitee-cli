@@ -50,7 +50,7 @@ The watch verb accepts a --type flag with three values:
   gitee repo watch myorg/myrepo --type releases_only
   gitee repo unwatch myorg/myrepo`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoWatchAgentHelp)
 		}
@@ -68,7 +68,7 @@ var watchWatchCmd = &cobra.Command{
 	Example: `  gitee repo watch myorg/myrepo
   gitee repo watch myorg/myrepo --type releases_only`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoWatchWatchAgentHelp)
 		}
@@ -78,11 +78,28 @@ var watchWatchCmd = &cobra.Command{
 }
 
 var watchUnwatchCmd = &cobra.Command{
-	Use:   "unwatch [owner/repo]",
-	Short: "Unsubscribe from a repository (no notifications)",
+	Use:     "unwatch [owner/repo]",
+	Short:   "Unsubscribe from a repository (no notifications)",
 	Example: `  gitee repo unwatch myorg/myrepo`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
+			cmd.PrintAgentHelp(repoWatchUnwatchAgentHelp)
+		}
+		return nil
+	},
+	RunE: runRepoUnwatch,
+}
+
+// repoUnwatchCmd is the top-level alias `gitee repo unwatch`. The nested
+// form `gitee repo watch unwatch` stays for the umbrella. Agent help and
+// the coverage matrix name the top-level path.
+var repoUnwatchCmd = &cobra.Command{
+	Use:     "unwatch [owner/repo]",
+	Short:   "Unsubscribe from a repository (alias of `gitee repo watch unwatch`)",
+	Example: `  gitee repo unwatch myorg/myrepo`,
+	PreRunE: func(c *cobra.Command, args []string) error {
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoWatchUnwatchAgentHelp)
 		}
@@ -97,9 +114,10 @@ func init() {
 	wf.StringVarP(&watchFlags.repo, "repo", "R", "", "Repository (owner/repo); falls back to global --repo, then to the positional arg")
 	wf.StringVarP(&watchFlags.typ, "type", "t", "watching", "Watch level: watching | releases_only | ignoring")
 
-	// unwatch flags
+	// unwatch flags (nested and top-level alias share watchFlags.repo)
 	uwf := watchUnwatchCmd.Flags()
 	uwf.StringVarP(&watchFlags.repo, "repo", "R", "", "Repository (owner/repo); falls back to global --repo, then to the positional arg")
+	repoUnwatchCmd.Flags().StringVarP(&watchFlags.repo, "repo", "R", "", "Repository (owner/repo); falls back to global --repo, then to the positional arg")
 
 	watchCmd.AddCommand(watchWatchCmd)
 	watchCmd.AddCommand(watchUnwatchCmd)

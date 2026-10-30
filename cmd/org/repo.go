@@ -25,7 +25,7 @@ var repoCmd = &cobra.Command{
 	Short:   "List organization repositories",
 	Example: `  gitee org repos my-org`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(orgRepoAgentHelp)
 		}
@@ -165,9 +165,9 @@ deleted, renamed, and flipped between public and private by org
 members at any time. A ` + "`" + `full_name` + "`" + ` picked from this snapshot can
 404 on ` + "`" + `gitee repo view` + "`" + ` or ` + "`" + `gitee repo clone` + "`" + ` moments later
 (rename/delete), and a previously visible repo gone private surfaces
-as 403. Stars/forks counters are point-in-time. With ` + "`" + `--paginate` + "`" + `,
-mutations mid-traversal can make pages overlap or skip entries —
-dedupe by ` + "`" + `full_name` + "`" + `. Read-only and always safe to retry.
+as 403. Stars/forks counters are point-in-time. This command
+returns one page (--limit is per_page, clamped to 1-100); repos
+past that page are not included. Read-only and always safe to retry.
 
 ## Next steps (orchestration hints)
 After enumerating repos, an agent typically wants to:

@@ -37,17 +37,29 @@ func TestEnvironmentTopicContent(t *testing.T) {
 	out := runTopic(t, root, environmentTopic)
 	required := []string{
 		"GITEE_TOKEN",
-		"GITEE_HOSTNAME",
-		"GITEE_API_URL",
-		"GITEE_OUTPUT",
 		"NO_COLOR",
-		"GITEE_PAGINATE",
+		"HTTPS_PROXY",
 		"GITEE_EXT_DIR",
 		"GITEE_ALIASES_FILE",
+		"BROWSER",
+		"Not read (setting these has no effect):",
+		"GITEE_PAGINATE",
+		"GITEE_HOSTNAME",
 	}
 	for _, want := range required {
 		if !strings.Contains(out, want) {
 			t.Errorf("environment topic missing %q\n--- got ---\n%s", want, out)
+		}
+	}
+	// The "not read" disclaimer may name these. The variable table
+	// (everything before that heading) must not list them as read.
+	table, _, _ := strings.Cut(out, "Not read")
+	for _, name := range []string{"GITEE_PAGINATE", "GITEE_OUTPUT", "GITEE_HOSTNAME"} {
+		for _, line := range strings.Split(table, "\n") {
+			fields := strings.Fields(line)
+			if len(fields) > 0 && fields[0] == name {
+				t.Errorf("%s listed as a read variable: %q", name, line)
+			}
 		}
 	}
 }
@@ -66,11 +78,17 @@ func TestExitCodesTopicContent(t *testing.T) {
 func TestFormattingTopicContent(t *testing.T) {
 	root := freshRoot()
 	out := runTopic(t, root, formattingTopic)
-	required := []string{"table", "json", "csv", "jq"}
+	required := []string{"table", "json", "jq", "html_url", "not implemented", "not NDJSON", "GITEE_OUTPUT is not read"}
 	for _, want := range required {
 		if !strings.Contains(out, want) {
-			t.Errorf("formatting topic missing reference to %q", want)
+			t.Errorf("formatting topic missing reference to %q\n--- got ---\n%s", want, out)
 		}
+	}
+	if strings.Contains(out, "RFC 4180") {
+		t.Error("formatting topic still describes csv as an implemented RFC 4180 format")
+	}
+	if strings.Contains(out, "GITEE_OUTPUT") && !strings.Contains(out, "GITEE_OUTPUT is not read") {
+		t.Error("formatting topic must say GITEE_OUTPUT is not read")
 	}
 }
 

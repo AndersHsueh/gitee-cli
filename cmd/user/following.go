@@ -26,7 +26,7 @@ var followingCmd = &cobra.Command{
   gitee user following --user bob
   gitee user following --limit 100 --output json`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(userFollowingAgentHelp)
 		}
@@ -103,15 +103,16 @@ follow plan ("follow everyone alice follows").
 
 ## Optional flags
   --user / -u   Equivalent to passing the username as a positional arg
-  --limit / -L  Maximum number of followings (default 30, max 100 per page)
+  --limit / -L  Page size sent as per_page (default 30). The CLI does not
+                clamp it and does not request further pages. Gitee's
+                maximum per_page is 100.
   --output      ` + "`" + `table` + "`" + ` (default) or ` + "`" + `json` + "`" + `
 
 ## Idempotency
 YES. Read-only.
 
 ## Atomicity
-Atomic per request. The server returns one page (up to ` + "`" + `per_page` + "`" + `
-items); use ` + "`" + `--paginate` + "`" + ` (a root flag) to traverse all pages.
+One GET. Either that single page is returned, or the call fails.
 
 ## Side effects
 None. Pure GET.
@@ -151,9 +152,9 @@ removed continuously, by the user themselves or by other sessions.
 This output is a snapshot — between listing and acting (e.g. piping
 logins into ` + "`" + `gitee user unfollow` + "`" + `), an edge may already be gone,
 and unfollow then returns 404 (see its Idempotency note); treat that
-as "already unfollowed". With ` + "`" + `--paginate` + "`" + `, mutations
-mid-traversal can make pages overlap or skip entries — dedupe by
-` + "`" + `login` + "`" + `. Read-only and always safe to retry.
+as "already unfollowed". This command returns one page only, so
+an account past --limit is absent — do not treat that as "not
+followed". Read-only and always safe to retry.
 
 ## Next steps (orchestration hints)
 After listing who someone follows, an agent typically wants to:

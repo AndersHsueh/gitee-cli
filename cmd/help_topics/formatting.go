@@ -11,29 +11,34 @@ import (
 
 // formattingTopic is the implementation of `gitee help formatting`.
 //
-// gitee-cli ships with three output formats. This topic explains
-// the semantics, the machine-friendly patterns, and the
-// --output / GITEE_OUTPUT priority rules.
+// gitee-cli ships with two output formats. This topic explains
+// the semantics and the machine-friendly patterns. GITEE_OUTPUT
+// is not read; only --output / -o selects the format.
 var formattingTopic = &cobra.Command{
 	Use:   "formatting",
-	Short: "How to control output format (table/json/csv) and post-process with jq",
+	Short: "How to control output format (table/json) and post-process with jq",
 	Long: `Output format control for gitee-cli.
 
-Three formats are supported today:
+Two formats are supported:
 
-  table  Human-friendly columns, default for TTY output.
-  json   Machine-friendly. Use for piping to jq, scripts, agents.
-  csv   Spreadsheet-friendly. Header row included.
+  table  Human-friendly columns. This is the default, and it is also
+         what you get for any --output value other than json.
+  json   One indented JSON value (an array for lists, an object for
+         a single resource). Not NDJSON.
 
-Format is selected by the --output / -o flag or GITEE_OUTPUT.
-Precedence (highest first): --output > GITEE_OUTPUT > default ("table").`,
+csv is not implemented. --output csv prints the table.
+
+Format is selected only by --output / -o. GITEE_OUTPUT is not read.
+Default is "table".`,
 	RunE: func(c *cobra.Command, args []string) error {
+		_, _ = fmt.Fprintln(os.Stdout, "csv is not implemented. --output csv prints the table.")
+		_, _ = fmt.Fprintln(os.Stdout, "GITEE_OUTPUT is not read. Format is selected only by --output / -o.")
+		_, _ = fmt.Fprintln(os.Stdout)
 		w := output.NewTableWriter()
 		fmt.Fprintln(w, "FORMAT\tUSE WHEN\tNOTES")
 		rows := []struct{ a, b, c string }{
-			{"table", "Reading in a terminal", "Default. Auto-falls-back to plain (no color, no borders) when piped."},
-			{"json", "Piping to jq / scripts / agents", "Always emits one JSON object per line for collections (NDJSON for streams), or a single object/array for singletons."},
-			{"csv", "Importing to a spreadsheet", "Header row included. Quotes and embedded newlines follow RFC 4180."},
+			{"table", "Reading in a terminal", "Default. Also used when --output is anything other than json, including csv."},
+			{"json", "Piping to jq / scripts / agents", "One indented JSON value for the whole result. Lists are arrays, not NDJSON."},
 		}
 		for _, r := range rows {
 			fmt.Fprintf(w, "%s\t%s\t%s\n", r.a, r.b, r.c)
@@ -49,8 +54,10 @@ Precedence (highest first): --output > GITEE_OUTPUT > default ("table").`,
 		_, _ = fmt.Fprintln(os.Stdout, "Count open issues assigned to you:")
 		_, _ = fmt.Fprintln(os.Stdout, "  gitee issue list --output json --assignee @me --state open | jq 'length'")
 		_, _ = fmt.Fprintln(os.Stdout)
-		_, _ = fmt.Fprintln(os.Stdout, "Get just the URLs of the last 5 releases:")
-		_, _ = fmt.Fprintln(os.Stdout, "  gitee release list --output json --limit 5 | jq -r '.[].url'")
+		_, _ = fmt.Fprintln(os.Stdout, "Get html_url for the first page of releases (up to 5).")
+		_, _ = fmt.Fprintln(os.Stdout, "JSON fields are the Go struct names from the API payload;")
+		_, _ = fmt.Fprintln(os.Stdout, "a release URL is html_url, not url:")
+		_, _ = fmt.Fprintln(os.Stdout, "  gitee release list --repo owner/repo --output json --limit 5 | jq -r '.[].html_url'")
 		_, _ = fmt.Fprintln(os.Stdout)
 		_, _ = fmt.Fprintln(os.Stdout, "## Stable columns")
 		_, _ = fmt.Fprintln(os.Stdout)
@@ -60,8 +67,14 @@ Precedence (highest first): --output > GITEE_OUTPUT > default ("table").`,
 		_, _ = fmt.Fprintln(os.Stdout)
 		_, _ = fmt.Fprintln(os.Stdout, "## When the API is paginated")
 		_, _ = fmt.Fprintln(os.Stdout)
-		_, _ = fmt.Fprintln(os.Stdout, "Most list commands accept --paginate / -P to walk every page. Combine with")
-		_, _ = fmt.Fprintln(os.Stdout, "--limit N for a total cap (N is across all pages, not per page).")
+		_, _ = fmt.Fprintln(os.Stdout, "issue list, pr list, repo list, repo commits list, status, and api")
+		_, _ = fmt.Fprintln(os.Stdout, "honor --paginate / -P and walk every page. On those, --limit N is a")
+		_, _ = fmt.Fprintln(os.Stdout, "total cap across pages (repo list defaults that cap to 30; pass")
+		_, _ = fmt.Fprintln(os.Stdout, "--limit 0 for no cap on issue list, pr list, and repo list).")
+		_, _ = fmt.Fprintln(os.Stdout, "release list, label list, milestone list, webhook list, gist list,")
+		_, _ = fmt.Fprintln(os.Stdout, "ssh-key list, notification list, org lists, and user followers /")
+		_, _ = fmt.Fprintln(os.Stdout, "following issue one request and ignore --paginate. For those,")
+		_, _ = fmt.Fprintln(os.Stdout, "--limit is the page size of that single request.")
 		return nil
 	},
 }

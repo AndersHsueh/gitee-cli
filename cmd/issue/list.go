@@ -30,7 +30,7 @@ var listCmd = &cobra.Command{
   gitee issue list --repo owner/repo --paginate          # fetch ALL open issues
   gitee issue list --repo owner/repo --paginate --limit 0  # same, explicit`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(issueListAgentHelp)
 		}
@@ -133,8 +133,9 @@ or batch-editing them.
   --assignee        Filter by assignee username
   --milestone       Filter by milestone number
   --repo / -R       owner/repo format (falls back to global --repo, then git remote)
-  --output / -o     text (default) | json — when json, the issue list is dumped
-                    as a JSON array of Issue objects (full struct, not a table)
+  --output / -o     table (default) | json. json dumps the issue list as a
+                    JSON array of Issue objects (full struct, not a table).
+                    csv is not implemented; any other value prints the table.
   --page            Page number for the single-page path (default 1)
   --per-page        Per-page size (max 100, default 30)
   --paginate        Walk all pages up to --limit (recommended for agents)
@@ -208,6 +209,9 @@ After listing issues, an agent typically wants to:
 6. To see the activity summary across repos, ` + "`" + `gitee status` + "`" + `
 
 ## OAuth scope required
+Personal access token scope. This CLI does not perform an OAuth login;
+pass a PAT via GITEE_TOKEN, --token, or ~/.gitee-cli/settings.json.
+Gitee's token settings page uses these scope names.
 projects (read)
 
 ## Rate limit

@@ -55,7 +55,7 @@ use gitee repo watch to receive notifications about its activity.`,
   gitee repo star list
   gitee repo star list --limit 50`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoStarAgentHelp)
 		}
@@ -73,7 +73,7 @@ var starStarCmd = &cobra.Command{
 	Example: `  gitee repo star myorg/myrepo
   gitee repo star --repo myorg/myrepo`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoStarStarAgentHelp)
 		}
@@ -88,7 +88,25 @@ var starUnstarCmd = &cobra.Command{
 	Example: `  gitee repo unstar myorg/myrepo
   gitee repo unstar --repo myorg/myrepo`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
+		if rt.AgentHelp {
+			cmd.PrintAgentHelp(repoStarUnstarAgentHelp)
+		}
+		return nil
+	},
+	RunE: runRepoUnstar,
+}
+
+// repoUnstarCmd is the top-level alias `gitee repo unstar`. The nested
+// form `gitee repo star unstar` stays for the umbrella. Agent help and
+// the coverage matrix name the top-level path.
+var repoUnstarCmd = &cobra.Command{
+	Use:   "unstar [owner/repo]",
+	Short: "Remove a star from a repository (alias of `gitee repo star unstar`)",
+	Example: `  gitee repo unstar myorg/myrepo
+  gitee repo unstar --repo myorg/myrepo`,
+	PreRunE: func(c *cobra.Command, args []string) error {
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoStarUnstarAgentHelp)
 		}
@@ -103,7 +121,7 @@ var starListCmd = &cobra.Command{
 	Example: `  gitee repo star list
   gitee repo star list --limit 50`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(repoStarListAgentHelp)
 		}
@@ -117,9 +135,10 @@ func init() {
 	sf := starStarCmd.Flags()
 	sf.StringVarP(&starFlags.repo, "repo", "R", "", "Repository (owner/repo); falls back to global --repo, then to the positional arg")
 
-	// unstar flags
+	// unstar flags (nested and top-level alias share starFlags.repo)
 	uf := starUnstarCmd.Flags()
 	uf.StringVarP(&starFlags.repo, "repo", "R", "", "Repository (owner/repo); falls back to global --repo, then to the positional arg")
+	repoUnstarCmd.Flags().StringVarP(&starFlags.repo, "repo", "R", "", "Repository (owner/repo); falls back to global --repo, then to the positional arg")
 
 	// list flags
 	lf := starListCmd.Flags()

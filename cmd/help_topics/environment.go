@@ -13,6 +13,7 @@ package help_topics
 
 import (
 	"fmt"
+	"os"
 
 	"gitee-cli/internal/output"
 
@@ -29,123 +30,58 @@ type envVar struct {
 
 // environmentTopic is the implementation of `gitee help environment`.
 //
-// Lists every env var the gitee-cli binary reads, with the effective
-// default (what you'll see if it's unset) and a short description.
-// Read top-to-bottom; the list is ordered by category: auth, host,
-// config, output, debug, network, plugins/extensions.
+// Lists every env var the gitee-cli binary (or the libraries it
+// calls for color and HTTP) actually reads. Names that look like
+// they should work — GITEE_HOSTNAME, GITEE_PAGINATE, GITEE_OUTPUT,
+// and the rest of the "not read" list printed after the table —
+// have no effect.
 //
-// Note: gitee-cli prefers explicit flags (--token, --hostname) over
-// env vars, and the on-disk config (~/.gitee-cli/settings.json)
-// over env vars, in that order. See the priority column in the
-// description when in doubt.
+// Token priority is flag > GITEE_TOKEN > settings.json. Hostname
+// does not follow that chain: there is no GITEE_HOSTNAME variable.
 var environmentTopic = &cobra.Command{
 	Use:   "environment",
 	Short: "Environment variables that gitee-cli reads",
 	Long: `Environment variables recognized by gitee-cli.
 
-Most users only need GITEE_TOKEN (or --token). The rest cover
-enterprise deployments, output formatting, debug switches, and
-the extension/alias subsystems.
+Most users only need GITEE_TOKEN (or --token). Hostname, output
+format, pagination, verbosity, and timeout are flags or settings.json
+entries, not environment variables.
 
-Priority (highest to lowest):
-  1. CLI flag           (e.g. --token, --hostname)
-  2. Environment variable
-  3. Config file        (~/.gitee-cli/settings.json)
-  4. Built-in default`,
+Token priority (highest to lowest):
+  1. --token
+  2. GITEE_TOKEN
+  3. ~/.gitee-cli/settings.json`,
 	RunE: func(c *cobra.Command, args []string) error {
 		vars := []envVar{
-			// --- auth ---
 			{
 				Name:        "GITEE_TOKEN",
 				Default:     "(none — required for most commands)",
-				Description: "Personal access token. Equivalent to --token. Used to authenticate every API call.",
-			},
-			// --- host / enterprise ---
-			{
-				Name:        "GITEE_HOSTNAME",
-				Default:     "gitee.com",
-				Description: "Gitee hostname. Override for Gitee Enterprise (e.g. git.gitee.work). Equivalent to --hostname.",
-			},
-			{
-				Name:        "GITEE_API_URL",
-				Default:     "https://{hostname}/api/v5",
-				Description: "Full API base URL. Use when your enterprise deployment has a non-standard API path. Equivalent to --api-url.",
-			},
-			// --- output ---
-			{
-				Name:        "GITEE_OUTPUT",
-				Default:     "table",
-				Description: "Default output format: table|json|csv. Equivalent to --output/-o.",
+				Description: "Personal access token. Same credential as --token, checked after the flag and before settings.json.",
 			},
 			{
 				Name:        "NO_COLOR",
-				Default:     "(unset — colors enabled when stdout is a TTY)",
-				Description: "Set to any non-empty value to disable ANSI color codes in output. Equivalent to --no-color.",
-			},
-			{
-				Name:        "CLICOLOR_FORCE",
-				Default:     "(unset)",
-				Description: "Set to a non-zero value to force color output even when stdout is piped (used for grep / log capture).",
-			},
-			// --- pagination / limits ---
-			{
-				Name:        "GITEE_PAGINATE",
-				Default:     "(unset — single page only)",
-				Description: "If set, --paginate behaviour is enabled by default (walks all pages). Equivalent to --paginate/-P.",
-			},
-			{
-				Name:        "GITEE_LIMIT",
-				Default:     "30",
-				Description: "Default --limit value (max results). Equivalent to --limit.",
-			},
-			// --- debug / network ---
-			{
-				Name:        "GITEE_VERBOSE",
-				Default:     "(unset — quiet)",
-				Description: "Set to 1 / true / yes to print HTTP request/response details on stderr. Equivalent to --verbose/-v.",
-			},
-			{
-				Name:        "GITEE_TIMEOUT",
-				Default:     "30",
-				Description: "HTTP timeout in seconds. Equivalent to --timeout.",
+				Default:     "(unset — colors enabled)",
+				Description: "Any non-empty value disables ANSI color. Read by the color library, not by a gitee flag.",
 			},
 			{
 				Name:        "HTTPS_PROXY",
 				Default:     "(none — direct connection)",
-				Description: "Standard HTTPS proxy URL. Honored by net/http via ProxyFromEnvironment.",
+				Description: "Standard HTTPS proxy URL. Honored by net/http via ProxyFromEnvironment. HTTP_PROXY and NO_PROXY too.",
 			},
-			{
-				Name:        "GITEE_INSECURE",
-				Default:     "(unset — TLS verification on)",
-				Description: "Set to 1 to skip TLS certificate verification. Insecure; for testing only.",
-			},
-			// --- extensions ---
 			{
 				Name:        "GITEE_EXT_DIR",
 				Default:     "~/.gitee-cli/extensions",
-				Description: "Override the extension install directory. Mainly useful for portable dotfiles / test isolation.",
+				Description: "Override the extension install directory.",
 			},
-			{
-				Name:        "GITEE_NO_EXTENSIONS",
-				Default:     "(unset — extensions loaded)",
-				Description: "Set to 1 to skip the dynamic extension loader on startup. Equivalent to --no-extensions.",
-			},
-			// --- aliases ---
 			{
 				Name:        "GITEE_ALIASES_FILE",
 				Default:     "~/.gitee-cli/aliases.json",
-				Description: "Override the aliases JSON file location. Useful for portable dotfiles and CI.",
-			},
-			// --- editor / browser ---
-			{
-				Name:        "GITEE_EDITOR",
-				Default:     "$EDITOR or vi",
-				Description: "Editor for --editor flows (issue/pr create body). Falls back to VISUAL, then EDITOR.",
+				Description: "Override the aliases JSON file location.",
 			},
 			{
-				Name:        "GITEE_BROWSER",
-				Default:     "platform default",
-				Description: "Browser binary for 'gitee <cmd> --web' style flows. Falls back to BROWSER.",
+				Name:        "BROWSER",
+				Default:     "(none)",
+				Description: "Browser binary used by `gitee repo browse`. GITEE_BROWSER is not read.",
 			},
 		}
 		w := output.NewTableWriter()
@@ -153,6 +89,19 @@ Priority (highest to lowest):
 		for _, v := range vars {
 			fmt.Fprintf(w, "%s\t%s\t%s\n", v.Name, v.Default, v.Description)
 		}
-		return w.Flush()
+		if err := w.Flush(); err != nil {
+			return err
+		}
+		_, _ = fmt.Fprintln(os.Stdout)
+		_, _ = fmt.Fprintln(os.Stdout, "Not read (setting these has no effect):")
+		_, _ = fmt.Fprintln(os.Stdout, "  GITEE_HOSTNAME, GITEE_API_URL     use --hostname / --api-url, or `gitee auth switch`")
+		_, _ = fmt.Fprintln(os.Stdout, "  GITEE_OUTPUT                      use --output / -o (table or json)")
+		_, _ = fmt.Fprintln(os.Stdout, "  GITEE_PAGINATE, GITEE_LIMIT       use --paginate / --limit / --per-page")
+		_, _ = fmt.Fprintln(os.Stdout, "  GITEE_VERBOSE, GITEE_TIMEOUT      use --verbose / --timeout")
+		_, _ = fmt.Fprintln(os.Stdout, "  GITEE_INSECURE                    TLS verification cannot be disabled")
+		_, _ = fmt.Fprintln(os.Stdout, "  GITEE_NO_EXTENSIONS               use --no-extensions")
+		_, _ = fmt.Fprintln(os.Stdout, "  GITEE_EDITOR, GITEE_BROWSER       not consulted; browse reads BROWSER")
+		_, _ = fmt.Fprintln(os.Stdout, "  CLICOLOR_FORCE                    only NO_COLOR disables color")
+		return nil
 	},
 }

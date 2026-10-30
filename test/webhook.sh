@@ -68,8 +68,11 @@ fi
 # webhook list --output json
 # ---------------------------------------------------------------------------
 section "gitee webhook list --output json"
-output=$("$BINARY" webhook list --repo gitee/gitee --output json --limit 5 2>&1 || true)
-if echo "$output" | grep -qE '"id"|"url"|type|\['; then
+TEST_REPO="${GITEE_TEST_REPO:-andershsueh/gitee-cli}"
+output=$("$BINARY" webhook list --repo "$TEST_REPO" --output json --limit 5 2>&1 || true)
+if echo "$output" | grep -qiE '404|403|not found|forbidden'; then
+    skip "无法读取 $TEST_REPO 的 webhook（设置 GITEE_TEST_REPO 指向自己的仓库）"
+elif echo "$output" | grep -qE '"id"|"url"|^\['; then
     pass "webhook list --output json 输出有效"
 else
     fail "webhook list --output json 格式不符: ${output:0:200}"
@@ -80,7 +83,7 @@ fi
 # ---------------------------------------------------------------------------
 section "gitee webhook create --help"
 help_output=$("$BINARY" webhook create --help 2>&1)
-expected_args=("url" "push_events" "pull_requests_events")
+expected_args=("--url" "--push-events" "--merge-request-events")
 for arg in "${expected_args[@]}"; do
     if echo "$help_output" | grep -q "$arg"; then
         pass "webhook create --help 包含 $arg 参数"

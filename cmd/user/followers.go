@@ -26,7 +26,7 @@ var followersCmd = &cobra.Command{
   gitee user followers --user bob
   gitee user followers --limit 100 --output json`,
 	PreRunE: func(c *cobra.Command, args []string) error {
-	rt := cmd.RuntimeFromCmd(c)
+		rt := cmd.RuntimeFromCmd(c)
 		if rt.AgentHelp {
 			cmd.PrintAgentHelp(userFollowersAgentHelp)
 		}
@@ -103,15 +103,16 @@ tool with a list of accounts interested in someone.
 
 ## Optional flags
   --user / -u   Equivalent to passing the username as a positional arg
-  --limit / -L  Maximum number of followers (default 30, max 100 per page)
+  --limit / -L  Page size sent as per_page (default 30). The CLI does not
+                clamp it and does not request further pages. Gitee's
+                maximum per_page is 100.
   --output      ` + "`" + `table` + "`" + ` (default) or ` + "`" + `json` + "`" + `
 
 ## Idempotency
 YES. Read-only.
 
 ## Atomicity
-Atomic per request. The server returns one page (up to ` + "`" + `per_page` + "`" + `
-items); use ` + "`" + `--paginate` + "`" + ` (a root flag) to traverse all pages.
+One GET. Either that single page of followers is returned, or the call fails.
 
 ## Side effects
 None. Pure GET.
@@ -150,9 +151,9 @@ unfollow ` + "`" + `<username>` + "`" + ` (and rename or delete themselves) cont
 This output is a snapshot at fetch time — a ` + "`" + `login` + "`" + ` you pick from
 it may have unfollowed or vanished by the time you act on it, so run
 ` + "`" + `gitee user view <login>` + "`" + ` immediately before acting if existence
-matters. With ` + "`" + `--paginate` + "`" + `, pages fetched seconds apart can overlap
-or skip entries when the list mutates mid-traversal — dedupe by
-` + "`" + `login` + "`" + `. Read-only and always safe to retry.
+matters. This command returns one page only, so a follower past
+--limit is absent here — do not treat that as "does not follow".
+Read-only and always safe to retry.
 
 ## Next steps (orchestration hints)
 After listing followers, an agent typically wants to:
